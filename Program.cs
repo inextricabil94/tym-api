@@ -22,6 +22,20 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 app.UseCors();
 
+app.MapGet("/", () => Results.Json(new
+{
+    service = "tym-api",
+    version = TymConstants.Version,
+    endpoints = new[]
+    {
+        "GET /health",
+        "GET /openapi.yaml",
+        "POST /v1/diagrams",
+        "POST /v1/diagrams/svg",
+        "POST /v1/diagrams/xml"
+    }
+}));
+
 app.MapGet("/health", () => Results.Json(new { ok = true, service = "tym-api", version = TymConstants.Version }));
 
 app.MapGet("/openapi.yaml", () =>

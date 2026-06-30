@@ -1,0 +1,272 @@
+classDiagram
+  class DiagramRequest {
+    +string Text
+    +DiagramOptions Options
+  }
+  class DiagramOptions {
+    +string Layout
+    +int Width
+    +string[] HighlightEntities
+    +bool IncludeDebug
+  }
+  class ErrorResponse {
+    +string Error
+  }
+  class DiagramResponse {
+    +string Id
+    +string ModelVersion
+    +Diagram Diagram
+    +RenderResult Render
+    +string Xml
+    +IReadOnlyList<string> Warnings
+  }
+  class Diagram {
+    +IReadOnlyList<TimeActor> Actors
+    +IReadOnlyList<TimeLocation> Locations
+    +IReadOnlyList<NarrativeEvent> Events
+    +IReadOnlyList<TimeTrack> Tracks
+    +IReadOnlyList<TimeSegment> Segments
+    +IReadOnlyList<Endpoint> Endpoints
+    +IReadOnlyList<TimeRelation> Relations
+    +IReadOnlyList<SegmentBoundary> Boundaries
+  }
+  class TimeActor {
+    +string Id
+    +string Name
+  }
+  class TimeLocation {
+    +string Id
+    +string Name
+    +string ParentId
+  }
+  class NarrativeEvent {
+    +string Id
+    +string Text
+    +IReadOnlyList<string> Actors
+    +string TemporalAnchor
+    +string Location
+    +string Action
+    +string TemporalCategory
+    +int Order
+    +int SpanStart
+    +int SpanEnd
+    +double Confidence
+    +string Classifier
+  }
+  class TimeTrack {
+    +string Id
+    +string Name
+    +string LeftEndpoint
+    +string RightEndpoint
+  }
+  class TimeSegment {
+    +string Id
+    +string Text
+    +string TrackId
+    +string Type
+    +string Perspective
+    +int TextOrder
+    +double StoryOrder
+    +IReadOnlyList<string> Entities
+    +IReadOnlyList<string> Actors
+    +string LocationId
+    +string TemporalAnchor
+    +string TemporalCategory
+  }
+  class Endpoint {
+    +string Id
+    +string Type
+    +string Name
+    +IReadOnlyList<string> TrackIds
+    +string SegmentId
+  }
+  class TimeRelation {
+    +string FromId
+    +string Rel
+    +string ToId
+  }
+  class SegmentBoundary {
+    +string Id
+    +string Type
+    +string FromSegmentId
+    +string ToSegmentId
+    +IReadOnlyList<string> TrackIds
+    +string Reason
+  }
+  class RenderResult {
+    +string Format
+    +int Width
+    +int Height
+    +string Svg
+  }
+  class TymConstants {
+    +string Version
+  }
+  class MutableTrack {
+    +string Id
+    +string Name
+    +string LeftEndpoint
+    +string RightEndpoint
+    +ToRecord() TimeTrack
+  }
+  class MutableSegment {
+    +string Id
+    +string Text
+    +string TrackId
+    +string Type
+    +string Perspective
+    +int TextOrder
+    +double StoryOrder
+    +IReadOnlyList<string> Entities
+    +IReadOnlyList<string> Actors
+    +string LocationId
+    +string TemporalAnchor
+    +string TemporalCategory
+    +ToRecord() TimeSegment
+  }
+  class SegmentClassification {
+    +string Label
+    +double Confidence
+    +string Source
+  }
+  class EventTemporalClassification {
+    +string Label
+    +double Confidence
+    +string Source
+  }
+  class SegmentTypeTrainingRow {
+    +string Text
+    +string Label
+  }
+  class SegmentTypePrediction {
+    +string PredictedLabel
+    +float[] Score
+  }
+  class EventTemporalTrainingRow {
+    +string Text
+    +string Label
+  }
+  class EventTemporalPrediction {
+    +string PredictedLabel
+    +float[] Score
+  }
+  class MutableNarrativeEvent {
+    +string Id
+    +string Text
+    +IReadOnlyList<string> Actors
+    +string TemporalAnchor
+    +string Location
+    +string Action
+    +string TemporalCategory
+    +int Order
+    +int SpanStart
+    +int SpanEnd
+    +double Confidence
+    +string Classifier
+    +ToRecord() NarrativeEvent
+  }
+  class TimeSegmentCandidate {
+    +string Text
+    +IReadOnlyList<MutableNarrativeEvent> Events
+    +IReadOnlyList<string> Actors
+    +string TemporalAnchor
+    +string Location
+    +string TemporalCategory
+    +int SpanStart
+    +int SpanEnd
+  }
+  class ClauseSpan {
+    +string Text
+    +int Start
+    +int End
+  }
+  class TymSegmentTypeClassifier {
+    +HashSet<string> KnownLabels
+    +double MinimumModelConfidence
+    +HashSet<string> KnownLabels
+    +PredictionEngine<SegmentTypeTrainingRow, SegmentTypePrediction
+    +object _predictionLock
+    +Train() TymSegmentTypeClassifier
+    +Predict() SegmentClassification
+    -SeedRows() IEnumerable<SegmentTypeTrainingRow>
+    -Row() SegmentTypeTrainingRow
+  }
+  class TymEventTemporalClassifier {
+    +HashSet<string> KnownLabels
+    +double MinimumModelConfidence
+    +HashSet<string> KnownLabels
+    +PredictionEngine<EventTemporalTrainingRow, EventTemporalPrediction
+    +object _predictionLock
+    +Train() TymEventTemporalClassifier
+    +Predict() EventTemporalClassification
+    -SeedRows() IEnumerable<EventTemporalTrainingRow>
+    -Row() EventTemporalTrainingRow
+  }
+  class TymAnalyzer {
+    +Lazy<TymSegmentTypeClassifier> SegmentTypeClassifier
+    +Lazy<TymEventTemporalClassifier> EventTemporalClassifier
+    +HashSet<string> EntityStopwords
+    +Lazy<TymSegmentTypeClassifier> SegmentTypeClassifier
+    +Lazy<TymEventTemporalClassifier> EventTemporalClassifier
+    +HashSet<string> EntityStopwords
+    +Analyze() DiagramResponse
+    -SplitSegments() List<string>
+    -ExtractEvents() List<MutableNarrativeEvent>
+    -SplitEventClauses() List<ClauseSpan>
+    -BuildTimeSegmentCandidates() List<TimeSegmentCandidate>
+    -CreateCandidate() TimeSegmentCandidate
+    -BuildActors() IReadOnlyList<TimeActor>
+    -BuildLocations() IReadOnlyList<TimeLocation>
+  }
+  class TymXmlSerializer {
+    +Serialize() string
+    -X() string
+  }
+  class TymSvgRenderer {
+    +Render() RenderResult
+    -TruncateLabel() string
+    -SvgText() string
+    -Line() string
+    -Rect() string
+    -Triangle() string
+  }
+  TymAnalyzer --> TymSegmentTypeClassifier : has
+  TymAnalyzer ..> TimeActor : uses
+  TymAnalyzer ..> TymSegmentTypeClassifier : uses
+  TymEventTemporalClassifier ..> EventTemporalTrainingRow : returns
+  Diagram --> SegmentBoundary : has
+  TymAnalyzer ..> TimeRelation : uses
+  Diagram --> Endpoint : has
+  TymAnalyzer ..> MutableNarrativeEvent : uses
+  TymAnalyzer ..> TimeLocation : returns
+  TymSegmentTypeClassifier ..> SegmentTypeTrainingRow : returns
+  Diagram --> TimeLocation : has
+  TymAnalyzer ..> TymSvgRenderer : uses
+  Diagram --> TimeTrack : has
+  TymAnalyzer ..> TymXmlSerializer : uses
+  TymAnalyzer ..> SegmentBoundary : uses
+  TimeSegmentCandidate --> MutableNarrativeEvent : has
+  TymEventTemporalClassifier ..> EventTemporalTrainingRow : uses
+  TymAnalyzer ..> TymConstants : uses
+  TymAnalyzer ..> DiagramResponse : uses
+  Diagram --> TimeSegment : has
+  TymAnalyzer ..> Endpoint : uses
+  Diagram --> NarrativeEvent : has
+  TymAnalyzer ..> TimeLocation : uses
+  TymSegmentTypeClassifier ..> SegmentTypeTrainingRow : uses
+  TymAnalyzer ..> MutableTrack : uses
+  TymAnalyzer ..> ClauseSpan : returns
+  TymAnalyzer ..> TimeSegmentCandidate : returns
+  TymEventTemporalClassifier ..> EventTemporalClassification : uses
+  TymAnalyzer ..> Diagram : uses
+  TymAnalyzer ..> TimeActor : returns
+  TymSvgRenderer ..> RenderResult : uses
+  Diagram --> TimeActor : has
+  TymAnalyzer --> TymEventTemporalClassifier : has
+  TymSegmentTypeClassifier ..> SegmentClassification : uses
+  TymAnalyzer ..> MutableSegment : uses
+  TymAnalyzer ..> TymEventTemporalClassifier : uses
+  TymAnalyzer ..> ClauseSpan : uses
+  Diagram --> TimeRelation : has
+  TymAnalyzer ..> MutableNarrativeEvent : returns
+  TymAnalyzer ..> TimeSegmentCandidate : uses
