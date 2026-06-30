@@ -1,0 +1,455 @@
+openapi: 3.1.0
+info:
+  title: TYM Diagram API
+  version: 0.3.0
+  description: API for generating paper-guided Time Yards Model diagrams from narrative text.
+servers:
+  - url: http://127.0.0.1:8765
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      responses:
+        "200":
+          description: Service status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  service:
+                    type: string
+                  version:
+                    type: string
+  /v1/diagrams:
+    post:
+      operationId: createDiagram
+      summary: Generate normalized TYM data and SVG from text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagramRequest"
+      responses:
+        "200":
+          description: Diagram generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiagramResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/diagrams/svg:
+    post:
+      operationId: createDiagramSvg
+      summary: Generate a TYM SVG directly from text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagramRequest"
+      responses:
+        "200":
+          description: SVG diagram
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/diagrams/xml:
+    post:
+      operationId: createDiagramXml
+      summary: Generate paper-style TYM XML directly from text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagramRequest"
+      responses:
+        "200":
+          description: XML notation using TT-SECTION, TIME-SECTION, EP-SECTION, and TS tags
+          content:
+            application/xml:
+              schema:
+                type: string
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    DiagramRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          description: Narrative text to analyze.
+        options:
+          type: object
+          additionalProperties: false
+          properties:
+            layout:
+              type: string
+              enum:
+                - both
+                - text_order
+                - time_yard
+              default: both
+            width:
+              type: integer
+              minimum: 720
+              maximum: 2400
+              default: 1200
+            highlight_entities:
+              type: array
+              items:
+                type: string
+              description: Characters whose tracks should be emphasized.
+            include_debug:
+              type: boolean
+              default: false
+    DiagramResponse:
+      type: object
+      required:
+        - id
+        - model_version
+        - diagram
+        - render
+        - xml
+        - warnings
+      properties:
+        id:
+          type: string
+        model_version:
+          type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        diagram:
+          type: object
+          required:
+            - actors
+            - locations
+            - events
+            - tracks
+            - segments
+            - endpoints
+            - relations
+            - boundaries
+          properties:
+            actors:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeActor"
+            locations:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeLocation"
+            events:
+              type: array
+              items:
+                $ref: "#/components/schemas/NarrativeEvent"
+            tracks:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeTrack"
+            segments:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeSegment"
+            endpoints:
+              type: array
+              items:
+                $ref: "#/components/schemas/Endpoint"
+            relations:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeRelation"
+            boundaries:
+              type: array
+              items:
+                $ref: "#/components/schemas/SegmentBoundary"
+        render:
+          type: object
+          required:
+            - format
+            - width
+            - height
+            - svg
+          properties:
+            format:
+              type: string
+              const: svg
+            width:
+              type: integer
+            height:
+              type: integer
+            svg:
+              type: string
+        xml:
+          type: string
+          description: Paper-style XML notation with TA, TL, EVENT, TT, TREL/TIME, ENDPOINT, POINT, and inline TS elements.
+    TimeActor:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    TimeLocation:
+      type: object
+      required:
+        - id
+        - name
+        - parent_id
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        parent_id:
+          type: string
+    NarrativeEvent:
+      type: object
+      required:
+        - id
+        - text
+        - actors
+        - temporal_anchor
+        - location
+        - action
+        - temporal_category
+        - order
+        - span_start
+        - span_end
+        - confidence
+        - classifier
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        actors:
+          type: array
+          items:
+            type: string
+        temporal_anchor:
+          type: string
+        location:
+          type: string
+        action:
+          type: string
+        temporal_category:
+          type: string
+          enum:
+            - Past
+            - Present
+            - Future
+        order:
+          type: integer
+        span_start:
+          type: integer
+        span_end:
+          type: integer
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        classifier:
+          type: string
+    TimeTrack:
+      type: object
+      required:
+        - id
+        - name
+        - left_endpoint
+        - right_endpoint
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        left_endpoint:
+          type: string
+        right_endpoint:
+          type: string
+    TimeSegment:
+      type: object
+      required:
+        - id
+        - text
+        - track_id
+        - type
+        - perspective
+        - text_order
+        - story_order
+        - actors
+        - location_id
+        - temporal_anchor
+        - temporal_category
+        - span_start
+        - span_end
+        - event_ids
+        - confidence
+        - classifier
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        track_id:
+          type: string
+        type:
+          type: string
+          enum:
+            - NAR
+            - REM
+            - SUP
+            - GEN
+            - FIC
+        perspective:
+          type: string
+        text_order:
+          type: integer
+        story_order:
+          type: number
+        entities:
+          type: array
+          items:
+            type: string
+        actors:
+          type: array
+          items:
+            type: string
+        location_id:
+          type: string
+        temporal_anchor:
+          type: string
+        temporal_category:
+          type: string
+          enum:
+            - Past
+            - Present
+            - Future
+        span_start:
+          type: integer
+        span_end:
+          type: integer
+        event_ids:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Confidence score returned by the ML.NET segment classifier.
+        classifier:
+          type: string
+          description: Classifier source used for this segment, such as mlnet_seed_model or heuristic_fallback.
+    Endpoint:
+      type: object
+      required:
+        - id
+        - type
+        - track_ids
+        - segment_id
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - JOIN
+            - SPLIT
+        name:
+          type: string
+        track_ids:
+          type: array
+          items:
+            type: string
+        segment_id:
+          type: string
+    TimeRelation:
+      type: object
+      required:
+        - from_id
+        - rel
+        - to_id
+      properties:
+        from_id:
+          type: string
+        rel:
+          type: string
+          enum:
+            - BEFORE
+            - IMMEDIATELY_BEFORE
+            - AFTER
+            - IMMEDIATELY_AFTER
+            - SIMULTANEOUS
+        to_id:
+          type: string
+    SegmentBoundary:
+      type: object
+      required:
+        - id
+        - type
+        - track_ids
+        - reason
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - START
+            - STOP
+            - COMMUTE
+            - RUPTURE
+            - JOIN
+            - SPLIT
+        from_segment_id:
+          type:
+            - string
+            - "null"
+        to_segment_id:
+          type:
+            - string
+            - "null"
+        track_ids:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string

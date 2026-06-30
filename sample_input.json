@@ -1,0 +1,9 @@
+{
+  "text": "Adam and Johan grew up in the same house. Years earlier, Karl had carried Adam through the rain. Margaret remembered her mother in Jakarta. Meanwhile, Karl traveled alone across the island. Adam searched for Margaret after the storm. Margaret found Adam at the doorway. Adam disappeared before dawn.",
+  "options": {
+    "layout": "both",
+    "width": 1200,
+    "highlight_entities": ["Adam"],
+    "include_debug": true
+  }
+}

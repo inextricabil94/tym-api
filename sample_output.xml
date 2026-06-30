@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TYM>
+  <TA-SECTION>
+    <TA ID="A0" NAME="Narrator" />
+    <TA ID="A1" NAME="Adam" />
+    <TA ID="A2" NAME="Johan" />
+    <TA ID="A3" NAME="Karl" />
+    <TA ID="A4" NAME="Margaret" />
+  </TA-SECTION>
+  <TL-SECTION>
+    <TL ID="L1" NAME="unknown" PARENTID="" />
+    <TL ID="L2" NAME="the same house" PARENTID="" />
+    <TL ID="L3" NAME="Jakarta" PARENTID="" />
+    <TL ID="L4" NAME="the doorway" PARENTID="" />
+  </TL-SECTION>
+  <EVENT-SECTION>
+    <EVENT ID="EV1" SPANS="0~41" ACTORS="A1,A2" LOCATION="L2" TEMPORAL-ANCHOR="" TENSE="Past" ACTION="grew" ORDER="1" TEXT="Adam and Johan grew up in the same house." />
+    <EVENT ID="EV2" SPANS="42~96" ACTORS="A3,A1" LOCATION="L1" TEMPORAL-ANCHOR="Years earlier" TENSE="Past" ACTION="had" ORDER="2" TEXT="Years earlier, Karl had carried Adam through the rain." />
+    <EVENT ID="EV3" SPANS="97~139" ACTORS="A4" LOCATION="L3" TEMPORAL-ANCHOR="Years earlier" TENSE="Past" ACTION="remembered" ORDER="3" TEXT="Margaret remembered her mother in Jakarta." />
+    <EVENT ID="EV4" SPANS="140~189" ACTORS="A3" LOCATION="L1" TEMPORAL-ANCHOR="Years earlier" TENSE="Past" ACTION="traveled" ORDER="4" TEXT="Meanwhile, Karl traveled alone across the island." />
+    <EVENT ID="EV5" SPANS="190~233" ACTORS="A1,A4" LOCATION="L1" TEMPORAL-ANCHOR="after the storm" TENSE="Past" ACTION="searched" ORDER="5" TEXT="Adam searched for Margaret after the storm." />
+    <EVENT ID="EV6" SPANS="234~269" ACTORS="A4,A1" LOCATION="L4" TEMPORAL-ANCHOR="after the storm" TENSE="Past" ACTION="found" ORDER="6" TEXT="Margaret found Adam at the doorway." />
+    <EVENT ID="EV7" SPANS="270~299" ACTORS="A1" LOCATION="L1" TEMPORAL-ANCHOR="before dawn" TENSE="Past" ACTION="disappeared" ORDER="7" TEXT="Adam disappeared before dawn." />
+  </EVENT-SECTION>
+  <TT-SECTION>
+    <TT ID="TT1" NAME="Adam&amp;Johan" LEFT-EP="START" RIGHT-EP="STOP" />
+    <TT ID="TT2" NAME="Karl&amp;Adam" LEFT-EP="START" RIGHT-EP="STOP" />
+    <TT ID="TT3" NAME="Margaret" LEFT-EP="START" RIGHT-EP="EP1" />
+    <TT ID="TT4" NAME="Karl" LEFT-EP="EP1" RIGHT-EP="EP2" />
+    <TT ID="TT5" NAME="Adam&amp;Margaret" LEFT-EP="EP2" RIGHT-EP="EP3" />
+    <TT ID="TT6" NAME="Adam" LEFT-EP="EP3" RIGHT-EP="STOP" />
+  </TT-SECTION>
+  <TIME-SECTION>
+    <TREL ID="TI1" FROM="TS1" REL="IMMEDIATELY-BEFORE" TO="TS2" />
+    <TIME ID="TI2" FROM="TT1" REL="BEFORE" TO="TT2" />
+    <TREL ID="TI3" FROM="TS2" REL="IMMEDIATELY-BEFORE" TO="TS3" />
+    <TIME ID="TI4" FROM="TT2" REL="BEFORE" TO="TT3" />
+    <TREL ID="TI5" FROM="TS3" REL="IMMEDIATELY-BEFORE" TO="TS4" />
+    <TIME ID="TI6" FROM="TT3" REL="SIMULTANEOUS" TO="TT4" />
+    <TREL ID="TI7" FROM="TS4" REL="IMMEDIATELY-BEFORE" TO="TS5" />
+    <TIME ID="TI8" FROM="TT4" REL="BEFORE" TO="TT5" />
+    <TREL ID="TI9" FROM="TS5" REL="IMMEDIATELY-BEFORE" TO="TS6" />
+    <TIME ID="TI10" FROM="TT5" REL="BEFORE" TO="TT6" />
+  </TIME-SECTION>
+  <EP-SECTION>
+    <ENDPOINT ID="EP1" TYPE="SPLIT" NAME="Karl split" TT1="TT3" TT2="TT4" SEGMENT="TS4" />
+    <ENDPOINT ID="EP2" TYPE="JOIN" NAME="Karl+Adam&amp;Margaret" TT1="TT4" TT2="TT5" SEGMENT="TS5" />
+    <ENDPOINT ID="EP3" TYPE="SPLIT" NAME="Adam split" TT1="TT5" TT2="TT6" SEGMENT="TS6" />
+  </EP-SECTION>
+  <POINT-SECTION>
+    <POINT ID="B1" TYPE="START" FROM-TS="" TO-TS="TS1" TRACKS="TT1" REASON="First TS in text order." />
+    <POINT ID="B2" TYPE="RUPTURE" FROM-TS="TS1" TO-TS="TS2" TRACKS="TT1 TT2" REASON="Adjacent text segments belong to different time tracks." />
+    <POINT ID="B3" TYPE="RUPTURE" FROM-TS="TS2" TO-TS="TS3" TRACKS="TT2 TT3" REASON="Adjacent text segments belong to different time tracks." />
+    <POINT ID="B4" TYPE="RUPTURE" FROM-TS="TS3" TO-TS="TS4" TRACKS="TT3 TT4" REASON="Adjacent text segments belong to different time tracks." />
+    <POINT ID="B5" TYPE="SPLIT" FROM-TS="TS3" TO-TS="TS4" TRACKS="TT3 TT4" REASON="Text indicates separation, disappearance, or an actor continuing alone." />
+    <POINT ID="B6" TYPE="RUPTURE" FROM-TS="TS4" TO-TS="TS5" TRACKS="TT4 TT5" REASON="Adjacent text segments belong to different time tracks." />
+    <POINT ID="B7" TYPE="JOIN" FROM-TS="TS4" TO-TS="TS5" TRACKS="TT4 TT5" REASON="Text indicates that separate developments meet and continue together." />
+    <POINT ID="B8" TYPE="RUPTURE" FROM-TS="TS5" TO-TS="TS6" TRACKS="TT5 TT6" REASON="Adjacent text segments belong to different time tracks." />
+    <POINT ID="B9" TYPE="SPLIT" FROM-TS="TS5" TO-TS="TS6" TRACKS="TT5 TT6" REASON="Text indicates separation, disappearance, or an actor continuing alone." />
+    <POINT ID="B10" TYPE="STOP" FROM-TS="TS6" TO-TS="" TRACKS="TT6" REASON="Last TS in text order." />
+  </POINT-SECTION>
+  <BODY>
+    <TS ID="TS1" IN-TT="TT1" SPANS="0~41" ACTORS="A1,A2" LOCATION="L2" NAME="TS1" TYPE="NAR" TST="Past" TIME="" PER="narrator" EVENTS="EV1">Adam and Johan grew up in the same house.</TS>
+    <TS ID="TS2" IN-TT="TT2" SPANS="42~96" ACTORS="A3,A1" LOCATION="L1" NAME="TS2" TYPE="REM" TST="Past" TIME="Years earlier" PER="Karl" EVENTS="EV2">Years earlier, Karl had carried Adam through the rain.</TS>
+    <TS ID="TS3" IN-TT="TT3" SPANS="97~139" ACTORS="A4" LOCATION="L3" NAME="TS3" TYPE="REM" TST="Past" TIME="Years earlier" PER="Margaret" EVENTS="EV3">Margaret remembered her mother in Jakarta.</TS>
+    <TS ID="TS4" IN-TT="TT4" SPANS="140~189" ACTORS="A3" LOCATION="L1" NAME="TS4" TYPE="NAR" TST="Past" TIME="Years earlier" PER="narrator" EVENTS="EV4">Meanwhile, Karl traveled alone across the island.</TS>
+    <TS ID="TS5" IN-TT="TT5" SPANS="190~269" ACTORS="A1,A4" LOCATION="L4" NAME="TS5" TYPE="NAR" TST="Past" TIME="after the storm" PER="narrator" EVENTS="EV5,EV6">Adam searched for Margaret after the storm. Margaret found Adam at the doorway.</TS>
+    <TS ID="TS6" IN-TT="TT6" SPANS="270~299" ACTORS="A1" LOCATION="L1" NAME="TS6" TYPE="NAR" TST="Past" TIME="before dawn" PER="narrator" EVENTS="EV7">Adam disappeared before dawn.</TS>
+  </BODY>
+</TYM>
