@@ -1,0 +1,16 @@
+.git/
+.github/
+.vs/
+bin/
+obj/
+build_publish/
+build_verify/
+ClassDiagrams/
+pocs/
+*.log
+*.user
+*.suo
+tym-api-deploy.zip
+sample_response.json
+sample_output.*
+README.md

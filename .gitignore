@@ -6,3 +6,5 @@ obj/
 .vs/
 TestResults/
 build_verify/
+build_publish/
+tym-api-deploy.zip
