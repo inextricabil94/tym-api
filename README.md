@@ -12,6 +12,16 @@ No LLM is used by the API pipeline. The extraction path is deterministic rules p
 
 English is the default extraction language. Romanian narrative text is supported with `options.language = "ro"` using Romanian rule profiles for named-entity candidates, temporal anchors, temporal signals, event tense, TimeML-style labels, and TYM segment/track creation.
 
+## Example
+
+Input text:
+
+> Adam and Johan grew up in the same house. Years earlier, Karl had carried Adam through the rain. Margaret remembered her mother in Jakarta. Meanwhile, Karl traveled alone across the island. Adam searched for Margaret after the storm. Margaret found Adam at the doorway. Adam disappeared before dawn.
+
+Generated diagram:
+
+![Generated TYM diagram](sample_output.svg)
+
 ## Run
 
 ```powershell
