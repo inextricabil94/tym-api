@@ -1,0 +1,19 @@
+framework,sample_id,status,runtime_ms,sentences,tokens,named_entities,person_entities,location_entities,temporal_entities,temporal_anchors,events,temporal_relations,time_segments,time_tracks,notes
+article_rules_no_llm,tym_sample,available,0.63,7,57,11,5,3,3,3,7,6,6,6,"Pure rule-based approximation of the article pipeline: clause splitting, capitalized actor heuristic, temporal regexes, tense regexes."
+spacy_en_core_web_sm,tym_sample,available,5077.61,7,57,13,11,1,1,3,7,6,6,6,"Real spaCy model: tokenization, sentence segmentation, POS, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found."
+stanza_en,tym_sample,available,9923.99,7,57,13,11,1,1,3,7,6,6,6,"Real Stanza neural pipeline: tokenization, POS, lemma, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found."
+sutime_corenlp,tym_sample,unavailable,0,0,0,0,0,0,0,0,0,0,0,0,Java runtime is not on PATH. Install Java and Stanford CoreNLP/SUTime jars to run this POC.
+heideltime,tym_sample,unavailable,0,0,0,0,0,0,0,0,0,0,0,0,Java runtime is not on PATH. Install Java and HeidelTime distribution to run this POC.
+current_tym_api_sample,tym_sample,available_from_saved_output,0,0,0,9,4,3,6,6,7,10,6,6,Existing .NET API output. Counts come from sample_response.json rather than rerunning the API.
+article_rules_no_llm,article_example,available,0.31,3,35,5,1,1,3,2,4,3,2,2,"Pure rule-based approximation of the article pipeline: clause splitting, capitalized actor heuristic, temporal regexes, tense regexes."
+spacy_en_core_web_sm,article_example,available,798.7,4,35,3,1,0,2,3,4,3,4,3,"Real spaCy model: tokenization, sentence segmentation, POS, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found."
+stanza_en,article_example,available,6194.35,3,35,3,1,0,2,2,3,2,2,2,"Real Stanza neural pipeline: tokenization, POS, lemma, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found."
+sutime_corenlp,article_example,unavailable,0,0,0,0,0,0,0,0,0,0,0,0,Java runtime is not on PATH. Install Java and Stanford CoreNLP/SUTime jars to run this POC.
+heideltime,article_example,unavailable,0,0,0,0,0,0,0,0,0,0,0,0,Java runtime is not on PATH. Install Java and HeidelTime distribution to run this POC.
+current_tym_api_sample,article_example,not_applicable,0,0,0,0,0,0,0,0,0,0,0,0,Current saved API sample only corresponds to tym_sample.
+article_rules_no_llm,relation_mix,available,0.36,4,43,14,6,4,4,3,5,4,4,4,"Pure rule-based approximation of the article pipeline: clause splitting, capitalized actor heuristic, temporal regexes, tense regexes."
+spacy_en_core_web_sm,relation_mix,available,606.24,4,43,11,6,2,2,3,4,3,4,4,"Real spaCy model: tokenization, sentence segmentation, POS, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found."
+stanza_en,relation_mix,available,6696.01,4,43,12,6,2,2,3,4,3,4,4,"Real Stanza neural pipeline: tokenization, POS, lemma, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found."
+sutime_corenlp,relation_mix,unavailable,0,0,0,0,0,0,0,0,0,0,0,0,Java runtime is not on PATH. Install Java and Stanford CoreNLP/SUTime jars to run this POC.
+heideltime,relation_mix,unavailable,0,0,0,0,0,0,0,0,0,0,0,0,Java runtime is not on PATH. Install Java and HeidelTime distribution to run this POC.
+current_tym_api_sample,relation_mix,not_applicable,0,0,0,0,0,0,0,0,0,0,0,0,Current saved API sample only corresponds to tym_sample.

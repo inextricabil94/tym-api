@@ -1,0 +1,1233 @@
+[
+  {
+    "framework": "article_rules_no_llm",
+    "sample_id": "tym_sample",
+    "status": "available",
+    "runtime_ms": 0.63,
+    "sentences": 7,
+    "tokens": 57,
+    "named_entities": 11,
+    "person_entities": 5,
+    "location_entities": 3,
+    "temporal_entities": 3,
+    "temporal_anchors": 3,
+    "events": 7,
+    "temporal_relations": 6,
+    "time_segments": 6,
+    "time_tracks": 6,
+    "notes": "Pure rule-based approximation of the article pipeline: clause splitting, capitalized actor heuristic, temporal regexes, tense regexes.",
+    "examples": {
+      "events": [
+        {
+          "text": "Adam and Johan grew up in the same house. Years earlier",
+          "action": "grew",
+          "actors": [
+            "Adam",
+            "Johan"
+          ],
+          "locations": [
+            "the same house"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": null
+        },
+        {
+          "text": "Karl had carried Adam through the rain.",
+          "action": "had",
+          "actors": [
+            "Karl",
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Margaret remembered her mother in Jakarta. Meanwhile",
+          "action": "remembered",
+          "actors": [
+            "Margaret"
+          ],
+          "locations": [
+            "Jakarta"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Karl traveled alone across the island.",
+          "action": "traveled",
+          "actors": [
+            "Karl"
+          ],
+          "locations": [],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Adam searched for Margaret after the storm.",
+          "action": "searched",
+          "actors": [
+            "Adam",
+            "Margaret"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "after the storm"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "AFTER"
+        },
+        {
+          "text": "Margaret found Adam at the doorway.",
+          "action": "found",
+          "actors": [
+            "Margaret",
+            "Adam"
+          ],
+          "locations": [
+            "the doorway"
+          ],
+          "temporal_anchors": [
+            "after the storm"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Adam disappeared before dawn.",
+          "action": "disappeared",
+          "actors": [
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "before dawn"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "BEFORE"
+        }
+      ],
+      "segments": [
+        [
+          "Adam and Johan grew up in the same house. Years earlier"
+        ],
+        [
+          "Karl had carried Adam through the rain."
+        ],
+        [
+          "Margaret remembered her mother in Jakarta. Meanwhile"
+        ],
+        [
+          "Karl traveled alone across the island."
+        ],
+        [
+          "Adam searched for Margaret after the storm.",
+          "Margaret found Adam at the doorway."
+        ],
+        [
+          "Adam disappeared before dawn."
+        ]
+      ]
+    }
+  },
+  {
+    "framework": "spacy_en_core_web_sm",
+    "sample_id": "tym_sample",
+    "status": "available",
+    "runtime_ms": 5077.61,
+    "sentences": 7,
+    "tokens": 57,
+    "named_entities": 13,
+    "person_entities": 11,
+    "location_entities": 1,
+    "temporal_entities": 1,
+    "temporal_anchors": 3,
+    "events": 7,
+    "temporal_relations": 6,
+    "time_segments": 6,
+    "time_tracks": 6,
+    "notes": "Real spaCy model: tokenization, sentence segmentation, POS, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found.",
+    "examples": {
+      "events": [
+        {
+          "text": "Adam and Johan grew up in the same house.",
+          "action": "grow",
+          "actors": [
+            "Adam",
+            "Johan"
+          ],
+          "locations": [
+            "the same house"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": null
+        },
+        {
+          "text": "Years earlier, Karl had carried Adam through the rain.",
+          "action": "have",
+          "actors": [
+            "Karl",
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "Years earlier"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "BEFORE"
+        },
+        {
+          "text": "Margaret remembered her mother in Jakarta.",
+          "action": "remember",
+          "actors": [
+            "Margaret"
+          ],
+          "locations": [
+            "Jakarta"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Meanwhile, Karl traveled alone across the island.",
+          "action": "travel",
+          "actors": [
+            "Karl"
+          ],
+          "locations": [],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "SIMULTANEOUS"
+        },
+        {
+          "text": "Adam searched for Margaret after the storm.",
+          "action": "search",
+          "actors": [
+            "Adam",
+            "Margaret"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "after the storm"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "AFTER"
+        },
+        {
+          "text": "Margaret found Adam at the doorway.",
+          "action": "find",
+          "actors": [
+            "Margaret",
+            "Adam"
+          ],
+          "locations": [
+            "the doorway"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Adam disappeared before dawn.",
+          "action": "disappear",
+          "actors": [
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "before dawn"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "BEFORE"
+        }
+      ],
+      "segments": [
+        [
+          "Adam and Johan grew up in the same house."
+        ],
+        [
+          "Years earlier, Karl had carried Adam through the rain."
+        ],
+        [
+          "Margaret remembered her mother in Jakarta."
+        ],
+        [
+          "Meanwhile, Karl traveled alone across the island."
+        ],
+        [
+          "Adam searched for Margaret after the storm.",
+          "Margaret found Adam at the doorway."
+        ],
+        [
+          "Adam disappeared before dawn."
+        ]
+      ]
+    }
+  },
+  {
+    "framework": "stanza_en",
+    "sample_id": "tym_sample",
+    "status": "available",
+    "runtime_ms": 9923.99,
+    "sentences": 7,
+    "tokens": 57,
+    "named_entities": 13,
+    "person_entities": 11,
+    "location_entities": 1,
+    "temporal_entities": 1,
+    "temporal_anchors": 3,
+    "events": 7,
+    "temporal_relations": 6,
+    "time_segments": 6,
+    "time_tracks": 6,
+    "notes": "Real Stanza neural pipeline: tokenization, POS, lemma, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found.",
+    "examples": {
+      "events": [
+        {
+          "text": "Adam and Johan grew up in the same house.",
+          "action": "grow",
+          "actors": [
+            "Adam",
+            "Johan"
+          ],
+          "locations": [
+            "the same house"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": null
+        },
+        {
+          "text": "Years earlier, Karl had carried Adam through the rain.",
+          "action": "have",
+          "actors": [
+            "Adam",
+            "Karl"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "Years earlier"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "BEFORE"
+        },
+        {
+          "text": "Margaret remembered her mother in Jakarta.",
+          "action": "remember",
+          "actors": [
+            "Margaret"
+          ],
+          "locations": [
+            "Jakarta"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Meanwhile, Karl traveled alone across the island.",
+          "action": "travel",
+          "actors": [
+            "Karl"
+          ],
+          "locations": [],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "SIMULTANEOUS"
+        },
+        {
+          "text": "Adam searched for Margaret after the storm.",
+          "action": "search",
+          "actors": [
+            "Adam",
+            "Margaret"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "after the storm"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "AFTER"
+        },
+        {
+          "text": "Margaret found Adam at the doorway.",
+          "action": "find",
+          "actors": [
+            "Adam",
+            "Margaret"
+          ],
+          "locations": [
+            "the doorway"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Adam disappeared before dawn.",
+          "action": "disappear",
+          "actors": [
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "before dawn"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "BEFORE"
+        }
+      ],
+      "segments": [
+        [
+          "Adam and Johan grew up in the same house."
+        ],
+        [
+          "Years earlier, Karl had carried Adam through the rain."
+        ],
+        [
+          "Margaret remembered her mother in Jakarta."
+        ],
+        [
+          "Meanwhile, Karl traveled alone across the island."
+        ],
+        [
+          "Adam searched for Margaret after the storm.",
+          "Margaret found Adam at the doorway."
+        ],
+        [
+          "Adam disappeared before dawn."
+        ]
+      ]
+    }
+  },
+  {
+    "framework": "sutime_corenlp",
+    "sample_id": "tym_sample",
+    "status": "unavailable",
+    "runtime_ms": 0,
+    "sentences": 0,
+    "tokens": 0,
+    "named_entities": 0,
+    "person_entities": 0,
+    "location_entities": 0,
+    "temporal_entities": 0,
+    "temporal_anchors": 0,
+    "events": 0,
+    "temporal_relations": 0,
+    "time_segments": 0,
+    "time_tracks": 0,
+    "notes": "Java runtime is not on PATH. Install Java and Stanford CoreNLP/SUTime jars to run this POC.",
+    "examples": {}
+  },
+  {
+    "framework": "heideltime",
+    "sample_id": "tym_sample",
+    "status": "unavailable",
+    "runtime_ms": 0,
+    "sentences": 0,
+    "tokens": 0,
+    "named_entities": 0,
+    "person_entities": 0,
+    "location_entities": 0,
+    "temporal_entities": 0,
+    "temporal_anchors": 0,
+    "events": 0,
+    "temporal_relations": 0,
+    "time_segments": 0,
+    "time_tracks": 0,
+    "notes": "Java runtime is not on PATH. Install Java and HeidelTime distribution to run this POC.",
+    "examples": {}
+  },
+  {
+    "framework": "current_tym_api_sample",
+    "sample_id": "tym_sample",
+    "status": "available_from_saved_output",
+    "runtime_ms": 0,
+    "sentences": 0,
+    "tokens": 0,
+    "named_entities": 9,
+    "person_entities": 4,
+    "location_entities": 3,
+    "temporal_entities": 6,
+    "temporal_anchors": 6,
+    "events": 7,
+    "temporal_relations": 10,
+    "time_segments": 6,
+    "time_tracks": 6,
+    "notes": "Existing .NET API output. Counts come from sample_response.json rather than rerunning the API.",
+    "examples": {
+      "events": [
+        {
+          "id": "EV1",
+          "text": "Adam and Johan grew up in the same house.",
+          "actors": [
+            "Adam",
+            "Johan"
+          ],
+          "temporal_anchor": "",
+          "location": "the same house",
+          "action": "grew",
+          "temporal_category": "Past",
+          "order": 1,
+          "span_start": 0,
+          "span_end": 41,
+          "confidence": 0,
+          "classifier": "heuristic_fallback_explicit_tense"
+        },
+        {
+          "id": "EV2",
+          "text": "Years earlier, Karl had carried Adam through the rain.",
+          "actors": [
+            "Karl",
+            "Adam"
+          ],
+          "temporal_anchor": "Years earlier",
+          "location": "",
+          "action": "had",
+          "temporal_category": "Past",
+          "order": 2,
+          "span_start": 42,
+          "span_end": 96,
+          "confidence": 0.9908,
+          "classifier": "mlnet_event_temporal_model"
+        },
+        {
+          "id": "EV3",
+          "text": "Margaret remembered her mother in Jakarta.",
+          "actors": [
+            "Margaret"
+          ],
+          "temporal_anchor": "Years earlier",
+          "location": "Jakarta",
+          "action": "remembered",
+          "temporal_category": "Past",
+          "order": 3,
+          "span_start": 97,
+          "span_end": 139,
+          "confidence": 0.9798,
+          "classifier": "mlnet_event_temporal_model"
+        },
+        {
+          "id": "EV4",
+          "text": "Meanwhile, Karl traveled alone across the island.",
+          "actors": [
+            "Karl"
+          ],
+          "temporal_anchor": "Years earlier",
+          "location": "",
+          "action": "traveled",
+          "temporal_category": "Past",
+          "order": 4,
+          "span_start": 140,
+          "span_end": 189,
+          "confidence": 0,
+          "classifier": "heuristic_fallback_explicit_tense"
+        },
+        {
+          "id": "EV5",
+          "text": "Adam searched for Margaret after the storm.",
+          "actors": [
+            "Adam",
+            "Margaret"
+          ],
+          "temporal_anchor": "after the storm",
+          "location": "",
+          "action": "searched",
+          "temporal_category": "Past",
+          "order": 5,
+          "span_start": 190,
+          "span_end": 233,
+          "confidence": 0,
+          "classifier": "heuristic_fallback_explicit_tense"
+        },
+        {
+          "id": "EV6",
+          "text": "Margaret found Adam at the doorway.",
+          "actors": [
+            "Margaret",
+            "Adam"
+          ],
+          "temporal_anchor": "after the storm",
+          "location": "the doorway",
+          "action": "found",
+          "temporal_category": "Past",
+          "order": 6,
+          "span_start": 234,
+          "span_end": 269,
+          "confidence": 0,
+          "classifier": "heuristic_fallback_explicit_tense"
+        },
+        {
+          "id": "EV7",
+          "text": "Adam disappeared before dawn.",
+          "actors": [
+            "Adam"
+          ],
+          "temporal_anchor": "before dawn",
+          "location": "",
+          "action": "disappeared",
+          "temporal_category": "Past",
+          "order": 7,
+          "span_start": 270,
+          "span_end": 299,
+          "confidence": 0.6818,
+          "classifier": "mlnet_event_temporal_model"
+        }
+      ],
+      "segments": [
+        "Adam and Johan grew up in the same house.",
+        "Years earlier, Karl had carried Adam through the rain.",
+        "Margaret remembered her mother in Jakarta.",
+        "Meanwhile, Karl traveled alone across the island.",
+        "Adam searched for Margaret after the storm. Margaret found Adam at the doorway.",
+        "Adam disappeared before dawn."
+      ]
+    }
+  },
+  {
+    "framework": "article_rules_no_llm",
+    "sample_id": "article_example",
+    "status": "available",
+    "runtime_ms": 0.31,
+    "sentences": 3,
+    "tokens": 35,
+    "named_entities": 5,
+    "person_entities": 1,
+    "location_entities": 1,
+    "temporal_entities": 3,
+    "temporal_anchors": 2,
+    "events": 4,
+    "temporal_relations": 3,
+    "time_segments": 2,
+    "time_tracks": 2,
+    "notes": "Pure rule-based approximation of the article pipeline: clause splitting, capitalized actor heuristic, temporal regexes, tense regexes.",
+    "examples": {
+      "events": [
+        {
+          "text": "This is Adam.",
+          "action": "is",
+          "actors": [
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [],
+          "temporal_category": "Present",
+          "relation_to_previous": null
+        },
+        {
+          "text": "He came to live in this house",
+          "action": "came",
+          "actors": [
+            "Adam"
+          ],
+          "locations": [
+            "live in"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "he was five years old.",
+          "action": "was",
+          "actors": [
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Now he is sixteen and he has no memory of his life before he came here.",
+          "action": "is",
+          "actors": [
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "Now",
+            "before he"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "BEFORE"
+        }
+      ],
+      "segments": [
+        [
+          "This is Adam."
+        ],
+        [
+          "He came to live in this house",
+          "he was five years old.",
+          "Now he is sixteen and he has no memory of his life before he came here."
+        ]
+      ]
+    }
+  },
+  {
+    "framework": "spacy_en_core_web_sm",
+    "sample_id": "article_example",
+    "status": "available",
+    "runtime_ms": 798.7,
+    "sentences": 4,
+    "tokens": 35,
+    "named_entities": 3,
+    "person_entities": 1,
+    "location_entities": 0,
+    "temporal_entities": 2,
+    "temporal_anchors": 3,
+    "events": 4,
+    "temporal_relations": 3,
+    "time_segments": 4,
+    "time_tracks": 3,
+    "notes": "Real spaCy model: tokenization, sentence segmentation, POS, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found.",
+    "examples": {
+      "events": [
+        {
+          "text": "This is Adam.",
+          "action": "be",
+          "actors": [
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [],
+          "temporal_category": "Present",
+          "relation_to_previous": null
+        },
+        {
+          "text": "He came to live in this house when he was five years old.",
+          "action": "come",
+          "actors": [],
+          "locations": [
+            "live in"
+          ],
+          "temporal_anchors": [
+            "five years old"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Now he is sixteen",
+          "action": "be",
+          "actors": [],
+          "locations": [],
+          "temporal_anchors": [
+            "sixteen"
+          ],
+          "temporal_category": "Present",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "and he has no memory of his life before he came here.",
+          "action": "have",
+          "actors": [],
+          "locations": [],
+          "temporal_anchors": [
+            "before he"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "BEFORE"
+        }
+      ],
+      "segments": [
+        [
+          "This is Adam."
+        ],
+        [
+          "He came to live in this house when he was five years old."
+        ],
+        [
+          "Now he is sixteen"
+        ],
+        [
+          "and he has no memory of his life before he came here."
+        ]
+      ]
+    }
+  },
+  {
+    "framework": "stanza_en",
+    "sample_id": "article_example",
+    "status": "available",
+    "runtime_ms": 6194.35,
+    "sentences": 3,
+    "tokens": 35,
+    "named_entities": 3,
+    "person_entities": 1,
+    "location_entities": 0,
+    "temporal_entities": 2,
+    "temporal_anchors": 2,
+    "events": 3,
+    "temporal_relations": 2,
+    "time_segments": 2,
+    "time_tracks": 2,
+    "notes": "Real Stanza neural pipeline: tokenization, POS, lemma, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found.",
+    "examples": {
+      "events": [
+        {
+          "text": "This is Adam.",
+          "action": "be",
+          "actors": [
+            "Adam"
+          ],
+          "locations": [],
+          "temporal_anchors": [],
+          "temporal_category": "Present",
+          "relation_to_previous": null
+        },
+        {
+          "text": "He came to live in this house when he was five years old.",
+          "action": "come",
+          "actors": [],
+          "locations": [
+            "live in"
+          ],
+          "temporal_anchors": [
+            "five years old"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Now he is sixteen and he has no memory of his life before he came here.",
+          "action": "be",
+          "actors": [],
+          "locations": [],
+          "temporal_anchors": [
+            "sixteen"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "BEFORE"
+        }
+      ],
+      "segments": [
+        [
+          "This is Adam."
+        ],
+        [
+          "He came to live in this house when he was five years old.",
+          "Now he is sixteen and he has no memory of his life before he came here."
+        ]
+      ]
+    }
+  },
+  {
+    "framework": "sutime_corenlp",
+    "sample_id": "article_example",
+    "status": "unavailable",
+    "runtime_ms": 0,
+    "sentences": 0,
+    "tokens": 0,
+    "named_entities": 0,
+    "person_entities": 0,
+    "location_entities": 0,
+    "temporal_entities": 0,
+    "temporal_anchors": 0,
+    "events": 0,
+    "temporal_relations": 0,
+    "time_segments": 0,
+    "time_tracks": 0,
+    "notes": "Java runtime is not on PATH. Install Java and Stanford CoreNLP/SUTime jars to run this POC.",
+    "examples": {}
+  },
+  {
+    "framework": "heideltime",
+    "sample_id": "article_example",
+    "status": "unavailable",
+    "runtime_ms": 0,
+    "sentences": 0,
+    "tokens": 0,
+    "named_entities": 0,
+    "person_entities": 0,
+    "location_entities": 0,
+    "temporal_entities": 0,
+    "temporal_anchors": 0,
+    "events": 0,
+    "temporal_relations": 0,
+    "time_segments": 0,
+    "time_tracks": 0,
+    "notes": "Java runtime is not on PATH. Install Java and HeidelTime distribution to run this POC.",
+    "examples": {}
+  },
+  {
+    "framework": "current_tym_api_sample",
+    "sample_id": "article_example",
+    "status": "not_applicable",
+    "runtime_ms": 0,
+    "sentences": 0,
+    "tokens": 0,
+    "named_entities": 0,
+    "person_entities": 0,
+    "location_entities": 0,
+    "temporal_entities": 0,
+    "temporal_anchors": 0,
+    "events": 0,
+    "temporal_relations": 0,
+    "time_segments": 0,
+    "time_tracks": 0,
+    "notes": "Current saved API sample only corresponds to tym_sample.",
+    "examples": {}
+  },
+  {
+    "framework": "article_rules_no_llm",
+    "sample_id": "relation_mix",
+    "status": "available",
+    "runtime_ms": 0.36,
+    "sentences": 4,
+    "tokens": 43,
+    "named_entities": 14,
+    "person_entities": 6,
+    "location_entities": 4,
+    "temporal_entities": 4,
+    "temporal_anchors": 3,
+    "events": 5,
+    "temporal_relations": 4,
+    "time_segments": 4,
+    "time_tracks": 4,
+    "notes": "Pure rule-based approximation of the article pipeline: clause splitting, capitalized actor heuristic, temporal regexes, tense regexes.",
+    "examples": {
+      "events": [
+        {
+          "text": "John played tennis with Bill.",
+          "action": "played",
+          "actors": [
+            "John",
+            "Bill"
+          ],
+          "locations": [],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": null
+        },
+        {
+          "text": "He won by three to two.",
+          "action": "won",
+          "actors": [
+            "John",
+            "Bill"
+          ],
+          "locations": [
+            "two"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "While Sarah waited in the kitchen",
+          "action": "waited",
+          "actors": [
+            "While Sarah"
+          ],
+          "locations": [
+            "the kitchen"
+          ],
+          "temporal_anchors": [
+            "While"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "SIMULTANEOUS"
+        },
+        {
+          "text": "Mark called from London. Tomorrow",
+          "action": "called",
+          "actors": [
+            "Mark"
+          ],
+          "locations": [
+            "London"
+          ],
+          "temporal_anchors": [
+            "While"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "Sarah will meet Mark at the station before they leave for Paris.",
+          "action": "will",
+          "actors": [
+            "Sarah",
+            "Mark",
+            "Paris"
+          ],
+          "locations": [
+            "the station before"
+          ],
+          "temporal_anchors": [
+            "before they"
+          ],
+          "temporal_category": "Future",
+          "relation_to_previous": "BEFORE"
+        }
+      ],
+      "segments": [
+        [
+          "John played tennis with Bill.",
+          "He won by three to two."
+        ],
+        [
+          "While Sarah waited in the kitchen"
+        ],
+        [
+          "Mark called from London. Tomorrow"
+        ],
+        [
+          "Sarah will meet Mark at the station before they leave for Paris."
+        ]
+      ]
+    }
+  },
+  {
+    "framework": "spacy_en_core_web_sm",
+    "sample_id": "relation_mix",
+    "status": "available",
+    "runtime_ms": 606.24,
+    "sentences": 4,
+    "tokens": 43,
+    "named_entities": 11,
+    "person_entities": 6,
+    "location_entities": 2,
+    "temporal_entities": 2,
+    "temporal_anchors": 3,
+    "events": 4,
+    "temporal_relations": 3,
+    "time_segments": 4,
+    "time_tracks": 4,
+    "notes": "Real spaCy model: tokenization, sentence segmentation, POS, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found.",
+    "examples": {
+      "events": [
+        {
+          "text": "Last week, John played tennis with Bill.",
+          "action": "play",
+          "actors": [
+            "John",
+            "Bill"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "Last week"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": null
+        },
+        {
+          "text": "He won by three to two.",
+          "action": "win",
+          "actors": [],
+          "locations": [
+            "two"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "While Sarah waited in the kitchen, Mark called from London.",
+          "action": "wait",
+          "actors": [
+            "Sarah",
+            "Mark"
+          ],
+          "locations": [
+            "London"
+          ],
+          "temporal_anchors": [
+            "While"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "SIMULTANEOUS"
+        },
+        {
+          "text": "Tomorrow, Sarah will meet Mark at the station before they leave for Paris.",
+          "action": "will",
+          "actors": [
+            "Sarah",
+            "Mark"
+          ],
+          "locations": [
+            "Paris"
+          ],
+          "temporal_anchors": [
+            "Tomorrow"
+          ],
+          "temporal_category": "Future",
+          "relation_to_previous": "BEFORE"
+        }
+      ],
+      "segments": [
+        [
+          "Last week, John played tennis with Bill."
+        ],
+        [
+          "He won by three to two."
+        ],
+        [
+          "While Sarah waited in the kitchen, Mark called from London."
+        ],
+        [
+          "Tomorrow, Sarah will meet Mark at the station before they leave for Paris."
+        ]
+      ]
+    }
+  },
+  {
+    "framework": "stanza_en",
+    "sample_id": "relation_mix",
+    "status": "available",
+    "runtime_ms": 6696.01,
+    "sentences": 4,
+    "tokens": 43,
+    "named_entities": 12,
+    "person_entities": 6,
+    "location_entities": 2,
+    "temporal_entities": 2,
+    "temporal_anchors": 3,
+    "events": 4,
+    "temporal_relations": 3,
+    "time_segments": 4,
+    "time_tracks": 4,
+    "notes": "Real Stanza neural pipeline: tokenization, POS, lemma, dependency parse, NER. Temporal anchors fall back to regex if no DATE/TIME entity is found.",
+    "examples": {
+      "events": [
+        {
+          "text": "Last week, John played tennis with Bill.",
+          "action": "play",
+          "actors": [
+            "John",
+            "Bill"
+          ],
+          "locations": [],
+          "temporal_anchors": [
+            "Last week"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": null
+        },
+        {
+          "text": "He won by three to two.",
+          "action": "win",
+          "actors": [],
+          "locations": [
+            "two"
+          ],
+          "temporal_anchors": [],
+          "temporal_category": "Past",
+          "relation_to_previous": "IMMEDIATELY_BEFORE"
+        },
+        {
+          "text": "While Sarah waited in the kitchen, Mark called from London.",
+          "action": "wait",
+          "actors": [
+            "Sarah",
+            "Mark"
+          ],
+          "locations": [
+            "London"
+          ],
+          "temporal_anchors": [
+            "While"
+          ],
+          "temporal_category": "Past",
+          "relation_to_previous": "SIMULTANEOUS"
+        },
+        {
+          "text": "Tomorrow, Sarah will meet Mark at the station before they leave for Paris.",
+          "action": "will",
+          "actors": [
+            "Sarah",
+            "Mark"
+          ],
+          "locations": [
+            "Paris"
+          ],
+          "temporal_anchors": [
+            "Tomorrow"
+          ],
+          "temporal_category": "Future",
+          "relation_to_previous": "BEFORE"
+        }
+      ],
+      "segments": [
+        [
+          "Last week, John played tennis with Bill."
+        ],
+        [
+          "He won by three to two."
+        ],
+        [
+          "While Sarah waited in the kitchen, Mark called from London."
+        ],
+        [
+          "Tomorrow, Sarah will meet Mark at the station before they leave for Paris."
+        ]
+      ]
+    }
+  },
+  {
+    "framework": "sutime_corenlp",
+    "sample_id": "relation_mix",
+    "status": "unavailable",
+    "runtime_ms": 0,
+    "sentences": 0,
+    "tokens": 0,
+    "named_entities": 0,
+    "person_entities": 0,
+    "location_entities": 0,
+    "temporal_entities": 0,
+    "temporal_anchors": 0,
+    "events": 0,
+    "temporal_relations": 0,
+    "time_segments": 0,
+    "time_tracks": 0,
+    "notes": "Java runtime is not on PATH. Install Java and Stanford CoreNLP/SUTime jars to run this POC.",
+    "examples": {}
+  },
+  {
+    "framework": "heideltime",
+    "sample_id": "relation_mix",
+    "status": "unavailable",
+    "runtime_ms": 0,
+    "sentences": 0,
+    "tokens": 0,
+    "named_entities": 0,
+    "person_entities": 0,
+    "location_entities": 0,
+    "temporal_entities": 0,
+    "temporal_anchors": 0,
+    "events": 0,
+    "temporal_relations": 0,
+    "time_segments": 0,
+    "time_tracks": 0,
+    "notes": "Java runtime is not on PATH. Install Java and HeidelTime distribution to run this POC.",
+    "examples": {}
+  },
+  {
+    "framework": "current_tym_api_sample",
+    "sample_id": "relation_mix",
+    "status": "not_applicable",
+    "runtime_ms": 0,
+    "sentences": 0,
+    "tokens": 0,
+    "named_entities": 0,
+    "person_entities": 0,
+    "location_entities": 0,
+    "temporal_entities": 0,
+    "temporal_anchors": 0,
+    "events": 0,
+    "temporal_relations": 0,
+    "time_segments": 0,
+    "time_tracks": 0,
+    "notes": "Current saved API sample only corresponds to tym_sample.",
+    "examples": {}
+  }
+]

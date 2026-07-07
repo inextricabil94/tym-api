@@ -1,569 +1,1102 @@
 {
-    "id":  "90d47d8d421cd0b6",
-    "model_version":  "tym-dotnet-paper-guided-mlnet-v0.3",
-    "diagram":  {
-                    "actors":  [
-                                   {
-                                       "id":  "A0",
-                                       "name":  "Narrator"
-                                   },
-                                   {
-                                       "id":  "A1",
-                                       "name":  "Adam"
-                                   },
-                                   {
-                                       "id":  "A2",
-                                       "name":  "Johan"
-                                   },
-                                   {
-                                       "id":  "A3",
-                                       "name":  "Karl"
-                                   },
-                                   {
-                                       "id":  "A4",
-                                       "name":  "Margaret"
-                                   }
-                               ],
-                    "locations":  [
-                                      {
-                                          "id":  "L1",
-                                          "name":  "unknown",
-                                          "parent_id":  ""
-                                      },
-                                      {
-                                          "id":  "L2",
-                                          "name":  "the same house",
-                                          "parent_id":  ""
-                                      },
-                                      {
-                                          "id":  "L3",
-                                          "name":  "Jakarta",
-                                          "parent_id":  ""
-                                      },
-                                      {
-                                          "id":  "L4",
-                                          "name":  "the doorway",
-                                          "parent_id":  ""
-                                      }
-                                  ],
-                    "events":  [
-                                   {
-                                       "id":  "EV1",
-                                       "text":  "Adam and Johan grew up in the same house.",
-                                       "actors":  [
-                                                      "Adam",
-                                                      "Johan"
-                                                  ],
-                                       "temporal_anchor":  "",
-                                       "location":  "the same house",
-                                       "action":  "grew",
-                                       "temporal_category":  "Past",
-                                       "order":  1,
-                                       "span_start":  0,
-                                       "span_end":  41,
-                                       "confidence":  0,
-                                       "classifier":  "heuristic_fallback_explicit_tense"
-                                   },
-                                   {
-                                       "id":  "EV2",
-                                       "text":  "Years earlier, Karl had carried Adam through the rain.",
-                                       "actors":  [
-                                                      "Karl",
-                                                      "Adam"
-                                                  ],
-                                       "temporal_anchor":  "Years earlier",
-                                       "location":  "",
-                                       "action":  "had",
-                                       "temporal_category":  "Past",
-                                       "order":  2,
-                                       "span_start":  42,
-                                       "span_end":  96,
-                                       "confidence":  0.9908,
-                                       "classifier":  "mlnet_event_temporal_model"
-                                   },
-                                   {
-                                       "id":  "EV3",
-                                       "text":  "Margaret remembered her mother in Jakarta.",
-                                       "actors":  [
-                                                      "Margaret"
-                                                  ],
-                                       "temporal_anchor":  "Years earlier",
-                                       "location":  "Jakarta",
-                                       "action":  "remembered",
-                                       "temporal_category":  "Past",
-                                       "order":  3,
-                                       "span_start":  97,
-                                       "span_end":  139,
-                                       "confidence":  0.9798,
-                                       "classifier":  "mlnet_event_temporal_model"
-                                   },
-                                   {
-                                       "id":  "EV4",
-                                       "text":  "Meanwhile, Karl traveled alone across the island.",
-                                       "actors":  [
-                                                      "Karl"
-                                                  ],
-                                       "temporal_anchor":  "Years earlier",
-                                       "location":  "",
-                                       "action":  "traveled",
-                                       "temporal_category":  "Past",
-                                       "order":  4,
-                                       "span_start":  140,
-                                       "span_end":  189,
-                                       "confidence":  0,
-                                       "classifier":  "heuristic_fallback_explicit_tense"
-                                   },
-                                   {
-                                       "id":  "EV5",
-                                       "text":  "Adam searched for Margaret after the storm.",
-                                       "actors":  [
-                                                      "Adam",
-                                                      "Margaret"
-                                                  ],
-                                       "temporal_anchor":  "after the storm",
-                                       "location":  "",
-                                       "action":  "searched",
-                                       "temporal_category":  "Past",
-                                       "order":  5,
-                                       "span_start":  190,
-                                       "span_end":  233,
-                                       "confidence":  0,
-                                       "classifier":  "heuristic_fallback_explicit_tense"
-                                   },
-                                   {
-                                       "id":  "EV6",
-                                       "text":  "Margaret found Adam at the doorway.",
-                                       "actors":  [
-                                                      "Margaret",
-                                                      "Adam"
-                                                  ],
-                                       "temporal_anchor":  "after the storm",
-                                       "location":  "the doorway",
-                                       "action":  "found",
-                                       "temporal_category":  "Past",
-                                       "order":  6,
-                                       "span_start":  234,
-                                       "span_end":  269,
-                                       "confidence":  0,
-                                       "classifier":  "heuristic_fallback_explicit_tense"
-                                   },
-                                   {
-                                       "id":  "EV7",
-                                       "text":  "Adam disappeared before dawn.",
-                                       "actors":  [
-                                                      "Adam"
-                                                  ],
-                                       "temporal_anchor":  "before dawn",
-                                       "location":  "",
-                                       "action":  "disappeared",
-                                       "temporal_category":  "Past",
-                                       "order":  7,
-                                       "span_start":  270,
-                                       "span_end":  299,
-                                       "confidence":  0.6818,
-                                       "classifier":  "mlnet_event_temporal_model"
-                                   }
-                               ],
-                    "tracks":  [
-                                   {
-                                       "id":  "TT1",
-                                       "name":  "Adam\u0026Johan",
-                                       "left_endpoint":  "START",
-                                       "right_endpoint":  "STOP"
-                                   },
-                                   {
-                                       "id":  "TT2",
-                                       "name":  "Karl\u0026Adam",
-                                       "left_endpoint":  "START",
-                                       "right_endpoint":  "STOP"
-                                   },
-                                   {
-                                       "id":  "TT3",
-                                       "name":  "Margaret",
-                                       "left_endpoint":  "START",
-                                       "right_endpoint":  "EP1"
-                                   },
-                                   {
-                                       "id":  "TT4",
-                                       "name":  "Karl",
-                                       "left_endpoint":  "EP1",
-                                       "right_endpoint":  "EP2"
-                                   },
-                                   {
-                                       "id":  "TT5",
-                                       "name":  "Adam\u0026Margaret",
-                                       "left_endpoint":  "EP2",
-                                       "right_endpoint":  "EP3"
-                                   },
-                                   {
-                                       "id":  "TT6",
-                                       "name":  "Adam",
-                                       "left_endpoint":  "EP3",
-                                       "right_endpoint":  "STOP"
-                                   }
-                               ],
-                    "segments":  [
-                                     {
-                                         "id":  "TS1",
-                                         "text":  "Adam and Johan grew up in the same house.",
-                                         "track_id":  "TT1",
-                                         "type":  "NAR",
-                                         "perspective":  "narrator",
-                                         "text_order":  1,
-                                         "story_order":  1,
-                                         "entities":  [
-                                                          "Adam",
-                                                          "Johan"
-                                                      ],
-                                         "actors":  [
-                                                        "Adam",
-                                                        "Johan"
-                                                    ],
-                                         "location_id":  "L2",
-                                         "temporal_anchor":  "",
-                                         "temporal_category":  "Past",
-                                         "span_start":  0,
-                                         "span_end":  41,
-                                         "event_ids":  [
-                                                           "EV1"
-                                                       ],
-                                         "confidence":  0.987,
-                                         "classifier":  "mlnet_seed_model"
-                                     },
-                                     {
-                                         "id":  "TS2",
-                                         "text":  "Years earlier, Karl had carried Adam through the rain.",
-                                         "track_id":  "TT2",
-                                         "type":  "REM",
-                                         "perspective":  "Karl",
-                                         "text_order":  2,
-                                         "story_order":  0.65,
-                                         "entities":  [
-                                                          "Karl",
-                                                          "Adam"
-                                                      ],
-                                         "actors":  [
-                                                        "Karl",
-                                                        "Adam"
-                                                    ],
-                                         "location_id":  "L1",
-                                         "temporal_anchor":  "Years earlier",
-                                         "temporal_category":  "Past",
-                                         "span_start":  42,
-                                         "span_end":  96,
-                                         "event_ids":  [
-                                                           "EV2"
-                                                       ],
-                                         "confidence":  0.9829,
-                                         "classifier":  "mlnet_seed_model"
-                                     },
-                                     {
-                                         "id":  "TS3",
-                                         "text":  "Margaret remembered her mother in Jakarta.",
-                                         "track_id":  "TT3",
-                                         "type":  "REM",
-                                         "perspective":  "Margaret",
-                                         "text_order":  3,
-                                         "story_order":  0.65,
-                                         "entities":  [
-                                                          "Margaret"
-                                                      ],
-                                         "actors":  [
-                                                        "Margaret"
-                                                    ],
-                                         "location_id":  "L3",
-                                         "temporal_anchor":  "Years earlier",
-                                         "temporal_category":  "Past",
-                                         "span_start":  97,
-                                         "span_end":  139,
-                                         "event_ids":  [
-                                                           "EV3"
-                                                       ],
-                                         "confidence":  0.9603,
-                                         "classifier":  "mlnet_seed_model"
-                                     },
-                                     {
-                                         "id":  "TS4",
-                                         "text":  "Meanwhile, Karl traveled alone across the island.",
-                                         "track_id":  "TT4",
-                                         "type":  "NAR",
-                                         "perspective":  "narrator",
-                                         "text_order":  4,
-                                         "story_order":  1,
-                                         "entities":  [
-                                                          "Karl"
-                                                      ],
-                                         "actors":  [
-                                                        "Karl"
-                                                    ],
-                                         "location_id":  "L1",
-                                         "temporal_anchor":  "Years earlier",
-                                         "temporal_category":  "Past",
-                                         "span_start":  140,
-                                         "span_end":  189,
-                                         "event_ids":  [
-                                                           "EV4"
-                                                       ],
-                                         "confidence":  0.9883,
-                                         "classifier":  "mlnet_seed_model"
-                                     },
-                                     {
-                                         "id":  "TS5",
-                                         "text":  "Adam searched for Margaret after the storm. Margaret found Adam at the doorway.",
-                                         "track_id":  "TT5",
-                                         "type":  "NAR",
-                                         "perspective":  "narrator",
-                                         "text_order":  5,
-                                         "story_order":  1,
-                                         "entities":  [
-                                                          "Adam",
-                                                          "Margaret"
-                                                      ],
-                                         "actors":  [
-                                                        "Adam",
-                                                        "Margaret"
-                                                    ],
-                                         "location_id":  "L4",
-                                         "temporal_anchor":  "after the storm",
-                                         "temporal_category":  "Past",
-                                         "span_start":  190,
-                                         "span_end":  269,
-                                         "event_ids":  [
-                                                           "EV5",
-                                                           "EV6"
-                                                       ],
-                                         "confidence":  0.9943,
-                                         "classifier":  "mlnet_seed_model"
-                                     },
-                                     {
-                                         "id":  "TS6",
-                                         "text":  "Adam disappeared before dawn.",
-                                         "track_id":  "TT6",
-                                         "type":  "NAR",
-                                         "perspective":  "narrator",
-                                         "text_order":  6,
-                                         "story_order":  1,
-                                         "entities":  [
-                                                          "Adam"
-                                                      ],
-                                         "actors":  [
-                                                        "Adam"
-                                                    ],
-                                         "location_id":  "L1",
-                                         "temporal_anchor":  "before dawn",
-                                         "temporal_category":  "Past",
-                                         "span_start":  270,
-                                         "span_end":  299,
-                                         "event_ids":  [
-                                                           "EV7"
-                                                       ],
-                                         "confidence":  0.9889,
-                                         "classifier":  "mlnet_seed_model"
-                                     }
-                                 ],
-                    "endpoints":  [
-                                      {
-                                          "id":  "EP1",
-                                          "type":  "SPLIT",
-                                          "name":  "Karl split",
-                                          "track_ids":  [
-                                                            "TT3",
-                                                            "TT4"
-                                                        ],
-                                          "segment_id":  "TS4"
-                                      },
-                                      {
-                                          "id":  "EP2",
-                                          "type":  "JOIN",
-                                          "name":  "Karl+Adam\u0026Margaret",
-                                          "track_ids":  [
-                                                            "TT4",
-                                                            "TT5"
-                                                        ],
-                                          "segment_id":  "TS5"
-                                      },
-                                      {
-                                          "id":  "EP3",
-                                          "type":  "SPLIT",
-                                          "name":  "Adam split",
-                                          "track_ids":  [
-                                                            "TT5",
-                                                            "TT6"
-                                                        ],
-                                          "segment_id":  "TS6"
-                                      }
-                                  ],
-                    "relations":  [
-                                      {
-                                          "from_id":  "TS1",
-                                          "rel":  "IMMEDIATELY_BEFORE",
-                                          "to_id":  "TS2"
-                                      },
-                                      {
-                                          "from_id":  "TT1",
-                                          "rel":  "BEFORE",
-                                          "to_id":  "TT2"
-                                      },
-                                      {
-                                          "from_id":  "TS2",
-                                          "rel":  "IMMEDIATELY_BEFORE",
-                                          "to_id":  "TS3"
-                                      },
-                                      {
-                                          "from_id":  "TT2",
-                                          "rel":  "BEFORE",
-                                          "to_id":  "TT3"
-                                      },
-                                      {
-                                          "from_id":  "TS3",
-                                          "rel":  "IMMEDIATELY_BEFORE",
-                                          "to_id":  "TS4"
-                                      },
-                                      {
-                                          "from_id":  "TT3",
-                                          "rel":  "SIMULTANEOUS",
-                                          "to_id":  "TT4"
-                                      },
-                                      {
-                                          "from_id":  "TS4",
-                                          "rel":  "IMMEDIATELY_BEFORE",
-                                          "to_id":  "TS5"
-                                      },
-                                      {
-                                          "from_id":  "TT4",
-                                          "rel":  "BEFORE",
-                                          "to_id":  "TT5"
-                                      },
-                                      {
-                                          "from_id":  "TS5",
-                                          "rel":  "IMMEDIATELY_BEFORE",
-                                          "to_id":  "TS6"
-                                      },
-                                      {
-                                          "from_id":  "TT5",
-                                          "rel":  "BEFORE",
-                                          "to_id":  "TT6"
-                                      }
-                                  ],
-                    "boundaries":  [
-                                       {
-                                           "id":  "B1",
-                                           "type":  "START",
-                                           "to_segment_id":  "TS1",
-                                           "track_ids":  [
-                                                             "TT1"
-                                                         ],
-                                           "reason":  "First TS in text order."
-                                       },
-                                       {
-                                           "id":  "B2",
-                                           "type":  "RUPTURE",
-                                           "from_segment_id":  "TS1",
-                                           "to_segment_id":  "TS2",
-                                           "track_ids":  [
-                                                             "TT1",
-                                                             "TT2"
-                                                         ],
-                                           "reason":  "Adjacent text segments belong to different time tracks."
-                                       },
-                                       {
-                                           "id":  "B3",
-                                           "type":  "RUPTURE",
-                                           "from_segment_id":  "TS2",
-                                           "to_segment_id":  "TS3",
-                                           "track_ids":  [
-                                                             "TT2",
-                                                             "TT3"
-                                                         ],
-                                           "reason":  "Adjacent text segments belong to different time tracks."
-                                       },
-                                       {
-                                           "id":  "B4",
-                                           "type":  "RUPTURE",
-                                           "from_segment_id":  "TS3",
-                                           "to_segment_id":  "TS4",
-                                           "track_ids":  [
-                                                             "TT3",
-                                                             "TT4"
-                                                         ],
-                                           "reason":  "Adjacent text segments belong to different time tracks."
-                                       },
-                                       {
-                                           "id":  "B5",
-                                           "type":  "SPLIT",
-                                           "from_segment_id":  "TS3",
-                                           "to_segment_id":  "TS4",
-                                           "track_ids":  [
-                                                             "TT3",
-                                                             "TT4"
-                                                         ],
-                                           "reason":  "Text indicates separation, disappearance, or an actor continuing alone."
-                                       },
-                                       {
-                                           "id":  "B6",
-                                           "type":  "RUPTURE",
-                                           "from_segment_id":  "TS4",
-                                           "to_segment_id":  "TS5",
-                                           "track_ids":  [
-                                                             "TT4",
-                                                             "TT5"
-                                                         ],
-                                           "reason":  "Adjacent text segments belong to different time tracks."
-                                       },
-                                       {
-                                           "id":  "B7",
-                                           "type":  "JOIN",
-                                           "from_segment_id":  "TS4",
-                                           "to_segment_id":  "TS5",
-                                           "track_ids":  [
-                                                             "TT4",
-                                                             "TT5"
-                                                         ],
-                                           "reason":  "Text indicates that separate developments meet and continue together."
-                                       },
-                                       {
-                                           "id":  "B8",
-                                           "type":  "RUPTURE",
-                                           "from_segment_id":  "TS5",
-                                           "to_segment_id":  "TS6",
-                                           "track_ids":  [
-                                                             "TT5",
-                                                             "TT6"
-                                                         ],
-                                           "reason":  "Adjacent text segments belong to different time tracks."
-                                       },
-                                       {
-                                           "id":  "B9",
-                                           "type":  "SPLIT",
-                                           "from_segment_id":  "TS5",
-                                           "to_segment_id":  "TS6",
-                                           "track_ids":  [
-                                                             "TT5",
-                                                             "TT6"
-                                                         ],
-                                           "reason":  "Text indicates separation, disappearance, or an actor continuing alone."
-                                       },
-                                       {
-                                           "id":  "B10",
-                                           "type":  "STOP",
-                                           "from_segment_id":  "TS6",
-                                           "track_ids":  [
-                                                             "TT6"
-                                                         ],
-                                           "reason":  "Last TS in text order."
-                                       }
-                                   ]
-                },
-    "render":  {
-                   "format":  "svg",
-                   "width":  1200,
-                   "height":  788,
-                   "svg":  "\u003csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"788\" viewBox=\"0 0 1200 788\" role=\"img\" aria-label=\"TYM time-yard diagram\"\u003e\u003crect width=\"100%\" height=\"100%\" fill=\"#ffffff\"/\u003e\u003cstyle\u003etext{dominant-baseline:auto}\u003c/style\u003e\u003ctext x=\"600.0\" y=\"38.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"16\" font-weight=\"700\" fill=\"#111827\"\u003ea) Text-order time segments\u003c/text\u003e\u003cline x1=\"105.0\" y1=\"76.0\" x2=\"1120.0\" y2=\"76.0\" stroke=\"#374151\" stroke-width=\"2\" stroke-linecap=\"round\"/\u003e\u003cline x1=\"105.0\" y1=\"64.0\" x2=\"105.0\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"113.0\" y=\"54.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\"\u003eTS1\u003c/text\u003e\u003cline x1=\"274.2\" y1=\"64.0\" x2=\"274.2\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"282.2\" y=\"110.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\"\u003eTS2\u003c/text\u003e\u003cline x1=\"443.3\" y1=\"64.0\" x2=\"443.3\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"451.3\" y=\"54.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\"\u003eTS3\u003c/text\u003e\u003cline x1=\"612.5\" y1=\"64.0\" x2=\"612.5\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"620.5\" y=\"110.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\"\u003eTS4\u003c/text\u003e\u003cline x1=\"781.7\" y1=\"64.0\" x2=\"781.7\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"789.7\" y=\"54.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\"\u003eTS5\u003c/text\u003e\u003cline x1=\"950.8\" y1=\"64.0\" x2=\"950.8\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"958.8\" y=\"110.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\"\u003eTS6\u003c/text\u003e\u003cline x1=\"1120.0\" y1=\"64.0\" x2=\"1120.0\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"600.0\" y=\"158.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"16\" font-weight=\"700\" fill=\"#111827\"\u003eb) TYM time yard\u003c/text\u003e\u003ctext x=\"18.0\" y=\"205.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\"\u003eTT1: Adam\u0026amp;Johan\u003c/text\u003e\u003cpolygon points=\"57.0,188.0 57.0,212.0 79.0,200.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cpolygon points=\"298.0,188.0 298.0,212.0 276.0,200.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cline x1=\"105.0\" y1=\"200.0\" x2=\"250.0\" y2=\"200.0\" stroke=\"#111827\" stroke-width=\"5\" stroke-linecap=\"round\"/\u003e\u003crect x=\"92.0\" y=\"188.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/\u003e\u003ctext x=\"105.0\" y=\"204.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\"\u003eTS1\u003c/text\u003e\u003cline x1=\"250.0\" y1=\"187.0\" x2=\"250.0\" y2=\"213.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"177.5\" y=\"175.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\"\u003eTS1: Adam and Johan grew up in the same house.\u003c/text\u003e\u003ctext x=\"18.0\" y=\"291.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\"\u003eTT2: Karl\u0026amp;Adam\u003c/text\u003e\u003cpolygon points=\"57.0,274.0 57.0,298.0 79.0,286.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cpolygon points=\"298.0,274.0 298.0,298.0 276.0,286.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cline x1=\"105.0\" y1=\"286.0\" x2=\"250.0\" y2=\"286.0\" stroke=\"#111827\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-dasharray=\"7 7\"/\u003e\u003crect x=\"92.0\" y=\"274.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/\u003e\u003ctext x=\"105.0\" y=\"290.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\"\u003eTS2\u003c/text\u003e\u003cline x1=\"250.0\" y1=\"273.0\" x2=\"250.0\" y2=\"299.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"177.5\" y=\"261.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\"\u003eTS2: Years earlier, Karl had carried Adam throug...\u003c/text\u003e\u003ctext x=\"177.5\" y=\"277.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\"\u003eREM\u003c/text\u003e\u003ctext x=\"18.0\" y=\"377.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\"\u003eTT3: Margaret\u003c/text\u003e\u003cpolygon points=\"57.0,360.0 57.0,384.0 79.0,372.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cpolygon points=\"298.0,360.0 298.0,384.0 276.0,372.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cline x1=\"105.0\" y1=\"372.0\" x2=\"250.0\" y2=\"372.0\" stroke=\"#111827\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-dasharray=\"7 7\"/\u003e\u003crect x=\"92.0\" y=\"360.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/\u003e\u003ctext x=\"105.0\" y=\"376.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\"\u003eTS3\u003c/text\u003e\u003cline x1=\"250.0\" y1=\"359.0\" x2=\"250.0\" y2=\"385.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"177.5\" y=\"347.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\"\u003eTS3: Margaret remembered her mother in Jakarta.\u003c/text\u003e\u003ctext x=\"177.5\" y=\"363.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\"\u003eREM\u003c/text\u003e\u003ctext x=\"18.0\" y=\"463.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\"\u003eTT4: Karl\u003c/text\u003e\u003cpolygon points=\"57.0,446.0 57.0,470.0 79.0,458.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cpolygon points=\"298.0,446.0 298.0,470.0 276.0,458.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cline x1=\"105.0\" y1=\"458.0\" x2=\"250.0\" y2=\"458.0\" stroke=\"#111827\" stroke-width=\"2.4\" stroke-linecap=\"round\"/\u003e\u003crect x=\"92.0\" y=\"446.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/\u003e\u003ctext x=\"105.0\" y=\"462.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\"\u003eTS4\u003c/text\u003e\u003cline x1=\"250.0\" y1=\"445.0\" x2=\"250.0\" y2=\"471.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"177.5\" y=\"433.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\"\u003eTS4: Meanwhile, Karl traveled alone across the i...\u003c/text\u003e\u003ctext x=\"18.0\" y=\"549.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\"\u003eTT5: Adam\u0026amp;Margaret\u003c/text\u003e\u003cpolygon points=\"57.0,532.0 57.0,556.0 79.0,544.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cpolygon points=\"298.0,532.0 298.0,556.0 276.0,544.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cline x1=\"105.0\" y1=\"544.0\" x2=\"250.0\" y2=\"544.0\" stroke=\"#111827\" stroke-width=\"5\" stroke-linecap=\"round\"/\u003e\u003crect x=\"92.0\" y=\"532.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/\u003e\u003ctext x=\"105.0\" y=\"548.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\"\u003eTS5\u003c/text\u003e\u003cline x1=\"250.0\" y1=\"531.0\" x2=\"250.0\" y2=\"557.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"177.5\" y=\"519.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\"\u003eTS5: Adam searched for Margaret after the storm....\u003c/text\u003e\u003ctext x=\"18.0\" y=\"635.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\"\u003eTT6: Adam\u003c/text\u003e\u003cpolygon points=\"57.0,618.0 57.0,642.0 79.0,630.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cpolygon points=\"298.0,618.0 298.0,642.0 276.0,630.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/\u003e\u003cline x1=\"105.0\" y1=\"630.0\" x2=\"250.0\" y2=\"630.0\" stroke=\"#111827\" stroke-width=\"5\" stroke-linecap=\"round\"/\u003e\u003crect x=\"92.0\" y=\"618.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/\u003e\u003ctext x=\"105.0\" y=\"634.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\"\u003eTS6\u003c/text\u003e\u003cline x1=\"250.0\" y1=\"617.0\" x2=\"250.0\" y2=\"643.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/\u003e\u003ctext x=\"177.5\" y=\"605.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\"\u003eTS6: Adam disappeared before dawn.\u003c/text\u003e\u003ctext x=\"105.0\" y=\"724.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"11\" font-weight=\"400\" fill=\"#111827\"\u003eEP1: SPLIT at TS4\u003c/text\u003e\u003ctext x=\"285.0\" y=\"724.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"11\" font-weight=\"400\" fill=\"#111827\"\u003eEP2: JOIN at TS5\u003c/text\u003e\u003ctext x=\"465.0\" y=\"724.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"11\" font-weight=\"400\" fill=\"#111827\"\u003eEP3: SPLIT at TS6\u003c/text\u003e\u003c/svg\u003e"
-               },
-    "xml":  "\u003c?xml version=\"1.0\" encoding=\"utf-8\"?\u003e\r\n\u003cTYM\u003e\r\n  \u003cTA-SECTION\u003e\r\n    \u003cTA ID=\"A0\" NAME=\"Narrator\" /\u003e\r\n    \u003cTA ID=\"A1\" NAME=\"Adam\" /\u003e\r\n    \u003cTA ID=\"A2\" NAME=\"Johan\" /\u003e\r\n    \u003cTA ID=\"A3\" NAME=\"Karl\" /\u003e\r\n    \u003cTA ID=\"A4\" NAME=\"Margaret\" /\u003e\r\n  \u003c/TA-SECTION\u003e\r\n  \u003cTL-SECTION\u003e\r\n    \u003cTL ID=\"L1\" NAME=\"unknown\" PARENTID=\"\" /\u003e\r\n    \u003cTL ID=\"L2\" NAME=\"the same house\" PARENTID=\"\" /\u003e\r\n    \u003cTL ID=\"L3\" NAME=\"Jakarta\" PARENTID=\"\" /\u003e\r\n    \u003cTL ID=\"L4\" NAME=\"the doorway\" PARENTID=\"\" /\u003e\r\n  \u003c/TL-SECTION\u003e\r\n  \u003cEVENT-SECTION\u003e\r\n    \u003cEVENT ID=\"EV1\" SPANS=\"0~41\" ACTORS=\"A1,A2\" LOCATION=\"L2\" TEMPORAL-ANCHOR=\"\" TENSE=\"Past\" ACTION=\"grew\" ORDER=\"1\" TEXT=\"Adam and Johan grew up in the same house.\" /\u003e\r\n    \u003cEVENT ID=\"EV2\" SPANS=\"42~96\" ACTORS=\"A3,A1\" LOCATION=\"L1\" TEMPORAL-ANCHOR=\"Years earlier\" TENSE=\"Past\" ACTION=\"had\" ORDER=\"2\" TEXT=\"Years earlier, Karl had carried Adam through the rain.\" /\u003e\r\n    \u003cEVENT ID=\"EV3\" SPANS=\"97~139\" ACTORS=\"A4\" LOCATION=\"L3\" TEMPORAL-ANCHOR=\"Years earlier\" TENSE=\"Past\" ACTION=\"remembered\" ORDER=\"3\" TEXT=\"Margaret remembered her mother in Jakarta.\" /\u003e\r\n    \u003cEVENT ID=\"EV4\" SPANS=\"140~189\" ACTORS=\"A3\" LOCATION=\"L1\" TEMPORAL-ANCHOR=\"Years earlier\" TENSE=\"Past\" ACTION=\"traveled\" ORDER=\"4\" TEXT=\"Meanwhile, Karl traveled alone across the island.\" /\u003e\r\n    \u003cEVENT ID=\"EV5\" SPANS=\"190~233\" ACTORS=\"A1,A4\" LOCATION=\"L1\" TEMPORAL-ANCHOR=\"after the storm\" TENSE=\"Past\" ACTION=\"searched\" ORDER=\"5\" TEXT=\"Adam searched for Margaret after the storm.\" /\u003e\r\n    \u003cEVENT ID=\"EV6\" SPANS=\"234~269\" ACTORS=\"A4,A1\" LOCATION=\"L4\" TEMPORAL-ANCHOR=\"after the storm\" TENSE=\"Past\" ACTION=\"found\" ORDER=\"6\" TEXT=\"Margaret found Adam at the doorway.\" /\u003e\r\n    \u003cEVENT ID=\"EV7\" SPANS=\"270~299\" ACTORS=\"A1\" LOCATION=\"L1\" TEMPORAL-ANCHOR=\"before dawn\" TENSE=\"Past\" ACTION=\"disappeared\" ORDER=\"7\" TEXT=\"Adam disappeared before dawn.\" /\u003e\r\n  \u003c/EVENT-SECTION\u003e\r\n  \u003cTT-SECTION\u003e\r\n    \u003cTT ID=\"TT1\" NAME=\"Adam\u0026amp;Johan\" LEFT-EP=\"START\" RIGHT-EP=\"STOP\" /\u003e\r\n    \u003cTT ID=\"TT2\" NAME=\"Karl\u0026amp;Adam\" LEFT-EP=\"START\" RIGHT-EP=\"STOP\" /\u003e\r\n    \u003cTT ID=\"TT3\" NAME=\"Margaret\" LEFT-EP=\"START\" RIGHT-EP=\"EP1\" /\u003e\r\n    \u003cTT ID=\"TT4\" NAME=\"Karl\" LEFT-EP=\"EP1\" RIGHT-EP=\"EP2\" /\u003e\r\n    \u003cTT ID=\"TT5\" NAME=\"Adam\u0026amp;Margaret\" LEFT-EP=\"EP2\" RIGHT-EP=\"EP3\" /\u003e\r\n    \u003cTT ID=\"TT6\" NAME=\"Adam\" LEFT-EP=\"EP3\" RIGHT-EP=\"STOP\" /\u003e\r\n  \u003c/TT-SECTION\u003e\r\n  \u003cTIME-SECTION\u003e\r\n    \u003cTREL ID=\"TI1\" FROM=\"TS1\" REL=\"IMMEDIATELY-BEFORE\" TO=\"TS2\" /\u003e\r\n    \u003cTIME ID=\"TI2\" FROM=\"TT1\" REL=\"BEFORE\" TO=\"TT2\" /\u003e\r\n    \u003cTREL ID=\"TI3\" FROM=\"TS2\" REL=\"IMMEDIATELY-BEFORE\" TO=\"TS3\" /\u003e\r\n    \u003cTIME ID=\"TI4\" FROM=\"TT2\" REL=\"BEFORE\" TO=\"TT3\" /\u003e\r\n    \u003cTREL ID=\"TI5\" FROM=\"TS3\" REL=\"IMMEDIATELY-BEFORE\" TO=\"TS4\" /\u003e\r\n    \u003cTIME ID=\"TI6\" FROM=\"TT3\" REL=\"SIMULTANEOUS\" TO=\"TT4\" /\u003e\r\n    \u003cTREL ID=\"TI7\" FROM=\"TS4\" REL=\"IMMEDIATELY-BEFORE\" TO=\"TS5\" /\u003e\r\n    \u003cTIME ID=\"TI8\" FROM=\"TT4\" REL=\"BEFORE\" TO=\"TT5\" /\u003e\r\n    \u003cTREL ID=\"TI9\" FROM=\"TS5\" REL=\"IMMEDIATELY-BEFORE\" TO=\"TS6\" /\u003e\r\n    \u003cTIME ID=\"TI10\" FROM=\"TT5\" REL=\"BEFORE\" TO=\"TT6\" /\u003e\r\n  \u003c/TIME-SECTION\u003e\r\n  \u003cEP-SECTION\u003e\r\n    \u003cENDPOINT ID=\"EP1\" TYPE=\"SPLIT\" NAME=\"Karl split\" TT1=\"TT3\" TT2=\"TT4\" SEGMENT=\"TS4\" /\u003e\r\n    \u003cENDPOINT ID=\"EP2\" TYPE=\"JOIN\" NAME=\"Karl+Adam\u0026amp;Margaret\" TT1=\"TT4\" TT2=\"TT5\" SEGMENT=\"TS5\" /\u003e\r\n    \u003cENDPOINT ID=\"EP3\" TYPE=\"SPLIT\" NAME=\"Adam split\" TT1=\"TT5\" TT2=\"TT6\" SEGMENT=\"TS6\" /\u003e\r\n  \u003c/EP-SECTION\u003e\r\n  \u003cPOINT-SECTION\u003e\r\n    \u003cPOINT ID=\"B1\" TYPE=\"START\" FROM-TS=\"\" TO-TS=\"TS1\" TRACKS=\"TT1\" REASON=\"First TS in text order.\" /\u003e\r\n    \u003cPOINT ID=\"B2\" TYPE=\"RUPTURE\" FROM-TS=\"TS1\" TO-TS=\"TS2\" TRACKS=\"TT1 TT2\" REASON=\"Adjacent text segments belong to different time tracks.\" /\u003e\r\n    \u003cPOINT ID=\"B3\" TYPE=\"RUPTURE\" FROM-TS=\"TS2\" TO-TS=\"TS3\" TRACKS=\"TT2 TT3\" REASON=\"Adjacent text segments belong to different time tracks.\" /\u003e\r\n    \u003cPOINT ID=\"B4\" TYPE=\"RUPTURE\" FROM-TS=\"TS3\" TO-TS=\"TS4\" TRACKS=\"TT3 TT4\" REASON=\"Adjacent text segments belong to different time tracks.\" /\u003e\r\n    \u003cPOINT ID=\"B5\" TYPE=\"SPLIT\" FROM-TS=\"TS3\" TO-TS=\"TS4\" TRACKS=\"TT3 TT4\" REASON=\"Text indicates separation, disappearance, or an actor continuing alone.\" /\u003e\r\n    \u003cPOINT ID=\"B6\" TYPE=\"RUPTURE\" FROM-TS=\"TS4\" TO-TS=\"TS5\" TRACKS=\"TT4 TT5\" REASON=\"Adjacent text segments belong to different time tracks.\" /\u003e\r\n    \u003cPOINT ID=\"B7\" TYPE=\"JOIN\" FROM-TS=\"TS4\" TO-TS=\"TS5\" TRACKS=\"TT4 TT5\" REASON=\"Text indicates that separate developments meet and continue together.\" /\u003e\r\n    \u003cPOINT ID=\"B8\" TYPE=\"RUPTURE\" FROM-TS=\"TS5\" TO-TS=\"TS6\" TRACKS=\"TT5 TT6\" REASON=\"Adjacent text segments belong to different time tracks.\" /\u003e\r\n    \u003cPOINT ID=\"B9\" TYPE=\"SPLIT\" FROM-TS=\"TS5\" TO-TS=\"TS6\" TRACKS=\"TT5 TT6\" REASON=\"Text indicates separation, disappearance, or an actor continuing alone.\" /\u003e\r\n    \u003cPOINT ID=\"B10\" TYPE=\"STOP\" FROM-TS=\"TS6\" TO-TS=\"\" TRACKS=\"TT6\" REASON=\"Last TS in text order.\" /\u003e\r\n  \u003c/POINT-SECTION\u003e\r\n  \u003cBODY\u003e\r\n    \u003cTS ID=\"TS1\" IN-TT=\"TT1\" SPANS=\"0~41\" ACTORS=\"A1,A2\" LOCATION=\"L2\" NAME=\"TS1\" TYPE=\"NAR\" TST=\"Past\" TIME=\"\" PER=\"narrator\" EVENTS=\"EV1\"\u003eAdam and Johan grew up in the same house.\u003c/TS\u003e\r\n    \u003cTS ID=\"TS2\" IN-TT=\"TT2\" SPANS=\"42~96\" ACTORS=\"A3,A1\" LOCATION=\"L1\" NAME=\"TS2\" TYPE=\"REM\" TST=\"Past\" TIME=\"Years earlier\" PER=\"Karl\" EVENTS=\"EV2\"\u003eYears earlier, Karl had carried Adam through the rain.\u003c/TS\u003e\r\n    \u003cTS ID=\"TS3\" IN-TT=\"TT3\" SPANS=\"97~139\" ACTORS=\"A4\" LOCATION=\"L3\" NAME=\"TS3\" TYPE=\"REM\" TST=\"Past\" TIME=\"Years earlier\" PER=\"Margaret\" EVENTS=\"EV3\"\u003eMargaret remembered her mother in Jakarta.\u003c/TS\u003e\r\n    \u003cTS ID=\"TS4\" IN-TT=\"TT4\" SPANS=\"140~189\" ACTORS=\"A3\" LOCATION=\"L1\" NAME=\"TS4\" TYPE=\"NAR\" TST=\"Past\" TIME=\"Years earlier\" PER=\"narrator\" EVENTS=\"EV4\"\u003eMeanwhile, Karl traveled alone across the island.\u003c/TS\u003e\r\n    \u003cTS ID=\"TS5\" IN-TT=\"TT5\" SPANS=\"190~269\" ACTORS=\"A1,A4\" LOCATION=\"L4\" NAME=\"TS5\" TYPE=\"NAR\" TST=\"Past\" TIME=\"after the storm\" PER=\"narrator\" EVENTS=\"EV5,EV6\"\u003eAdam searched for Margaret after the storm. Margaret found Adam at the doorway.\u003c/TS\u003e\r\n    \u003cTS ID=\"TS6\" IN-TT=\"TT6\" SPANS=\"270~299\" ACTORS=\"A1\" LOCATION=\"L1\" NAME=\"TS6\" TYPE=\"NAR\" TST=\"Past\" TIME=\"before dawn\" PER=\"narrator\" EVENTS=\"EV7\"\u003eAdam disappeared before dawn.\u003c/TS\u003e\r\n  \u003c/BODY\u003e\r\n\u003c/TYM\u003e\r\n",
-    "warnings":  [
-                     "Time segment types follow the paper labels: NAR, REM, SUP, GEN, and FIC.",
-                     "The XML output follows the paper notation: TT-SECTION, TIME-SECTION, EP-SECTION, and inline TS tags.",
-                     "ML.NET calculates event temporal category and TS type from bundled paper-guided seed examples; replace these with an annotated corpus for production use."
-                 ]
+  "id": "90d47d8d421cd0b6",
+  "model_version": "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.6",
+  "diagram": {
+    "actors": [
+      {
+        "id": "A0",
+        "name": "Narrator"
+      },
+      {
+        "id": "A1",
+        "name": "Adam"
+      },
+      {
+        "id": "A2",
+        "name": "Johan"
+      },
+      {
+        "id": "A3",
+        "name": "Karl"
+      },
+      {
+        "id": "A4",
+        "name": "Margaret"
+      }
+    ],
+    "locations": [
+      {
+        "id": "L1",
+        "name": "unknown",
+        "parent_id": ""
+      },
+      {
+        "id": "L2",
+        "name": "the same house",
+        "parent_id": ""
+      },
+      {
+        "id": "L3",
+        "name": "Jakarta",
+        "parent_id": ""
+      },
+      {
+        "id": "L4",
+        "name": "the doorway",
+        "parent_id": ""
+      }
+    ],
+    "entity_mentions": [
+      {
+        "id": "EM1",
+        "text": "Adam",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 0,
+        "span_end": 4,
+        "event_id": "EV1"
+      },
+      {
+        "id": "EM2",
+        "text": "Johan",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 9,
+        "span_end": 14,
+        "event_id": "EV1"
+      },
+      {
+        "id": "EM3",
+        "text": "the same house",
+        "label": "LOCATION",
+        "source": "preposition_location_pattern",
+        "span_start": 26,
+        "span_end": 40,
+        "event_id": "EV1"
+      },
+      {
+        "id": "EM4",
+        "text": "grew",
+        "label": "EVENT_ACTION",
+        "source": "verb_pattern",
+        "span_start": 15,
+        "span_end": 19,
+        "event_id": "EV1"
+      },
+      {
+        "id": "EM5",
+        "text": "Karl",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 57,
+        "span_end": 61,
+        "event_id": "EV2"
+      },
+      {
+        "id": "EM6",
+        "text": "Adam",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 74,
+        "span_end": 78,
+        "event_id": "EV2"
+      },
+      {
+        "id": "EM7",
+        "text": "Years earlier",
+        "label": "DATE_TIME",
+        "source": "temporal_expression_pattern",
+        "span_start": 42,
+        "span_end": 55,
+        "event_id": "EV2"
+      },
+      {
+        "id": "EM8",
+        "text": "had",
+        "label": "EVENT_ACTION",
+        "source": "verb_pattern",
+        "span_start": 62,
+        "span_end": 65,
+        "event_id": "EV2"
+      },
+      {
+        "id": "EM9",
+        "text": "Margaret",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 97,
+        "span_end": 105,
+        "event_id": "EV3"
+      },
+      {
+        "id": "EM10",
+        "text": "Jakarta",
+        "label": "LOCATION",
+        "source": "preposition_location_pattern",
+        "span_start": 131,
+        "span_end": 138,
+        "event_id": "EV3"
+      },
+      {
+        "id": "EM11",
+        "text": "remembered",
+        "label": "EVENT_ACTION",
+        "source": "verb_pattern",
+        "span_start": 106,
+        "span_end": 116,
+        "event_id": "EV3"
+      },
+      {
+        "id": "EM12",
+        "text": "Karl",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 151,
+        "span_end": 155,
+        "event_id": "EV4"
+      },
+      {
+        "id": "EM13",
+        "text": "traveled",
+        "label": "EVENT_ACTION",
+        "source": "verb_pattern",
+        "span_start": 156,
+        "span_end": 164,
+        "event_id": "EV4"
+      },
+      {
+        "id": "EM14",
+        "text": "Adam",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 190,
+        "span_end": 194,
+        "event_id": "EV5"
+      },
+      {
+        "id": "EM15",
+        "text": "Margaret",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 208,
+        "span_end": 216,
+        "event_id": "EV5"
+      },
+      {
+        "id": "EM16",
+        "text": "after the storm",
+        "label": "DATE_TIME",
+        "source": "temporal_expression_pattern",
+        "span_start": 217,
+        "span_end": 232,
+        "event_id": "EV5"
+      },
+      {
+        "id": "EM17",
+        "text": "searched",
+        "label": "EVENT_ACTION",
+        "source": "verb_pattern",
+        "span_start": 195,
+        "span_end": 203,
+        "event_id": "EV5"
+      },
+      {
+        "id": "EM18",
+        "text": "Margaret",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 234,
+        "span_end": 242,
+        "event_id": "EV6"
+      },
+      {
+        "id": "EM19",
+        "text": "Adam",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 249,
+        "span_end": 253,
+        "event_id": "EV6"
+      },
+      {
+        "id": "EM20",
+        "text": "the doorway",
+        "label": "LOCATION",
+        "source": "preposition_location_pattern",
+        "span_start": 257,
+        "span_end": 268,
+        "event_id": "EV6"
+      },
+      {
+        "id": "EM21",
+        "text": "found",
+        "label": "EVENT_ACTION",
+        "source": "verb_pattern",
+        "span_start": 243,
+        "span_end": 248,
+        "event_id": "EV6"
+      },
+      {
+        "id": "EM22",
+        "text": "Adam",
+        "label": "PERSON",
+        "source": "capitalized_actor_mention",
+        "span_start": 270,
+        "span_end": 274,
+        "event_id": "EV7"
+      },
+      {
+        "id": "EM23",
+        "text": "before dawn",
+        "label": "DATE_TIME",
+        "source": "temporal_expression_pattern",
+        "span_start": 287,
+        "span_end": 298,
+        "event_id": "EV7"
+      },
+      {
+        "id": "EM24",
+        "text": "disappeared",
+        "label": "EVENT_ACTION",
+        "source": "verb_pattern",
+        "span_start": 275,
+        "span_end": 286,
+        "event_id": "EV7"
+      }
+    ],
+    "events": [
+      {
+        "id": "EV1",
+        "text": "Adam and Johan grew up in the same house.",
+        "actors": [
+          "Adam",
+          "Johan"
+        ],
+        "temporal_anchor": "",
+        "location": "the same house",
+        "action": "grew",
+        "temporal_category": "Past",
+        "relation_to_previous": "NONE",
+        "relation_cue": "",
+        "relation_evidence": "First event in text order.",
+        "order": 1,
+        "span_start": 0,
+        "span_end": 41,
+        "confidence": 0,
+        "classifier": "heuristic_fallback_explicit_tense"
+      },
+      {
+        "id": "EV2",
+        "text": "Years earlier, Karl had carried Adam through the rain.",
+        "actors": [
+          "Karl",
+          "Adam"
+        ],
+        "temporal_anchor": "Years earlier",
+        "location": "",
+        "action": "had",
+        "temporal_category": "Past",
+        "relation_to_previous": "BEFORE",
+        "relation_cue": "Years earlier",
+        "relation_evidence": "Retrospective cue places this event earlier than the previous event.",
+        "order": 2,
+        "span_start": 42,
+        "span_end": 96,
+        "confidence": 0.9909,
+        "classifier": "mlnet_event_temporal_model"
+      },
+      {
+        "id": "EV3",
+        "text": "Margaret remembered her mother in Jakarta.",
+        "actors": [
+          "Margaret"
+        ],
+        "temporal_anchor": "Years earlier",
+        "location": "Jakarta",
+        "action": "remembered",
+        "temporal_category": "Past",
+        "relation_to_previous": "IMMEDIATELY_AFTER",
+        "relation_cue": "",
+        "relation_evidence": "No explicit cue; defaulting to text-order adjacency.",
+        "order": 3,
+        "span_start": 97,
+        "span_end": 139,
+        "confidence": 0.9797,
+        "classifier": "mlnet_event_temporal_model"
+      },
+      {
+        "id": "EV4",
+        "text": "Meanwhile, Karl traveled alone across the island.",
+        "actors": [
+          "Karl"
+        ],
+        "temporal_anchor": "Years earlier",
+        "location": "",
+        "action": "traveled",
+        "temporal_category": "Past",
+        "relation_to_previous": "SIMULTANEOUS",
+        "relation_cue": "Meanwhile",
+        "relation_evidence": "Parallel cue places this event alongside the previous event.",
+        "order": 4,
+        "span_start": 140,
+        "span_end": 189,
+        "confidence": 0,
+        "classifier": "heuristic_fallback_explicit_tense"
+      },
+      {
+        "id": "EV5",
+        "text": "Adam searched for Margaret after the storm.",
+        "actors": [
+          "Adam",
+          "Margaret"
+        ],
+        "temporal_anchor": "after the storm",
+        "location": "",
+        "action": "searched",
+        "temporal_category": "Past",
+        "relation_to_previous": "AFTER",
+        "relation_cue": "after the storm",
+        "relation_evidence": "Forward cue places this event after the previous event.",
+        "order": 5,
+        "span_start": 190,
+        "span_end": 233,
+        "confidence": 0,
+        "classifier": "heuristic_fallback_explicit_tense"
+      },
+      {
+        "id": "EV6",
+        "text": "Margaret found Adam at the doorway.",
+        "actors": [
+          "Margaret",
+          "Adam"
+        ],
+        "temporal_anchor": "after the storm",
+        "location": "the doorway",
+        "action": "found",
+        "temporal_category": "Past",
+        "relation_to_previous": "IMMEDIATELY_AFTER",
+        "relation_cue": "",
+        "relation_evidence": "No explicit cue; defaulting to text-order adjacency.",
+        "order": 6,
+        "span_start": 234,
+        "span_end": 269,
+        "confidence": 0,
+        "classifier": "heuristic_fallback_explicit_tense"
+      },
+      {
+        "id": "EV7",
+        "text": "Adam disappeared before dawn.",
+        "actors": [
+          "Adam"
+        ],
+        "temporal_anchor": "before dawn",
+        "location": "",
+        "action": "disappeared",
+        "temporal_category": "Past",
+        "relation_to_previous": "IMMEDIATELY_AFTER",
+        "relation_cue": "",
+        "relation_evidence": "No explicit cue; defaulting to text-order adjacency.",
+        "order": 7,
+        "span_start": 270,
+        "span_end": 299,
+        "confidence": 0.6825,
+        "classifier": "mlnet_event_temporal_model"
+      }
+    ],
+    "tracks": [
+      {
+        "id": "TT1",
+        "name": "Adam&Johan",
+        "left_endpoint": "START",
+        "right_endpoint": "STOP"
+      },
+      {
+        "id": "TT2",
+        "name": "Karl&Adam",
+        "left_endpoint": "START",
+        "right_endpoint": "STOP"
+      },
+      {
+        "id": "TT3",
+        "name": "Margaret",
+        "left_endpoint": "START",
+        "right_endpoint": "EP1"
+      },
+      {
+        "id": "TT4",
+        "name": "Karl",
+        "left_endpoint": "EP1",
+        "right_endpoint": "EP2"
+      },
+      {
+        "id": "TT5",
+        "name": "Adam&Margaret",
+        "left_endpoint": "EP2",
+        "right_endpoint": "EP3"
+      },
+      {
+        "id": "TT6",
+        "name": "Adam",
+        "left_endpoint": "EP3",
+        "right_endpoint": "STOP"
+      }
+    ],
+    "segments": [
+      {
+        "id": "TS1",
+        "text": "Adam and Johan grew up in the same house.",
+        "track_id": "TT1",
+        "type": "NAR",
+        "perspective": "narrator",
+        "text_order": 1,
+        "story_order": 1,
+        "entities": [
+          "Adam",
+          "Johan"
+        ],
+        "actors": [
+          "Adam",
+          "Johan"
+        ],
+        "location_id": "L2",
+        "temporal_anchor": "",
+        "temporal_category": "Past",
+        "span_start": 0,
+        "span_end": 41,
+        "event_ids": [
+          "EV1"
+        ],
+        "confidence": 0.987,
+        "classifier": "mlnet_seed_model"
+      },
+      {
+        "id": "TS2",
+        "text": "Years earlier, Karl had carried Adam through the rain.",
+        "track_id": "TT2",
+        "type": "REM",
+        "perspective": "Karl",
+        "text_order": 2,
+        "story_order": 0.65,
+        "entities": [
+          "Karl",
+          "Adam"
+        ],
+        "actors": [
+          "Karl",
+          "Adam"
+        ],
+        "location_id": "L1",
+        "temporal_anchor": "Years earlier",
+        "temporal_category": "Past",
+        "span_start": 42,
+        "span_end": 96,
+        "event_ids": [
+          "EV2"
+        ],
+        "confidence": 0.9829,
+        "classifier": "mlnet_seed_model"
+      },
+      {
+        "id": "TS3",
+        "text": "Margaret remembered her mother in Jakarta.",
+        "track_id": "TT3",
+        "type": "REM",
+        "perspective": "Margaret",
+        "text_order": 3,
+        "story_order": 0.65,
+        "entities": [
+          "Margaret"
+        ],
+        "actors": [
+          "Margaret"
+        ],
+        "location_id": "L3",
+        "temporal_anchor": "Years earlier",
+        "temporal_category": "Past",
+        "span_start": 97,
+        "span_end": 139,
+        "event_ids": [
+          "EV3"
+        ],
+        "confidence": 0.9605,
+        "classifier": "mlnet_seed_model"
+      },
+      {
+        "id": "TS4",
+        "text": "Meanwhile, Karl traveled alone across the island.",
+        "track_id": "TT4",
+        "type": "NAR",
+        "perspective": "narrator",
+        "text_order": 4,
+        "story_order": 1,
+        "entities": [
+          "Karl"
+        ],
+        "actors": [
+          "Karl"
+        ],
+        "location_id": "L1",
+        "temporal_anchor": "Years earlier",
+        "temporal_category": "Past",
+        "span_start": 140,
+        "span_end": 189,
+        "event_ids": [
+          "EV4"
+        ],
+        "confidence": 0.9885,
+        "classifier": "mlnet_seed_model"
+      },
+      {
+        "id": "TS5",
+        "text": "Adam searched for Margaret after the storm. Margaret found Adam at the doorway.",
+        "track_id": "TT5",
+        "type": "NAR",
+        "perspective": "narrator",
+        "text_order": 5,
+        "story_order": 1,
+        "entities": [
+          "Adam",
+          "Margaret"
+        ],
+        "actors": [
+          "Adam",
+          "Margaret"
+        ],
+        "location_id": "L4",
+        "temporal_anchor": "after the storm",
+        "temporal_category": "Past",
+        "span_start": 190,
+        "span_end": 269,
+        "event_ids": [
+          "EV5",
+          "EV6"
+        ],
+        "confidence": 0.9942,
+        "classifier": "mlnet_seed_model"
+      },
+      {
+        "id": "TS6",
+        "text": "Adam disappeared before dawn.",
+        "track_id": "TT6",
+        "type": "NAR",
+        "perspective": "narrator",
+        "text_order": 6,
+        "story_order": 1,
+        "entities": [
+          "Adam"
+        ],
+        "actors": [
+          "Adam"
+        ],
+        "location_id": "L1",
+        "temporal_anchor": "before dawn",
+        "temporal_category": "Past",
+        "span_start": 270,
+        "span_end": 299,
+        "event_ids": [
+          "EV7"
+        ],
+        "confidence": 0.989,
+        "classifier": "mlnet_seed_model"
+      }
+    ],
+    "endpoints": [
+      {
+        "id": "EP1",
+        "type": "SPLIT",
+        "name": "Karl split",
+        "track_ids": [
+          "TT3",
+          "TT4"
+        ],
+        "segment_id": "TS4"
+      },
+      {
+        "id": "EP2",
+        "type": "JOIN",
+        "name": "Karl+Adam&Margaret",
+        "track_ids": [
+          "TT4",
+          "TT5"
+        ],
+        "segment_id": "TS5"
+      },
+      {
+        "id": "EP3",
+        "type": "SPLIT",
+        "name": "Adam split",
+        "track_ids": [
+          "TT5",
+          "TT6"
+        ],
+        "segment_id": "TS6"
+      }
+    ],
+    "relations": [
+      {
+        "from_id": "TS2",
+        "rel": "BEFORE",
+        "to_id": "TS1",
+        "cue": "Years earlier",
+        "evidence": "Retrospective cue places this event earlier than the previous event."
+      },
+      {
+        "from_id": "TT1",
+        "rel": "BEFORE",
+        "to_id": "TT2",
+        "cue": "",
+        "evidence": "Adjacent text segments belong to different time tracks."
+      },
+      {
+        "from_id": "TS2",
+        "rel": "IMMEDIATELY_BEFORE",
+        "to_id": "TS3",
+        "cue": "",
+        "evidence": "No explicit cue; defaulting to text-order adjacency."
+      },
+      {
+        "from_id": "TT2",
+        "rel": "BEFORE",
+        "to_id": "TT3",
+        "cue": "",
+        "evidence": "Adjacent text segments belong to different time tracks."
+      },
+      {
+        "from_id": "TS3",
+        "rel": "SIMULTANEOUS",
+        "to_id": "TS4",
+        "cue": "Meanwhile",
+        "evidence": "Parallel cue places this event alongside the previous event."
+      },
+      {
+        "from_id": "TT3",
+        "rel": "SIMULTANEOUS",
+        "to_id": "TT4",
+        "cue": "Meanwhile",
+        "evidence": "Parallel cue triggered a cross-track relation."
+      },
+      {
+        "from_id": "TS4",
+        "rel": "BEFORE",
+        "to_id": "TS5",
+        "cue": "after the storm",
+        "evidence": "Forward cue places this event after the previous event."
+      },
+      {
+        "from_id": "TT4",
+        "rel": "BEFORE",
+        "to_id": "TT5",
+        "cue": "",
+        "evidence": "Adjacent text segments belong to different time tracks."
+      },
+      {
+        "from_id": "TS5",
+        "rel": "IMMEDIATELY_BEFORE",
+        "to_id": "TS6",
+        "cue": "",
+        "evidence": "No explicit cue; defaulting to text-order adjacency."
+      },
+      {
+        "from_id": "TT5",
+        "rel": "BEFORE",
+        "to_id": "TT6",
+        "cue": "",
+        "evidence": "Adjacent text segments belong to different time tracks."
+      }
+    ],
+    "boundaries": [
+      {
+        "id": "B1",
+        "type": "START",
+        "to_segment_id": "TS1",
+        "track_ids": [
+          "TT1"
+        ],
+        "reason": "First TS in text order."
+      },
+      {
+        "id": "B2",
+        "type": "RUPTURE",
+        "from_segment_id": "TS1",
+        "to_segment_id": "TS2",
+        "track_ids": [
+          "TT1",
+          "TT2"
+        ],
+        "reason": "Adjacent text segments belong to different time tracks."
+      },
+      {
+        "id": "B3",
+        "type": "RUPTURE",
+        "from_segment_id": "TS2",
+        "to_segment_id": "TS3",
+        "track_ids": [
+          "TT2",
+          "TT3"
+        ],
+        "reason": "Adjacent text segments belong to different time tracks."
+      },
+      {
+        "id": "B4",
+        "type": "RUPTURE",
+        "from_segment_id": "TS3",
+        "to_segment_id": "TS4",
+        "track_ids": [
+          "TT3",
+          "TT4"
+        ],
+        "reason": "Adjacent text segments belong to different time tracks."
+      },
+      {
+        "id": "B5",
+        "type": "SPLIT",
+        "from_segment_id": "TS3",
+        "to_segment_id": "TS4",
+        "track_ids": [
+          "TT3",
+          "TT4"
+        ],
+        "reason": "Text indicates separation, disappearance, or an actor continuing alone."
+      },
+      {
+        "id": "B6",
+        "type": "RUPTURE",
+        "from_segment_id": "TS4",
+        "to_segment_id": "TS5",
+        "track_ids": [
+          "TT4",
+          "TT5"
+        ],
+        "reason": "Adjacent text segments belong to different time tracks."
+      },
+      {
+        "id": "B7",
+        "type": "JOIN",
+        "from_segment_id": "TS4",
+        "to_segment_id": "TS5",
+        "track_ids": [
+          "TT4",
+          "TT5"
+        ],
+        "reason": "Text indicates that separate developments meet and continue together."
+      },
+      {
+        "id": "B8",
+        "type": "RUPTURE",
+        "from_segment_id": "TS5",
+        "to_segment_id": "TS6",
+        "track_ids": [
+          "TT5",
+          "TT6"
+        ],
+        "reason": "Adjacent text segments belong to different time tracks."
+      },
+      {
+        "id": "B9",
+        "type": "SPLIT",
+        "from_segment_id": "TS5",
+        "to_segment_id": "TS6",
+        "track_ids": [
+          "TT5",
+          "TT6"
+        ],
+        "reason": "Text indicates separation, disappearance, or an actor continuing alone."
+      },
+      {
+        "id": "B10",
+        "type": "STOP",
+        "from_segment_id": "TS6",
+        "track_ids": [
+          "TT6"
+        ],
+        "reason": "Last TS in text order."
+      }
+    ],
+    "time_ml": {
+      "events": [
+        {
+          "eid": "e1",
+          "class": "OCCURRENCE",
+          "text": "grew",
+          "span_start": 15,
+          "span_end": 19,
+          "tym_event_id": "EV1"
+        },
+        {
+          "eid": "e2",
+          "class": "I_STATE",
+          "text": "had",
+          "span_start": 62,
+          "span_end": 65,
+          "tym_event_id": "EV2"
+        },
+        {
+          "eid": "e3",
+          "class": "I_STATE",
+          "text": "remembered",
+          "span_start": 106,
+          "span_end": 116,
+          "tym_event_id": "EV3"
+        },
+        {
+          "eid": "e4",
+          "class": "OCCURRENCE",
+          "text": "traveled",
+          "span_start": 156,
+          "span_end": 164,
+          "tym_event_id": "EV4"
+        },
+        {
+          "eid": "e5",
+          "class": "OCCURRENCE",
+          "text": "searched",
+          "span_start": 195,
+          "span_end": 203,
+          "tym_event_id": "EV5"
+        },
+        {
+          "eid": "e6",
+          "class": "OCCURRENCE",
+          "text": "found",
+          "span_start": 243,
+          "span_end": 248,
+          "tym_event_id": "EV6"
+        },
+        {
+          "eid": "e7",
+          "class": "OCCURRENCE",
+          "text": "disappeared",
+          "span_start": 275,
+          "span_end": 286,
+          "tym_event_id": "EV7"
+        }
+      ],
+      "timex3": [
+        {
+          "tid": "t1",
+          "type": "DATE",
+          "value": "PAST_REF",
+          "text": "Years earlier",
+          "span_start": 42,
+          "span_end": 55,
+          "source": "explicit_temporal_expression",
+          "function_in_document": "NONE"
+        },
+        {
+          "tid": "t2",
+          "type": "DATE",
+          "value": "PAST_REF",
+          "text": "after the storm",
+          "span_start": 217,
+          "span_end": 232,
+          "source": "explicit_temporal_expression",
+          "function_in_document": "NONE"
+        },
+        {
+          "tid": "t3",
+          "type": "TIME",
+          "value": "PAST_REF",
+          "text": "before dawn",
+          "span_start": 287,
+          "span_end": 298,
+          "source": "explicit_temporal_expression",
+          "function_in_document": "NONE"
+        }
+      ],
+      "signals": [
+        {
+          "sid": "s1",
+          "text": "Years earlier",
+          "span_start": 42,
+          "span_end": 55,
+          "event_id": "EV2",
+          "relation_hint": "BEFORE"
+        },
+        {
+          "sid": "s2",
+          "text": "Meanwhile",
+          "span_start": 140,
+          "span_end": 149,
+          "event_id": "EV4",
+          "relation_hint": "SIMULTANEOUS"
+        },
+        {
+          "sid": "s3",
+          "text": "after the storm",
+          "span_start": 217,
+          "span_end": 232,
+          "event_id": "EV5",
+          "relation_hint": "AFTER"
+        }
+      ],
+      "make_instances": [
+        {
+          "eiid": "ei1",
+          "event_id": "e1",
+          "tense": "PAST",
+          "aspect": "NONE",
+          "polarity": "POS",
+          "pos": "VERB",
+          "tym_event_id": "EV1"
+        },
+        {
+          "eiid": "ei2",
+          "event_id": "e2",
+          "tense": "PAST",
+          "aspect": "PERFECTIVE",
+          "polarity": "POS",
+          "pos": "VERB",
+          "tym_event_id": "EV2"
+        },
+        {
+          "eiid": "ei3",
+          "event_id": "e3",
+          "tense": "PAST",
+          "aspect": "NONE",
+          "polarity": "POS",
+          "pos": "VERB",
+          "tym_event_id": "EV3"
+        },
+        {
+          "eiid": "ei4",
+          "event_id": "e4",
+          "tense": "PAST",
+          "aspect": "NONE",
+          "polarity": "POS",
+          "pos": "VERB",
+          "tym_event_id": "EV4"
+        },
+        {
+          "eiid": "ei5",
+          "event_id": "e5",
+          "tense": "PAST",
+          "aspect": "NONE",
+          "polarity": "POS",
+          "pos": "VERB",
+          "tym_event_id": "EV5"
+        },
+        {
+          "eiid": "ei6",
+          "event_id": "e6",
+          "tense": "PAST",
+          "aspect": "NONE",
+          "polarity": "POS",
+          "pos": "VERB",
+          "tym_event_id": "EV6"
+        },
+        {
+          "eiid": "ei7",
+          "event_id": "e7",
+          "tense": "PAST",
+          "aspect": "NONE",
+          "polarity": "POS",
+          "pos": "VERB",
+          "tym_event_id": "EV7"
+        }
+      ],
+      "tlinks": [
+        {
+          "lid": "l1",
+          "rel_type": "IS_INCLUDED",
+          "event_instance_id": "ei2",
+          "related_to_time": "t1",
+          "origin": "event_temporal_anchor"
+        },
+        {
+          "lid": "l2",
+          "rel_type": "BEFORE",
+          "event_instance_id": "ei2",
+          "related_to_event_instance": "ei1",
+          "signal_id": "s1",
+          "origin": "event_relation_signal"
+        },
+        {
+          "lid": "l3",
+          "rel_type": "IS_INCLUDED",
+          "event_instance_id": "ei3",
+          "related_to_time": "t1",
+          "origin": "event_temporal_anchor"
+        },
+        {
+          "lid": "l4",
+          "rel_type": "IBEFORE",
+          "event_instance_id": "ei2",
+          "related_to_event_instance": "ei3",
+          "origin": "event_text_order"
+        },
+        {
+          "lid": "l5",
+          "rel_type": "IS_INCLUDED",
+          "event_instance_id": "ei4",
+          "related_to_time": "t1",
+          "origin": "event_temporal_anchor"
+        },
+        {
+          "lid": "l6",
+          "rel_type": "SIMULTANEOUS",
+          "event_instance_id": "ei3",
+          "related_to_event_instance": "ei4",
+          "signal_id": "s2",
+          "origin": "event_relation_signal"
+        },
+        {
+          "lid": "l7",
+          "rel_type": "IS_INCLUDED",
+          "event_instance_id": "ei5",
+          "related_to_time": "t2",
+          "origin": "event_temporal_anchor"
+        },
+        {
+          "lid": "l8",
+          "rel_type": "BEFORE",
+          "event_instance_id": "ei4",
+          "related_to_event_instance": "ei5",
+          "signal_id": "s3",
+          "origin": "event_relation_signal"
+        },
+        {
+          "lid": "l9",
+          "rel_type": "IS_INCLUDED",
+          "event_instance_id": "ei6",
+          "related_to_time": "t2",
+          "origin": "event_temporal_anchor"
+        },
+        {
+          "lid": "l10",
+          "rel_type": "IBEFORE",
+          "event_instance_id": "ei5",
+          "related_to_event_instance": "ei6",
+          "origin": "event_text_order"
+        },
+        {
+          "lid": "l11",
+          "rel_type": "IS_INCLUDED",
+          "event_instance_id": "ei7",
+          "related_to_time": "t3",
+          "origin": "event_temporal_anchor"
+        },
+        {
+          "lid": "l12",
+          "rel_type": "IBEFORE",
+          "event_instance_id": "ei6",
+          "related_to_event_instance": "ei7",
+          "origin": "event_text_order"
+        }
+      ]
+    }
+  },
+  "render": {
+    "format": "svg",
+    "width": 1200,
+    "height": 788,
+    "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"788\" viewBox=\"0 0 1200 788\" role=\"img\" aria-label=\"TYM time-yard diagram\"><rect width=\"100%\" height=\"100%\" fill=\"#ffffff\"/><style>text{dominant-baseline:auto}</style><text x=\"600.0\" y=\"38.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"16\" font-weight=\"700\" fill=\"#111827\">a) Text-order time segments</text><line x1=\"105.0\" y1=\"76.0\" x2=\"1120.0\" y2=\"76.0\" stroke=\"#374151\" stroke-width=\"2\" stroke-linecap=\"round\"/><line x1=\"105.0\" y1=\"64.0\" x2=\"105.0\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><text x=\"113.0\" y=\"54.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\">TS1</text><line x1=\"274.2\" y1=\"64.0\" x2=\"274.2\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><text x=\"282.2\" y=\"110.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\">TS2</text><line x1=\"443.3\" y1=\"64.0\" x2=\"443.3\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><text x=\"451.3\" y=\"54.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\">TS3</text><line x1=\"612.5\" y1=\"64.0\" x2=\"612.5\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><text x=\"620.5\" y=\"110.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\">TS4</text><line x1=\"781.7\" y1=\"64.0\" x2=\"781.7\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><text x=\"789.7\" y=\"54.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\">TS5</text><line x1=\"950.8\" y1=\"64.0\" x2=\"950.8\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><text x=\"958.8\" y=\"110.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"13\" font-weight=\"400\" fill=\"#111827\">TS6</text><line x1=\"1120.0\" y1=\"64.0\" x2=\"1120.0\" y2=\"88.0\" stroke=\"#111827\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><text x=\"600.0\" y=\"158.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"16\" font-weight=\"700\" fill=\"#111827\">b) TYM time yard</text><text x=\"18.0\" y=\"205.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\">TT1: Adam&amp;Johan</text><polygon points=\"57.0,188.0 57.0,212.0 79.0,200.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><polygon points=\"298.0,188.0 298.0,212.0 276.0,200.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><line x1=\"105.0\" y1=\"200.0\" x2=\"250.0\" y2=\"200.0\" stroke=\"#111827\" stroke-width=\"5\" stroke-linecap=\"round\"/><rect x=\"92.0\" y=\"188.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/><text x=\"105.0\" y=\"204.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\">TS1</text><line x1=\"250.0\" y1=\"187.0\" x2=\"250.0\" y2=\"213.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><text x=\"177.5\" y=\"175.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\">TS1: Adam and Johan grew up in the same house.</text><text x=\"18.0\" y=\"291.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\">TT2: Karl&amp;Adam</text><polygon points=\"57.0,274.0 57.0,298.0 79.0,286.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><polygon points=\"298.0,274.0 298.0,298.0 276.0,286.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><line x1=\"105.0\" y1=\"286.0\" x2=\"250.0\" y2=\"286.0\" stroke=\"#111827\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-dasharray=\"7 7\"/><rect x=\"92.0\" y=\"274.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/><text x=\"105.0\" y=\"290.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\">TS2</text><line x1=\"250.0\" y1=\"273.0\" x2=\"250.0\" y2=\"299.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><text x=\"177.5\" y=\"261.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\">TS2: Years earlier, Karl had carried Adam throug...</text><text x=\"177.5\" y=\"277.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\">REM</text><text x=\"18.0\" y=\"377.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\">TT3: Margaret</text><polygon points=\"57.0,360.0 57.0,384.0 79.0,372.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><polygon points=\"298.0,360.0 298.0,384.0 276.0,372.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><line x1=\"105.0\" y1=\"372.0\" x2=\"250.0\" y2=\"372.0\" stroke=\"#111827\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-dasharray=\"7 7\"/><rect x=\"92.0\" y=\"360.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/><text x=\"105.0\" y=\"376.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\">TS3</text><line x1=\"250.0\" y1=\"359.0\" x2=\"250.0\" y2=\"385.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><text x=\"177.5\" y=\"347.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\">TS3: Margaret remembered her mother in Jakarta.</text><text x=\"177.5\" y=\"363.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\">REM</text><text x=\"18.0\" y=\"463.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\">TT4: Karl</text><polygon points=\"57.0,446.0 57.0,470.0 79.0,458.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><polygon points=\"298.0,446.0 298.0,470.0 276.0,458.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><line x1=\"105.0\" y1=\"458.0\" x2=\"250.0\" y2=\"458.0\" stroke=\"#111827\" stroke-width=\"2.4\" stroke-linecap=\"round\"/><rect x=\"92.0\" y=\"446.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/><text x=\"105.0\" y=\"462.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\">TS4</text><line x1=\"250.0\" y1=\"445.0\" x2=\"250.0\" y2=\"471.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><text x=\"177.5\" y=\"433.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\">TS4: Meanwhile, Karl traveled alone across the i...</text><text x=\"18.0\" y=\"549.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\">TT5: Adam&amp;Margaret</text><polygon points=\"57.0,532.0 57.0,556.0 79.0,544.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><polygon points=\"298.0,532.0 298.0,556.0 276.0,544.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><line x1=\"105.0\" y1=\"544.0\" x2=\"250.0\" y2=\"544.0\" stroke=\"#111827\" stroke-width=\"5\" stroke-linecap=\"round\"/><rect x=\"92.0\" y=\"532.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/><text x=\"105.0\" y=\"548.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\">TS5</text><line x1=\"250.0\" y1=\"531.0\" x2=\"250.0\" y2=\"557.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><text x=\"177.5\" y=\"519.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\">TS5: Adam searched for Margaret after the storm....</text><text x=\"18.0\" y=\"635.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"#111827\">TT6: Adam</text><polygon points=\"57.0,618.0 57.0,642.0 79.0,630.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><polygon points=\"298.0,618.0 298.0,642.0 276.0,630.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\"/><line x1=\"105.0\" y1=\"630.0\" x2=\"250.0\" y2=\"630.0\" stroke=\"#111827\" stroke-width=\"5\" stroke-linecap=\"round\"/><rect x=\"92.0\" y=\"618.0\" width=\"26.0\" height=\"24.0\" fill=\"#dbeafe\" stroke=\"#111827\" stroke-width=\"1.5\" rx=\"2\"/><text x=\"105.0\" y=\"634.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#111827\">TS6</text><line x1=\"250.0\" y1=\"617.0\" x2=\"250.0\" y2=\"643.0\" stroke=\"#111827\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><text x=\"177.5\" y=\"605.0\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12\" font-weight=\"400\" fill=\"#111827\">TS6: Adam disappeared before dawn.</text><text x=\"105.0\" y=\"724.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"11\" font-weight=\"400\" fill=\"#111827\">EP1: SPLIT at TS4</text><text x=\"285.0\" y=\"724.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"11\" font-weight=\"400\" fill=\"#111827\">EP2: JOIN at TS5</text><text x=\"465.0\" y=\"724.0\" text-anchor=\"start\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"11\" font-weight=\"400\" fill=\"#111827\">EP3: SPLIT at TS6</text></svg>"
+  },
+  "xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<TYM>\r\n  <TA-SECTION>\r\n    <TA ID=\"A0\" NAME=\"Narrator\" />\r\n    <TA ID=\"A1\" NAME=\"Adam\" />\r\n    <TA ID=\"A2\" NAME=\"Johan\" />\r\n    <TA ID=\"A3\" NAME=\"Karl\" />\r\n    <TA ID=\"A4\" NAME=\"Margaret\" />\r\n  </TA-SECTION>\r\n  <TL-SECTION>\r\n    <TL ID=\"L1\" NAME=\"unknown\" PARENTID=\"\" />\r\n    <TL ID=\"L2\" NAME=\"the same house\" PARENTID=\"\" />\r\n    <TL ID=\"L3\" NAME=\"Jakarta\" PARENTID=\"\" />\r\n    <TL ID=\"L4\" NAME=\"the doorway\" PARENTID=\"\" />\r\n  </TL-SECTION>\r\n  <ENTITY-MENTION-SECTION>\r\n    <ENTITY-MENTION ID=\"EM1\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV1\" SPANS=\"0~4\" TEXT=\"Adam\" />\r\n    <ENTITY-MENTION ID=\"EM2\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV1\" SPANS=\"9~14\" TEXT=\"Johan\" />\r\n    <ENTITY-MENTION ID=\"EM3\" TYPE=\"LOCATION\" SOURCE=\"preposition_location_pattern\" EVENT=\"EV1\" SPANS=\"26~40\" TEXT=\"the same house\" />\r\n    <ENTITY-MENTION ID=\"EM4\" TYPE=\"EVENT_ACTION\" SOURCE=\"verb_pattern\" EVENT=\"EV1\" SPANS=\"15~19\" TEXT=\"grew\" />\r\n    <ENTITY-MENTION ID=\"EM5\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV2\" SPANS=\"57~61\" TEXT=\"Karl\" />\r\n    <ENTITY-MENTION ID=\"EM6\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV2\" SPANS=\"74~78\" TEXT=\"Adam\" />\r\n    <ENTITY-MENTION ID=\"EM7\" TYPE=\"DATE_TIME\" SOURCE=\"temporal_expression_pattern\" EVENT=\"EV2\" SPANS=\"42~55\" TEXT=\"Years earlier\" />\r\n    <ENTITY-MENTION ID=\"EM8\" TYPE=\"EVENT_ACTION\" SOURCE=\"verb_pattern\" EVENT=\"EV2\" SPANS=\"62~65\" TEXT=\"had\" />\r\n    <ENTITY-MENTION ID=\"EM9\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV3\" SPANS=\"97~105\" TEXT=\"Margaret\" />\r\n    <ENTITY-MENTION ID=\"EM10\" TYPE=\"LOCATION\" SOURCE=\"preposition_location_pattern\" EVENT=\"EV3\" SPANS=\"131~138\" TEXT=\"Jakarta\" />\r\n    <ENTITY-MENTION ID=\"EM11\" TYPE=\"EVENT_ACTION\" SOURCE=\"verb_pattern\" EVENT=\"EV3\" SPANS=\"106~116\" TEXT=\"remembered\" />\r\n    <ENTITY-MENTION ID=\"EM12\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV4\" SPANS=\"151~155\" TEXT=\"Karl\" />\r\n    <ENTITY-MENTION ID=\"EM13\" TYPE=\"EVENT_ACTION\" SOURCE=\"verb_pattern\" EVENT=\"EV4\" SPANS=\"156~164\" TEXT=\"traveled\" />\r\n    <ENTITY-MENTION ID=\"EM14\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV5\" SPANS=\"190~194\" TEXT=\"Adam\" />\r\n    <ENTITY-MENTION ID=\"EM15\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV5\" SPANS=\"208~216\" TEXT=\"Margaret\" />\r\n    <ENTITY-MENTION ID=\"EM16\" TYPE=\"DATE_TIME\" SOURCE=\"temporal_expression_pattern\" EVENT=\"EV5\" SPANS=\"217~232\" TEXT=\"after the storm\" />\r\n    <ENTITY-MENTION ID=\"EM17\" TYPE=\"EVENT_ACTION\" SOURCE=\"verb_pattern\" EVENT=\"EV5\" SPANS=\"195~203\" TEXT=\"searched\" />\r\n    <ENTITY-MENTION ID=\"EM18\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV6\" SPANS=\"234~242\" TEXT=\"Margaret\" />\r\n    <ENTITY-MENTION ID=\"EM19\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV6\" SPANS=\"249~253\" TEXT=\"Adam\" />\r\n    <ENTITY-MENTION ID=\"EM20\" TYPE=\"LOCATION\" SOURCE=\"preposition_location_pattern\" EVENT=\"EV6\" SPANS=\"257~268\" TEXT=\"the doorway\" />\r\n    <ENTITY-MENTION ID=\"EM21\" TYPE=\"EVENT_ACTION\" SOURCE=\"verb_pattern\" EVENT=\"EV6\" SPANS=\"243~248\" TEXT=\"found\" />\r\n    <ENTITY-MENTION ID=\"EM22\" TYPE=\"PERSON\" SOURCE=\"capitalized_actor_mention\" EVENT=\"EV7\" SPANS=\"270~274\" TEXT=\"Adam\" />\r\n    <ENTITY-MENTION ID=\"EM23\" TYPE=\"DATE_TIME\" SOURCE=\"temporal_expression_pattern\" EVENT=\"EV7\" SPANS=\"287~298\" TEXT=\"before dawn\" />\r\n    <ENTITY-MENTION ID=\"EM24\" TYPE=\"EVENT_ACTION\" SOURCE=\"verb_pattern\" EVENT=\"EV7\" SPANS=\"275~286\" TEXT=\"disappeared\" />\r\n  </ENTITY-MENTION-SECTION>\r\n  <EVENT-SECTION>\r\n    <EVENT ID=\"EV1\" SPANS=\"0~41\" ACTORS=\"A1,A2\" LOCATION=\"L2\" TEMPORAL-ANCHOR=\"\" TENSE=\"Past\" ACTION=\"grew\" REL-PREV=\"NONE\" REL-CUE=\"\" ORDER=\"1\" TEXT=\"Adam and Johan grew up in the same house.\" />\r\n    <EVENT ID=\"EV2\" SPANS=\"42~96\" ACTORS=\"A3,A1\" LOCATION=\"L1\" TEMPORAL-ANCHOR=\"Years earlier\" TENSE=\"Past\" ACTION=\"had\" REL-PREV=\"BEFORE\" REL-CUE=\"Years earlier\" ORDER=\"2\" TEXT=\"Years earlier, Karl had carried Adam through the rain.\" />\r\n    <EVENT ID=\"EV3\" SPANS=\"97~139\" ACTORS=\"A4\" LOCATION=\"L3\" TEMPORAL-ANCHOR=\"Years earlier\" TENSE=\"Past\" ACTION=\"remembered\" REL-PREV=\"IMMEDIATELY_AFTER\" REL-CUE=\"\" ORDER=\"3\" TEXT=\"Margaret remembered her mother in Jakarta.\" />\r\n    <EVENT ID=\"EV4\" SPANS=\"140~189\" ACTORS=\"A3\" LOCATION=\"L1\" TEMPORAL-ANCHOR=\"Years earlier\" TENSE=\"Past\" ACTION=\"traveled\" REL-PREV=\"SIMULTANEOUS\" REL-CUE=\"Meanwhile\" ORDER=\"4\" TEXT=\"Meanwhile, Karl traveled alone across the island.\" />\r\n    <EVENT ID=\"EV5\" SPANS=\"190~233\" ACTORS=\"A1,A4\" LOCATION=\"L1\" TEMPORAL-ANCHOR=\"after the storm\" TENSE=\"Past\" ACTION=\"searched\" REL-PREV=\"AFTER\" REL-CUE=\"after the storm\" ORDER=\"5\" TEXT=\"Adam searched for Margaret after the storm.\" />\r\n    <EVENT ID=\"EV6\" SPANS=\"234~269\" ACTORS=\"A4,A1\" LOCATION=\"L4\" TEMPORAL-ANCHOR=\"after the storm\" TENSE=\"Past\" ACTION=\"found\" REL-PREV=\"IMMEDIATELY_AFTER\" REL-CUE=\"\" ORDER=\"6\" TEXT=\"Margaret found Adam at the doorway.\" />\r\n    <EVENT ID=\"EV7\" SPANS=\"270~299\" ACTORS=\"A1\" LOCATION=\"L1\" TEMPORAL-ANCHOR=\"before dawn\" TENSE=\"Past\" ACTION=\"disappeared\" REL-PREV=\"IMMEDIATELY_AFTER\" REL-CUE=\"\" ORDER=\"7\" TEXT=\"Adam disappeared before dawn.\" />\r\n  </EVENT-SECTION>\r\n  <TIMEML-SECTION>\r\n    <EVENT eid=\"e1\" class=\"OCCURRENCE\" tymEventId=\"EV1\" spans=\"15~19\">grew</EVENT>\r\n    <EVENT eid=\"e2\" class=\"I_STATE\" tymEventId=\"EV2\" spans=\"62~65\">had</EVENT>\r\n    <EVENT eid=\"e3\" class=\"I_STATE\" tymEventId=\"EV3\" spans=\"106~116\">remembered</EVENT>\r\n    <EVENT eid=\"e4\" class=\"OCCURRENCE\" tymEventId=\"EV4\" spans=\"156~164\">traveled</EVENT>\r\n    <EVENT eid=\"e5\" class=\"OCCURRENCE\" tymEventId=\"EV5\" spans=\"195~203\">searched</EVENT>\r\n    <EVENT eid=\"e6\" class=\"OCCURRENCE\" tymEventId=\"EV6\" spans=\"243~248\">found</EVENT>\r\n    <EVENT eid=\"e7\" class=\"OCCURRENCE\" tymEventId=\"EV7\" spans=\"275~286\">disappeared</EVENT>\r\n    <TIMEX3 tid=\"t1\" type=\"DATE\" value=\"PAST_REF\" functionInDocument=\"NONE\" source=\"explicit_temporal_expression\" spans=\"42~55\">Years earlier</TIMEX3>\r\n    <TIMEX3 tid=\"t2\" type=\"DATE\" value=\"PAST_REF\" functionInDocument=\"NONE\" source=\"explicit_temporal_expression\" spans=\"217~232\">after the storm</TIMEX3>\r\n    <TIMEX3 tid=\"t3\" type=\"TIME\" value=\"PAST_REF\" functionInDocument=\"NONE\" source=\"explicit_temporal_expression\" spans=\"287~298\">before dawn</TIMEX3>\r\n    <SIGNAL sid=\"s1\" eventId=\"EV2\" relationHint=\"BEFORE\" spans=\"42~55\">Years earlier</SIGNAL>\r\n    <SIGNAL sid=\"s2\" eventId=\"EV4\" relationHint=\"SIMULTANEOUS\" spans=\"140~149\">Meanwhile</SIGNAL>\r\n    <SIGNAL sid=\"s3\" eventId=\"EV5\" relationHint=\"AFTER\" spans=\"217~232\">after the storm</SIGNAL>\r\n    <MAKEINSTANCE eiid=\"ei1\" eventID=\"e1\" tense=\"PAST\" aspect=\"NONE\" polarity=\"POS\" pos=\"VERB\" tymEventId=\"EV1\" />\r\n    <MAKEINSTANCE eiid=\"ei2\" eventID=\"e2\" tense=\"PAST\" aspect=\"PERFECTIVE\" polarity=\"POS\" pos=\"VERB\" tymEventId=\"EV2\" />\r\n    <MAKEINSTANCE eiid=\"ei3\" eventID=\"e3\" tense=\"PAST\" aspect=\"NONE\" polarity=\"POS\" pos=\"VERB\" tymEventId=\"EV3\" />\r\n    <MAKEINSTANCE eiid=\"ei4\" eventID=\"e4\" tense=\"PAST\" aspect=\"NONE\" polarity=\"POS\" pos=\"VERB\" tymEventId=\"EV4\" />\r\n    <MAKEINSTANCE eiid=\"ei5\" eventID=\"e5\" tense=\"PAST\" aspect=\"NONE\" polarity=\"POS\" pos=\"VERB\" tymEventId=\"EV5\" />\r\n    <MAKEINSTANCE eiid=\"ei6\" eventID=\"e6\" tense=\"PAST\" aspect=\"NONE\" polarity=\"POS\" pos=\"VERB\" tymEventId=\"EV6\" />\r\n    <MAKEINSTANCE eiid=\"ei7\" eventID=\"e7\" tense=\"PAST\" aspect=\"NONE\" polarity=\"POS\" pos=\"VERB\" tymEventId=\"EV7\" />\r\n    <TLINK lid=\"l1\" relType=\"IS_INCLUDED\" eventInstanceID=\"ei2\" relatedToEventInstance=\"\" timeID=\"\" relatedToTime=\"t1\" signalID=\"\" origin=\"event_temporal_anchor\" />\r\n    <TLINK lid=\"l2\" relType=\"BEFORE\" eventInstanceID=\"ei2\" relatedToEventInstance=\"ei1\" timeID=\"\" relatedToTime=\"\" signalID=\"s1\" origin=\"event_relation_signal\" />\r\n    <TLINK lid=\"l3\" relType=\"IS_INCLUDED\" eventInstanceID=\"ei3\" relatedToEventInstance=\"\" timeID=\"\" relatedToTime=\"t1\" signalID=\"\" origin=\"event_temporal_anchor\" />\r\n    <TLINK lid=\"l4\" relType=\"IBEFORE\" eventInstanceID=\"ei2\" relatedToEventInstance=\"ei3\" timeID=\"\" relatedToTime=\"\" signalID=\"\" origin=\"event_text_order\" />\r\n    <TLINK lid=\"l5\" relType=\"IS_INCLUDED\" eventInstanceID=\"ei4\" relatedToEventInstance=\"\" timeID=\"\" relatedToTime=\"t1\" signalID=\"\" origin=\"event_temporal_anchor\" />\r\n    <TLINK lid=\"l6\" relType=\"SIMULTANEOUS\" eventInstanceID=\"ei3\" relatedToEventInstance=\"ei4\" timeID=\"\" relatedToTime=\"\" signalID=\"s2\" origin=\"event_relation_signal\" />\r\n    <TLINK lid=\"l7\" relType=\"IS_INCLUDED\" eventInstanceID=\"ei5\" relatedToEventInstance=\"\" timeID=\"\" relatedToTime=\"t2\" signalID=\"\" origin=\"event_temporal_anchor\" />\r\n    <TLINK lid=\"l8\" relType=\"BEFORE\" eventInstanceID=\"ei4\" relatedToEventInstance=\"ei5\" timeID=\"\" relatedToTime=\"\" signalID=\"s3\" origin=\"event_relation_signal\" />\r\n    <TLINK lid=\"l9\" relType=\"IS_INCLUDED\" eventInstanceID=\"ei6\" relatedToEventInstance=\"\" timeID=\"\" relatedToTime=\"t2\" signalID=\"\" origin=\"event_temporal_anchor\" />\r\n    <TLINK lid=\"l10\" relType=\"IBEFORE\" eventInstanceID=\"ei5\" relatedToEventInstance=\"ei6\" timeID=\"\" relatedToTime=\"\" signalID=\"\" origin=\"event_text_order\" />\r\n    <TLINK lid=\"l11\" relType=\"IS_INCLUDED\" eventInstanceID=\"ei7\" relatedToEventInstance=\"\" timeID=\"\" relatedToTime=\"t3\" signalID=\"\" origin=\"event_temporal_anchor\" />\r\n    <TLINK lid=\"l12\" relType=\"IBEFORE\" eventInstanceID=\"ei6\" relatedToEventInstance=\"ei7\" timeID=\"\" relatedToTime=\"\" signalID=\"\" origin=\"event_text_order\" />\r\n  </TIMEML-SECTION>\r\n  <TT-SECTION>\r\n    <TT ID=\"TT1\" NAME=\"Adam&amp;Johan\" LEFT-EP=\"START\" RIGHT-EP=\"STOP\" />\r\n    <TT ID=\"TT2\" NAME=\"Karl&amp;Adam\" LEFT-EP=\"START\" RIGHT-EP=\"STOP\" />\r\n    <TT ID=\"TT3\" NAME=\"Margaret\" LEFT-EP=\"START\" RIGHT-EP=\"EP1\" />\r\n    <TT ID=\"TT4\" NAME=\"Karl\" LEFT-EP=\"EP1\" RIGHT-EP=\"EP2\" />\r\n    <TT ID=\"TT5\" NAME=\"Adam&amp;Margaret\" LEFT-EP=\"EP2\" RIGHT-EP=\"EP3\" />\r\n    <TT ID=\"TT6\" NAME=\"Adam\" LEFT-EP=\"EP3\" RIGHT-EP=\"STOP\" />\r\n  </TT-SECTION>\r\n  <TIME-SECTION>\r\n    <TREL ID=\"TI1\" FROM=\"TS2\" REL=\"BEFORE\" TO=\"TS1\" CUE=\"Years earlier\" EVIDENCE=\"Retrospective cue places this event earlier than the previous event.\" />\r\n    <TIME ID=\"TI2\" FROM=\"TT1\" REL=\"BEFORE\" TO=\"TT2\" CUE=\"\" EVIDENCE=\"Adjacent text segments belong to different time tracks.\" />\r\n    <TREL ID=\"TI3\" FROM=\"TS2\" REL=\"IMMEDIATELY-BEFORE\" TO=\"TS3\" CUE=\"\" EVIDENCE=\"No explicit cue; defaulting to text-order adjacency.\" />\r\n    <TIME ID=\"TI4\" FROM=\"TT2\" REL=\"BEFORE\" TO=\"TT3\" CUE=\"\" EVIDENCE=\"Adjacent text segments belong to different time tracks.\" />\r\n    <TREL ID=\"TI5\" FROM=\"TS3\" REL=\"SIMULTANEOUS\" TO=\"TS4\" CUE=\"Meanwhile\" EVIDENCE=\"Parallel cue places this event alongside the previous event.\" />\r\n    <TIME ID=\"TI6\" FROM=\"TT3\" REL=\"SIMULTANEOUS\" TO=\"TT4\" CUE=\"Meanwhile\" EVIDENCE=\"Parallel cue triggered a cross-track relation.\" />\r\n    <TREL ID=\"TI7\" FROM=\"TS4\" REL=\"BEFORE\" TO=\"TS5\" CUE=\"after the storm\" EVIDENCE=\"Forward cue places this event after the previous event.\" />\r\n    <TIME ID=\"TI8\" FROM=\"TT4\" REL=\"BEFORE\" TO=\"TT5\" CUE=\"\" EVIDENCE=\"Adjacent text segments belong to different time tracks.\" />\r\n    <TREL ID=\"TI9\" FROM=\"TS5\" REL=\"IMMEDIATELY-BEFORE\" TO=\"TS6\" CUE=\"\" EVIDENCE=\"No explicit cue; defaulting to text-order adjacency.\" />\r\n    <TIME ID=\"TI10\" FROM=\"TT5\" REL=\"BEFORE\" TO=\"TT6\" CUE=\"\" EVIDENCE=\"Adjacent text segments belong to different time tracks.\" />\r\n  </TIME-SECTION>\r\n  <EP-SECTION>\r\n    <ENDPOINT ID=\"EP1\" TYPE=\"SPLIT\" NAME=\"Karl split\" TT1=\"TT3\" TT2=\"TT4\" SEGMENT=\"TS4\" />\r\n    <ENDPOINT ID=\"EP2\" TYPE=\"JOIN\" NAME=\"Karl+Adam&amp;Margaret\" TT1=\"TT4\" TT2=\"TT5\" SEGMENT=\"TS5\" />\r\n    <ENDPOINT ID=\"EP3\" TYPE=\"SPLIT\" NAME=\"Adam split\" TT1=\"TT5\" TT2=\"TT6\" SEGMENT=\"TS6\" />\r\n  </EP-SECTION>\r\n  <POINT-SECTION>\r\n    <POINT ID=\"B1\" TYPE=\"START\" FROM-TS=\"\" TO-TS=\"TS1\" TRACKS=\"TT1\" REASON=\"First TS in text order.\" />\r\n    <POINT ID=\"B2\" TYPE=\"RUPTURE\" FROM-TS=\"TS1\" TO-TS=\"TS2\" TRACKS=\"TT1 TT2\" REASON=\"Adjacent text segments belong to different time tracks.\" />\r\n    <POINT ID=\"B3\" TYPE=\"RUPTURE\" FROM-TS=\"TS2\" TO-TS=\"TS3\" TRACKS=\"TT2 TT3\" REASON=\"Adjacent text segments belong to different time tracks.\" />\r\n    <POINT ID=\"B4\" TYPE=\"RUPTURE\" FROM-TS=\"TS3\" TO-TS=\"TS4\" TRACKS=\"TT3 TT4\" REASON=\"Adjacent text segments belong to different time tracks.\" />\r\n    <POINT ID=\"B5\" TYPE=\"SPLIT\" FROM-TS=\"TS3\" TO-TS=\"TS4\" TRACKS=\"TT3 TT4\" REASON=\"Text indicates separation, disappearance, or an actor continuing alone.\" />\r\n    <POINT ID=\"B6\" TYPE=\"RUPTURE\" FROM-TS=\"TS4\" TO-TS=\"TS5\" TRACKS=\"TT4 TT5\" REASON=\"Adjacent text segments belong to different time tracks.\" />\r\n    <POINT ID=\"B7\" TYPE=\"JOIN\" FROM-TS=\"TS4\" TO-TS=\"TS5\" TRACKS=\"TT4 TT5\" REASON=\"Text indicates that separate developments meet and continue together.\" />\r\n    <POINT ID=\"B8\" TYPE=\"RUPTURE\" FROM-TS=\"TS5\" TO-TS=\"TS6\" TRACKS=\"TT5 TT6\" REASON=\"Adjacent text segments belong to different time tracks.\" />\r\n    <POINT ID=\"B9\" TYPE=\"SPLIT\" FROM-TS=\"TS5\" TO-TS=\"TS6\" TRACKS=\"TT5 TT6\" REASON=\"Text indicates separation, disappearance, or an actor continuing alone.\" />\r\n    <POINT ID=\"B10\" TYPE=\"STOP\" FROM-TS=\"TS6\" TO-TS=\"\" TRACKS=\"TT6\" REASON=\"Last TS in text order.\" />\r\n  </POINT-SECTION>\r\n  <BODY>\r\n    <TS ID=\"TS1\" IN-TT=\"TT1\" SPANS=\"0~41\" ACTORS=\"A1,A2\" LOCATION=\"L2\" NAME=\"TS1\" TYPE=\"NAR\" TST=\"Past\" TIME=\"\" PER=\"narrator\" EVENTS=\"EV1\">Adam and Johan grew up in the same house.</TS>\r\n    <TS ID=\"TS2\" IN-TT=\"TT2\" SPANS=\"42~96\" ACTORS=\"A3,A1\" LOCATION=\"L1\" NAME=\"TS2\" TYPE=\"REM\" TST=\"Past\" TIME=\"Years earlier\" PER=\"Karl\" EVENTS=\"EV2\">Years earlier, Karl had carried Adam through the rain.</TS>\r\n    <TS ID=\"TS3\" IN-TT=\"TT3\" SPANS=\"97~139\" ACTORS=\"A4\" LOCATION=\"L3\" NAME=\"TS3\" TYPE=\"REM\" TST=\"Past\" TIME=\"Years earlier\" PER=\"Margaret\" EVENTS=\"EV3\">Margaret remembered her mother in Jakarta.</TS>\r\n    <TS ID=\"TS4\" IN-TT=\"TT4\" SPANS=\"140~189\" ACTORS=\"A3\" LOCATION=\"L1\" NAME=\"TS4\" TYPE=\"NAR\" TST=\"Past\" TIME=\"Years earlier\" PER=\"narrator\" EVENTS=\"EV4\">Meanwhile, Karl traveled alone across the island.</TS>\r\n    <TS ID=\"TS5\" IN-TT=\"TT5\" SPANS=\"190~269\" ACTORS=\"A1,A4\" LOCATION=\"L4\" NAME=\"TS5\" TYPE=\"NAR\" TST=\"Past\" TIME=\"after the storm\" PER=\"narrator\" EVENTS=\"EV5,EV6\">Adam searched for Margaret after the storm. Margaret found Adam at the doorway.</TS>\r\n    <TS ID=\"TS6\" IN-TT=\"TT6\" SPANS=\"270~299\" ACTORS=\"A1\" LOCATION=\"L1\" NAME=\"TS6\" TYPE=\"NAR\" TST=\"Past\" TIME=\"before dawn\" PER=\"narrator\" EVENTS=\"EV7\">Adam disappeared before dawn.</TS>\r\n  </BODY>\r\n</TYM>\r\n",
+  "warnings": [
+    "Time segment types follow the paper labels: NAR, REM, SUP, GEN, and FIC.",
+    "The XML output follows the paper notation: TT-SECTION, TIME-SECTION, EP-SECTION, and inline TS tags.",
+    "The diagram includes a TimeML-style layer with EVENT, TIMEX3, SIGNAL, MAKEINSTANCE, and TLINK annotations.",
+    "English extraction uses non-LLM rules plus ML.NET seed classifiers for event temporal category and TS type.",
+    "ML.NET calculates event temporal category and TS type from bundled paper-guided seed examples; replace these with an annotated corpus for production use."
+  ]
 }

@@ -1,0 +1,10 @@
+{
+  "text": "Adam și Johan au crescut în aceeași casă. Cu ani în urmă, Karl l-a dus pe Adam prin ploaie. Margaret și-a amintit de mama ei în Jakarta. Între timp, Karl a călătorit singur pe insulă. Adam a căutat-o pe Margaret după furtună. Margaret l-a găsit pe Adam la ușă. Adam a dispărut înainte de zori.",
+  "options": {
+    "layout": "both",
+    "width": 1200,
+    "highlight_entities": ["Adam"],
+    "include_debug": true,
+    "language": "ro"
+  }
+}

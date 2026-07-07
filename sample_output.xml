@@ -13,15 +13,75 @@
     <TL ID="L3" NAME="Jakarta" PARENTID="" />
     <TL ID="L4" NAME="the doorway" PARENTID="" />
   </TL-SECTION>
+  <ENTITY-MENTION-SECTION>
+    <ENTITY-MENTION ID="EM1" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV1" SPANS="0~4" TEXT="Adam" />
+    <ENTITY-MENTION ID="EM2" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV1" SPANS="9~14" TEXT="Johan" />
+    <ENTITY-MENTION ID="EM3" TYPE="LOCATION" SOURCE="preposition_location_pattern" EVENT="EV1" SPANS="26~40" TEXT="the same house" />
+    <ENTITY-MENTION ID="EM4" TYPE="EVENT_ACTION" SOURCE="verb_pattern" EVENT="EV1" SPANS="15~19" TEXT="grew" />
+    <ENTITY-MENTION ID="EM5" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV2" SPANS="57~61" TEXT="Karl" />
+    <ENTITY-MENTION ID="EM6" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV2" SPANS="74~78" TEXT="Adam" />
+    <ENTITY-MENTION ID="EM7" TYPE="DATE_TIME" SOURCE="temporal_expression_pattern" EVENT="EV2" SPANS="42~55" TEXT="Years earlier" />
+    <ENTITY-MENTION ID="EM8" TYPE="EVENT_ACTION" SOURCE="verb_pattern" EVENT="EV2" SPANS="62~65" TEXT="had" />
+    <ENTITY-MENTION ID="EM9" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV3" SPANS="97~105" TEXT="Margaret" />
+    <ENTITY-MENTION ID="EM10" TYPE="LOCATION" SOURCE="preposition_location_pattern" EVENT="EV3" SPANS="131~138" TEXT="Jakarta" />
+    <ENTITY-MENTION ID="EM11" TYPE="EVENT_ACTION" SOURCE="verb_pattern" EVENT="EV3" SPANS="106~116" TEXT="remembered" />
+    <ENTITY-MENTION ID="EM12" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV4" SPANS="151~155" TEXT="Karl" />
+    <ENTITY-MENTION ID="EM13" TYPE="EVENT_ACTION" SOURCE="verb_pattern" EVENT="EV4" SPANS="156~164" TEXT="traveled" />
+    <ENTITY-MENTION ID="EM14" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV5" SPANS="190~194" TEXT="Adam" />
+    <ENTITY-MENTION ID="EM15" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV5" SPANS="208~216" TEXT="Margaret" />
+    <ENTITY-MENTION ID="EM16" TYPE="DATE_TIME" SOURCE="temporal_expression_pattern" EVENT="EV5" SPANS="217~232" TEXT="after the storm" />
+    <ENTITY-MENTION ID="EM17" TYPE="EVENT_ACTION" SOURCE="verb_pattern" EVENT="EV5" SPANS="195~203" TEXT="searched" />
+    <ENTITY-MENTION ID="EM18" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV6" SPANS="234~242" TEXT="Margaret" />
+    <ENTITY-MENTION ID="EM19" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV6" SPANS="249~253" TEXT="Adam" />
+    <ENTITY-MENTION ID="EM20" TYPE="LOCATION" SOURCE="preposition_location_pattern" EVENT="EV6" SPANS="257~268" TEXT="the doorway" />
+    <ENTITY-MENTION ID="EM21" TYPE="EVENT_ACTION" SOURCE="verb_pattern" EVENT="EV6" SPANS="243~248" TEXT="found" />
+    <ENTITY-MENTION ID="EM22" TYPE="PERSON" SOURCE="capitalized_actor_mention" EVENT="EV7" SPANS="270~274" TEXT="Adam" />
+    <ENTITY-MENTION ID="EM23" TYPE="DATE_TIME" SOURCE="temporal_expression_pattern" EVENT="EV7" SPANS="287~298" TEXT="before dawn" />
+    <ENTITY-MENTION ID="EM24" TYPE="EVENT_ACTION" SOURCE="verb_pattern" EVENT="EV7" SPANS="275~286" TEXT="disappeared" />
+  </ENTITY-MENTION-SECTION>
   <EVENT-SECTION>
-    <EVENT ID="EV1" SPANS="0~41" ACTORS="A1,A2" LOCATION="L2" TEMPORAL-ANCHOR="" TENSE="Past" ACTION="grew" ORDER="1" TEXT="Adam and Johan grew up in the same house." />
-    <EVENT ID="EV2" SPANS="42~96" ACTORS="A3,A1" LOCATION="L1" TEMPORAL-ANCHOR="Years earlier" TENSE="Past" ACTION="had" ORDER="2" TEXT="Years earlier, Karl had carried Adam through the rain." />
-    <EVENT ID="EV3" SPANS="97~139" ACTORS="A4" LOCATION="L3" TEMPORAL-ANCHOR="Years earlier" TENSE="Past" ACTION="remembered" ORDER="3" TEXT="Margaret remembered her mother in Jakarta." />
-    <EVENT ID="EV4" SPANS="140~189" ACTORS="A3" LOCATION="L1" TEMPORAL-ANCHOR="Years earlier" TENSE="Past" ACTION="traveled" ORDER="4" TEXT="Meanwhile, Karl traveled alone across the island." />
-    <EVENT ID="EV5" SPANS="190~233" ACTORS="A1,A4" LOCATION="L1" TEMPORAL-ANCHOR="after the storm" TENSE="Past" ACTION="searched" ORDER="5" TEXT="Adam searched for Margaret after the storm." />
-    <EVENT ID="EV6" SPANS="234~269" ACTORS="A4,A1" LOCATION="L4" TEMPORAL-ANCHOR="after the storm" TENSE="Past" ACTION="found" ORDER="6" TEXT="Margaret found Adam at the doorway." />
-    <EVENT ID="EV7" SPANS="270~299" ACTORS="A1" LOCATION="L1" TEMPORAL-ANCHOR="before dawn" TENSE="Past" ACTION="disappeared" ORDER="7" TEXT="Adam disappeared before dawn." />
+    <EVENT ID="EV1" SPANS="0~41" ACTORS="A1,A2" LOCATION="L2" TEMPORAL-ANCHOR="" TENSE="Past" ACTION="grew" REL-PREV="NONE" REL-CUE="" ORDER="1" TEXT="Adam and Johan grew up in the same house." />
+    <EVENT ID="EV2" SPANS="42~96" ACTORS="A3,A1" LOCATION="L1" TEMPORAL-ANCHOR="Years earlier" TENSE="Past" ACTION="had" REL-PREV="BEFORE" REL-CUE="Years earlier" ORDER="2" TEXT="Years earlier, Karl had carried Adam through the rain." />
+    <EVENT ID="EV3" SPANS="97~139" ACTORS="A4" LOCATION="L3" TEMPORAL-ANCHOR="Years earlier" TENSE="Past" ACTION="remembered" REL-PREV="IMMEDIATELY_AFTER" REL-CUE="" ORDER="3" TEXT="Margaret remembered her mother in Jakarta." />
+    <EVENT ID="EV4" SPANS="140~189" ACTORS="A3" LOCATION="L1" TEMPORAL-ANCHOR="Years earlier" TENSE="Past" ACTION="traveled" REL-PREV="SIMULTANEOUS" REL-CUE="Meanwhile" ORDER="4" TEXT="Meanwhile, Karl traveled alone across the island." />
+    <EVENT ID="EV5" SPANS="190~233" ACTORS="A1,A4" LOCATION="L1" TEMPORAL-ANCHOR="after the storm" TENSE="Past" ACTION="searched" REL-PREV="AFTER" REL-CUE="after the storm" ORDER="5" TEXT="Adam searched for Margaret after the storm." />
+    <EVENT ID="EV6" SPANS="234~269" ACTORS="A4,A1" LOCATION="L4" TEMPORAL-ANCHOR="after the storm" TENSE="Past" ACTION="found" REL-PREV="IMMEDIATELY_AFTER" REL-CUE="" ORDER="6" TEXT="Margaret found Adam at the doorway." />
+    <EVENT ID="EV7" SPANS="270~299" ACTORS="A1" LOCATION="L1" TEMPORAL-ANCHOR="before dawn" TENSE="Past" ACTION="disappeared" REL-PREV="IMMEDIATELY_AFTER" REL-CUE="" ORDER="7" TEXT="Adam disappeared before dawn." />
   </EVENT-SECTION>
+  <TIMEML-SECTION>
+    <EVENT eid="e1" class="OCCURRENCE" tymEventId="EV1" spans="15~19">grew</EVENT>
+    <EVENT eid="e2" class="I_STATE" tymEventId="EV2" spans="62~65">had</EVENT>
+    <EVENT eid="e3" class="I_STATE" tymEventId="EV3" spans="106~116">remembered</EVENT>
+    <EVENT eid="e4" class="OCCURRENCE" tymEventId="EV4" spans="156~164">traveled</EVENT>
+    <EVENT eid="e5" class="OCCURRENCE" tymEventId="EV5" spans="195~203">searched</EVENT>
+    <EVENT eid="e6" class="OCCURRENCE" tymEventId="EV6" spans="243~248">found</EVENT>
+    <EVENT eid="e7" class="OCCURRENCE" tymEventId="EV7" spans="275~286">disappeared</EVENT>
+    <TIMEX3 tid="t1" type="DATE" value="PAST_REF" functionInDocument="NONE" source="explicit_temporal_expression" spans="42~55">Years earlier</TIMEX3>
+    <TIMEX3 tid="t2" type="DATE" value="PAST_REF" functionInDocument="NONE" source="explicit_temporal_expression" spans="217~232">after the storm</TIMEX3>
+    <TIMEX3 tid="t3" type="TIME" value="PAST_REF" functionInDocument="NONE" source="explicit_temporal_expression" spans="287~298">before dawn</TIMEX3>
+    <SIGNAL sid="s1" eventId="EV2" relationHint="BEFORE" spans="42~55">Years earlier</SIGNAL>
+    <SIGNAL sid="s2" eventId="EV4" relationHint="SIMULTANEOUS" spans="140~149">Meanwhile</SIGNAL>
+    <SIGNAL sid="s3" eventId="EV5" relationHint="AFTER" spans="217~232">after the storm</SIGNAL>
+    <MAKEINSTANCE eiid="ei1" eventID="e1" tense="PAST" aspect="NONE" polarity="POS" pos="VERB" tymEventId="EV1" />
+    <MAKEINSTANCE eiid="ei2" eventID="e2" tense="PAST" aspect="PERFECTIVE" polarity="POS" pos="VERB" tymEventId="EV2" />
+    <MAKEINSTANCE eiid="ei3" eventID="e3" tense="PAST" aspect="NONE" polarity="POS" pos="VERB" tymEventId="EV3" />
+    <MAKEINSTANCE eiid="ei4" eventID="e4" tense="PAST" aspect="NONE" polarity="POS" pos="VERB" tymEventId="EV4" />
+    <MAKEINSTANCE eiid="ei5" eventID="e5" tense="PAST" aspect="NONE" polarity="POS" pos="VERB" tymEventId="EV5" />
+    <MAKEINSTANCE eiid="ei6" eventID="e6" tense="PAST" aspect="NONE" polarity="POS" pos="VERB" tymEventId="EV6" />
+    <MAKEINSTANCE eiid="ei7" eventID="e7" tense="PAST" aspect="NONE" polarity="POS" pos="VERB" tymEventId="EV7" />
+    <TLINK lid="l1" relType="IS_INCLUDED" eventInstanceID="ei2" relatedToEventInstance="" timeID="" relatedToTime="t1" signalID="" origin="event_temporal_anchor" />
+    <TLINK lid="l2" relType="BEFORE" eventInstanceID="ei2" relatedToEventInstance="ei1" timeID="" relatedToTime="" signalID="s1" origin="event_relation_signal" />
+    <TLINK lid="l3" relType="IS_INCLUDED" eventInstanceID="ei3" relatedToEventInstance="" timeID="" relatedToTime="t1" signalID="" origin="event_temporal_anchor" />
+    <TLINK lid="l4" relType="IBEFORE" eventInstanceID="ei2" relatedToEventInstance="ei3" timeID="" relatedToTime="" signalID="" origin="event_text_order" />
+    <TLINK lid="l5" relType="IS_INCLUDED" eventInstanceID="ei4" relatedToEventInstance="" timeID="" relatedToTime="t1" signalID="" origin="event_temporal_anchor" />
+    <TLINK lid="l6" relType="SIMULTANEOUS" eventInstanceID="ei3" relatedToEventInstance="ei4" timeID="" relatedToTime="" signalID="s2" origin="event_relation_signal" />
+    <TLINK lid="l7" relType="IS_INCLUDED" eventInstanceID="ei5" relatedToEventInstance="" timeID="" relatedToTime="t2" signalID="" origin="event_temporal_anchor" />
+    <TLINK lid="l8" relType="BEFORE" eventInstanceID="ei4" relatedToEventInstance="ei5" timeID="" relatedToTime="" signalID="s3" origin="event_relation_signal" />
+    <TLINK lid="l9" relType="IS_INCLUDED" eventInstanceID="ei6" relatedToEventInstance="" timeID="" relatedToTime="t2" signalID="" origin="event_temporal_anchor" />
+    <TLINK lid="l10" relType="IBEFORE" eventInstanceID="ei5" relatedToEventInstance="ei6" timeID="" relatedToTime="" signalID="" origin="event_text_order" />
+    <TLINK lid="l11" relType="IS_INCLUDED" eventInstanceID="ei7" relatedToEventInstance="" timeID="" relatedToTime="t3" signalID="" origin="event_temporal_anchor" />
+    <TLINK lid="l12" relType="IBEFORE" eventInstanceID="ei6" relatedToEventInstance="ei7" timeID="" relatedToTime="" signalID="" origin="event_text_order" />
+  </TIMEML-SECTION>
   <TT-SECTION>
     <TT ID="TT1" NAME="Adam&amp;Johan" LEFT-EP="START" RIGHT-EP="STOP" />
     <TT ID="TT2" NAME="Karl&amp;Adam" LEFT-EP="START" RIGHT-EP="STOP" />
@@ -31,16 +91,16 @@
     <TT ID="TT6" NAME="Adam" LEFT-EP="EP3" RIGHT-EP="STOP" />
   </TT-SECTION>
   <TIME-SECTION>
-    <TREL ID="TI1" FROM="TS1" REL="IMMEDIATELY-BEFORE" TO="TS2" />
-    <TIME ID="TI2" FROM="TT1" REL="BEFORE" TO="TT2" />
-    <TREL ID="TI3" FROM="TS2" REL="IMMEDIATELY-BEFORE" TO="TS3" />
-    <TIME ID="TI4" FROM="TT2" REL="BEFORE" TO="TT3" />
-    <TREL ID="TI5" FROM="TS3" REL="IMMEDIATELY-BEFORE" TO="TS4" />
-    <TIME ID="TI6" FROM="TT3" REL="SIMULTANEOUS" TO="TT4" />
-    <TREL ID="TI7" FROM="TS4" REL="IMMEDIATELY-BEFORE" TO="TS5" />
-    <TIME ID="TI8" FROM="TT4" REL="BEFORE" TO="TT5" />
-    <TREL ID="TI9" FROM="TS5" REL="IMMEDIATELY-BEFORE" TO="TS6" />
-    <TIME ID="TI10" FROM="TT5" REL="BEFORE" TO="TT6" />
+    <TREL ID="TI1" FROM="TS2" REL="BEFORE" TO="TS1" CUE="Years earlier" EVIDENCE="Retrospective cue places this event earlier than the previous event." />
+    <TIME ID="TI2" FROM="TT1" REL="BEFORE" TO="TT2" CUE="" EVIDENCE="Adjacent text segments belong to different time tracks." />
+    <TREL ID="TI3" FROM="TS2" REL="IMMEDIATELY-BEFORE" TO="TS3" CUE="" EVIDENCE="No explicit cue; defaulting to text-order adjacency." />
+    <TIME ID="TI4" FROM="TT2" REL="BEFORE" TO="TT3" CUE="" EVIDENCE="Adjacent text segments belong to different time tracks." />
+    <TREL ID="TI5" FROM="TS3" REL="SIMULTANEOUS" TO="TS4" CUE="Meanwhile" EVIDENCE="Parallel cue places this event alongside the previous event." />
+    <TIME ID="TI6" FROM="TT3" REL="SIMULTANEOUS" TO="TT4" CUE="Meanwhile" EVIDENCE="Parallel cue triggered a cross-track relation." />
+    <TREL ID="TI7" FROM="TS4" REL="BEFORE" TO="TS5" CUE="after the storm" EVIDENCE="Forward cue places this event after the previous event." />
+    <TIME ID="TI8" FROM="TT4" REL="BEFORE" TO="TT5" CUE="" EVIDENCE="Adjacent text segments belong to different time tracks." />
+    <TREL ID="TI9" FROM="TS5" REL="IMMEDIATELY-BEFORE" TO="TS6" CUE="" EVIDENCE="No explicit cue; defaulting to text-order adjacency." />
+    <TIME ID="TI10" FROM="TT5" REL="BEFORE" TO="TT6" CUE="" EVIDENCE="Adjacent text segments belong to different time tracks." />
   </TIME-SECTION>
   <EP-SECTION>
     <ENDPOINT ID="EP1" TYPE="SPLIT" NAME="Karl split" TT1="TT3" TT2="TT4" SEGMENT="TS4" />

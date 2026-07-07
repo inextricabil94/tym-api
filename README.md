@@ -8,6 +8,10 @@ TYM is a small ASP.NET Core Minimal API for turning narrative text into time-yar
 
 This prototype now follows the implementation directions from the supplied papers more closely. It first extracts event-like clauses, attaches actors, temporal anchors, locations, actions, and a `Past`/`Present`/`Future` temporal category, then groups contiguous compatible events into time segments. ML.NET is used for event temporal-category classification and for each candidate time segment's narrative type (`NAR`, `REM`, `SUP`, `GEN`, or `FIC`). The bundled models are trained at startup from seed examples in `Program.cs`; a production implementation should replace those examples with the annotated TYM corpus.
 
+No LLM is used by the API pipeline. The extraction path is deterministic rules plus ML.NET classifiers, and the renderer is deterministic JSON/SVG/XML generation. The JSON/XML output now also includes a TimeML-style layer with `EVENT`, `TIMEX3`, `SIGNAL`, `MAKEINSTANCE`, and `TLINK` annotations so the TYM diagram can be compared with standard temporal NLP tooling.
+
+English is the default extraction language. Romanian narrative text is supported with `options.language = "ro"` using Romanian rule profiles for named-entity candidates, temporal anchors, temporal signals, event tense, TimeML-style labels, and TYM segment/track creation.
+
 ## Run
 
 ```powershell
@@ -25,6 +29,16 @@ Invoke-RestMethod `
   -Body (Get-Content .\sample_input.json -Raw)
 ```
 
+Romanian sample:
+
+```powershell
+Invoke-RestMethod `
+  -Uri http://127.0.0.1:8765/v1/diagrams `
+  -Method Post `
+  -ContentType 'application/json' `
+  -Body (Get-Content .\sample_input_ro.json -Raw)
+```
+
 To get only SVG:
 
 ```powershell
@@ -39,6 +53,7 @@ Invoke-WebRequest `
 ## Endpoints
 
 - `GET /health`
+- `GET /` returns service metadata and the available endpoints
 - `POST /v1/diagrams` returns normalized diagram JSON plus embedded SVG
 - `POST /v1/diagrams/svg` returns `image/svg+xml`
 - `POST /v1/diagrams/xml` returns paper-style XML notation
@@ -80,6 +95,8 @@ http://127.0.0.1:8765/openapi.yaml
 - `confidence`: ML.NET classifier confidence for `type`
 - `classifier`: `mlnet_seed_model` or `heuristic_fallback`
 
+For Romanian (`language = "ro"`), event temporal category and segment type are currently rule-based (`romanian_rule_event_temporal`, `romanian_rule_segment_type`) because the bundled ML.NET seed examples are English.
+
 `TimeTrack` corresponds to `TT`:
 
 - `id`: stable track id, such as `TT1`
@@ -97,6 +114,15 @@ http://127.0.0.1:8765/openapi.yaml
 
 - `from_id`, `to_id`
 - `rel`: `BEFORE`, `IMMEDIATELY_BEFORE`, `AFTER`, `IMMEDIATELY_AFTER`, or `SIMULTANEOUS`
+- `cue`, `evidence`: the lexical cue and rule explanation, when available
+
+`time_ml` is a TimeML-style annotation layer:
+
+- `events`: event heads with TimeML event class, such as `OCCURRENCE`, `STATE`, `I_STATE`, or `PERCEPTION`
+- `timex3`: temporal expressions with rough `DATE`, `TIME`, `DURATION`, or `SET` typing and normalized values such as `PAST_REF`
+- `signals`: cue words such as `meanwhile`, `years earlier`, `then`, or `after`
+- `make_instances`: event instances with tense, aspect, polarity, and POS
+- `tlinks`: event-event and event-time temporal links using TimeML-style relation labels such as `IBEFORE`, `BEFORE`, `SIMULTANEOUS`, and `IS_INCLUDED`
 
 ## Production Notes
 
@@ -104,10 +130,24 @@ The API boundary is intentionally separate from extraction. The current pipeline
 
 1. split text into event-like clauses using punctuation, conjunction, and verb cues
 2. extract actor, temporal anchor, location, action, and offset features
-3. classify each event as `Past`, `Present`, or `Future` with ML.NET
+3. classify each event as `Past`, `Present`, or `Future` with ML.NET for English, or Romanian temporal rules for Romanian
 4. concatenate adjacent events with compatible temporal category and actor unity into `TS`
-5. classify each `TS` as `NAR`, `REM`, `SUP`, `GEN`, or `FIC`
+5. classify each `TS` as `NAR`, `REM`, `SUP`, `GEN`, or `FIC` with ML.NET for English, or Romanian narrative-mode rules for Romanian
 6. infer TT membership, boundaries, endpoints, and relations
-7. render JSON, SVG, and paper-style XML
+7. emit TimeML-style EVENT/TIMEX3/SIGNAL/MAKEINSTANCE/TLINK annotations
+8. render JSON, SVG, and paper-style XML
 
 The renderer consumes normalized TYM JSON, so extraction can be upgraded independently.
+
+## Non-LLM Framework POCs
+
+The comparison suite in [pocs/nlp-framework-comparison](pocs/nlp-framework-comparison) implements the article pipeline as non-LLM proof of concepts and reports statistics for:
+
+- article-guided rules
+- spaCy NER/POS/dependency preprocessing
+- Stanza NER/POS/dependency preprocessing
+- SUTime/CoreNLP availability
+- HeidelTime availability
+- current saved .NET API output
+
+See [poc_report.md](pocs/nlp-framework-comparison/results/poc_report.md) for the generated statistics and [llm_considerations.md](pocs/nlp-framework-comparison/llm_considerations.md) for where an optional LLM layer would fit.

@@ -9,6 +9,7 @@
   <ItemGroup>
     <Content Update="openapi.yaml" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="sample_input.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="sample_input_ro.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

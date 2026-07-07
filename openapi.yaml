@@ -1,11 +1,37 @@
 openapi: 3.1.0
 info:
   title: TYM Diagram API
-  version: 0.3.0
-  description: API for generating paper-guided Time Yards Model diagrams from narrative text.
+  version: 0.6.0
+  description: API for generating paper-guided Time Yards Model diagrams and TimeML-style temporal annotations from English or Romanian narrative text.
 servers:
   - url: http://127.0.0.1:8765
 paths:
+  /:
+    get:
+      operationId: getServiceInfo
+      summary: Service metadata and endpoint list
+      responses:
+        "200":
+          description: Service metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  version:
+                    type: string
+                  extraction:
+                    type: string
+                  supported_languages:
+                    type: array
+                    items:
+                      type: string
+                  endpoints:
+                    type: array
+                    items:
+                      type: string
   /health:
     get:
       operationId: getHealth
@@ -128,6 +154,13 @@ components:
             include_debug:
               type: boolean
               default: false
+            language:
+              type: string
+              enum:
+                - en
+                - ro
+              default: en
+              description: Extraction language. Use `ro` for Romanian narrative text.
     DiagramResponse:
       type: object
       required:
@@ -151,12 +184,14 @@ components:
           required:
             - actors
             - locations
+            - entity_mentions
             - events
             - tracks
             - segments
             - endpoints
             - relations
             - boundaries
+            - time_ml
           properties:
             actors:
               type: array
@@ -166,6 +201,10 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/TimeLocation"
+            entity_mentions:
+              type: array
+              items:
+                $ref: "#/components/schemas/EntityMention"
             events:
               type: array
               items:
@@ -190,6 +229,8 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/SegmentBoundary"
+            time_ml:
+              $ref: "#/components/schemas/TimeMlDocument"
         render:
           type: object
           required:
@@ -233,6 +274,36 @@ components:
           type: string
         parent_id:
           type: string
+    EntityMention:
+      type: object
+      required:
+        - id
+        - text
+        - label
+        - source
+        - span_start
+        - span_end
+        - event_id
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        label:
+          type: string
+          enum:
+            - PERSON
+            - LOCATION
+            - DATE_TIME
+            - EVENT_ACTION
+        source:
+          type: string
+        span_start:
+          type: integer
+        span_end:
+          type: integer
+        event_id:
+          type: string
     NarrativeEvent:
       type: object
       required:
@@ -243,6 +314,9 @@ components:
         - location
         - action
         - temporal_category
+        - relation_to_previous
+        - relation_cue
+        - relation_evidence
         - order
         - span_start
         - span_end
@@ -269,6 +343,18 @@ components:
             - Past
             - Present
             - Future
+        relation_to_previous:
+          type: string
+          enum:
+            - NONE
+            - BEFORE
+            - AFTER
+            - IMMEDIATELY_AFTER
+            - SIMULTANEOUS
+        relation_cue:
+          type: string
+        relation_evidence:
+          type: string
         order:
           type: integer
         span_start:
@@ -400,6 +486,8 @@ components:
         - from_id
         - rel
         - to_id
+        - cue
+        - evidence
       properties:
         from_id:
           type: string
@@ -412,6 +500,10 @@ components:
             - IMMEDIATELY_AFTER
             - SIMULTANEOUS
         to_id:
+          type: string
+        cue:
+          type: string
+        evidence:
           type: string
     SegmentBoundary:
       type: object
@@ -445,6 +537,194 @@ components:
           items:
             type: string
         reason:
+          type: string
+    TimeMlDocument:
+      type: object
+      required:
+        - events
+        - timex3
+        - signals
+        - make_instances
+        - tlinks
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeMlEvent"
+        timex3:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeMlTimex3"
+        signals:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeMlSignal"
+        make_instances:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeMlMakeInstance"
+        tlinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeMlTLink"
+    TimeMlEvent:
+      type: object
+      required:
+        - eid
+        - class
+        - text
+        - span_start
+        - span_end
+        - tym_event_id
+      properties:
+        eid:
+          type: string
+        class:
+          type: string
+          enum:
+            - OCCURRENCE
+            - PERCEPTION
+            - REPORTING
+            - ASPECTUAL
+            - I_ACTION
+            - I_STATE
+            - STATE
+        text:
+          type: string
+        span_start:
+          type: integer
+        span_end:
+          type: integer
+        tym_event_id:
+          type: string
+    TimeMlTimex3:
+      type: object
+      required:
+        - tid
+        - type
+        - value
+        - text
+        - span_start
+        - span_end
+        - source
+        - function_in_document
+      properties:
+        tid:
+          type: string
+        type:
+          type: string
+          enum:
+            - DATE
+            - TIME
+            - DURATION
+            - SET
+        value:
+          type: string
+        text:
+          type: string
+        span_start:
+          type: integer
+        span_end:
+          type: integer
+        source:
+          type: string
+        function_in_document:
+          type: string
+    TimeMlSignal:
+      type: object
+      required:
+        - sid
+        - text
+        - span_start
+        - span_end
+        - event_id
+        - relation_hint
+      properties:
+        sid:
+          type: string
+        text:
+          type: string
+        span_start:
+          type: integer
+        span_end:
+          type: integer
+        event_id:
+          type: string
+        relation_hint:
+          type: string
+    TimeMlMakeInstance:
+      type: object
+      required:
+        - eiid
+        - event_id
+        - tense
+        - aspect
+        - polarity
+        - pos
+        - tym_event_id
+      properties:
+        eiid:
+          type: string
+        event_id:
+          type: string
+        tense:
+          type: string
+        aspect:
+          type: string
+        polarity:
+          type: string
+          enum:
+            - POS
+            - NEG
+        pos:
+          type: string
+        tym_event_id:
+          type: string
+    TimeMlTLink:
+      type: object
+      required:
+        - lid
+        - rel_type
+        - origin
+      properties:
+        lid:
+          type: string
+        rel_type:
+          type: string
+          enum:
+            - BEFORE
+            - AFTER
+            - IBEFORE
+            - IAFTER
+            - INCLUDES
+            - IS_INCLUDED
+            - DURING
+            - DURING_INV
+            - SIMULTANEOUS
+            - IDENTITY
+            - BEGINS
+            - ENDS
+        event_instance_id:
+          type:
+            - string
+            - "null"
+        related_to_event_instance:
+          type:
+            - string
+            - "null"
+        time_id:
+          type:
+            - string
+            - "null"
+        related_to_time:
+          type:
+            - string
+            - "null"
+        signal_id:
+          type:
+            - string
+            - "null"
+        origin:
           type: string
     ErrorResponse:
       type: object

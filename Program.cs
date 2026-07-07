@@ -26,6 +26,8 @@ app.MapGet("/", () => Results.Json(new
 {
     service = "tym-api",
     version = TymConstants.Version,
+    extraction = "non-llm article-guided rules plus ML.NET seed classifiers plus TimeML-style temporal annotations",
+    supportedLanguages = new[] { "en", "ro" },
     endpoints = new[]
     {
         "GET /health",
@@ -98,7 +100,23 @@ static string? Validate(DiagramRequest? request)
         return "'options.layout' must be one of: both, text_order, time_yard.";
     }
 
+    var language = request.Options?.Language;
+    if (!string.IsNullOrWhiteSpace(language) && NormalizeLanguage(language) is null)
+    {
+        return "'options.language' must be one of: en, ro.";
+    }
+
     return null;
+}
+
+static string? NormalizeLanguage(string language)
+{
+    return language.Trim().ToLowerInvariant() switch
+    {
+        "en" or "eng" or "english" => "en",
+        "ro" or "ron" or "rom" or "romanian" or "română" or "romana" => "ro",
+        _ => null
+    };
 }
 
 public sealed record DiagramRequest(
@@ -109,7 +127,8 @@ public sealed record DiagramOptions(
     string Layout = "both",
     int Width = 1200,
     string[]? HighlightEntities = null,
-    bool IncludeDebug = false);
+    bool IncludeDebug = false,
+    string Language = "en");
 
 public sealed record ErrorResponse(string Error);
 
@@ -124,12 +143,14 @@ public sealed record DiagramResponse(
 public sealed record Diagram(
     IReadOnlyList<TimeActor> Actors,
     IReadOnlyList<TimeLocation> Locations,
+    IReadOnlyList<EntityMention> EntityMentions,
     IReadOnlyList<NarrativeEvent> Events,
     IReadOnlyList<TimeTrack> Tracks,
     IReadOnlyList<TimeSegment> Segments,
     IReadOnlyList<Endpoint> Endpoints,
     IReadOnlyList<TimeRelation> Relations,
-    IReadOnlyList<SegmentBoundary> Boundaries);
+    IReadOnlyList<SegmentBoundary> Boundaries,
+    TimeMlDocument TimeMl);
 
 public sealed record TimeActor(
     string Id,
@@ -140,6 +161,15 @@ public sealed record TimeLocation(
     string Name,
     string ParentId);
 
+public sealed record EntityMention(
+    string Id,
+    string Text,
+    string Label,
+    string Source,
+    int SpanStart,
+    int SpanEnd,
+    string EventId);
+
 public sealed record NarrativeEvent(
     string Id,
     string Text,
@@ -148,6 +178,9 @@ public sealed record NarrativeEvent(
     string Location,
     string Action,
     string TemporalCategory,
+    string RelationToPrevious,
+    string RelationCue,
+    string RelationEvidence,
     int Order,
     int SpanStart,
     int SpanEnd,
@@ -189,7 +222,9 @@ public sealed record Endpoint(
 public sealed record TimeRelation(
     string FromId,
     string Rel,
-    string ToId);
+    string ToId,
+    string Cue,
+    string Evidence);
 
 public sealed record SegmentBoundary(
     string Id,
@@ -199,6 +234,59 @@ public sealed record SegmentBoundary(
     IReadOnlyList<string> TrackIds,
     string Reason);
 
+public sealed record TimeMlDocument(
+    IReadOnlyList<TimeMlEvent> Events,
+    IReadOnlyList<TimeMlTimex3> Timex3,
+    IReadOnlyList<TimeMlSignal> Signals,
+    IReadOnlyList<TimeMlMakeInstance> MakeInstances,
+    [property: JsonPropertyName("tlinks")]
+    IReadOnlyList<TimeMlTLink> TLinks);
+
+public sealed record TimeMlEvent(
+    string Eid,
+    string Class,
+    string Text,
+    int SpanStart,
+    int SpanEnd,
+    string TymEventId);
+
+public sealed record TimeMlTimex3(
+    string Tid,
+    string Type,
+    string Value,
+    string Text,
+    int SpanStart,
+    int SpanEnd,
+    string Source,
+    string FunctionInDocument);
+
+public sealed record TimeMlSignal(
+    string Sid,
+    string Text,
+    int SpanStart,
+    int SpanEnd,
+    string EventId,
+    string RelationHint);
+
+public sealed record TimeMlMakeInstance(
+    string Eiid,
+    string EventId,
+    string Tense,
+    string Aspect,
+    string Polarity,
+    string Pos,
+    string TymEventId);
+
+public sealed record TimeMlTLink(
+    string Lid,
+    string RelType,
+    string? EventInstanceId,
+    string? RelatedToEventInstance,
+    string? TimeId,
+    string? RelatedToTime,
+    string? SignalId,
+    string Origin);
+
 public sealed record RenderResult(
     string Format,
     int Width,
@@ -207,7 +295,7 @@ public sealed record RenderResult(
 
 internal static class TymConstants
 {
-    public const string Version = "tym-dotnet-paper-guided-mlnet-v0.3";
+    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.6";
 }
 
 internal sealed class MutableTrack
@@ -264,6 +352,8 @@ internal sealed record SegmentClassification(string Label, double Confidence, st
 
 internal sealed record EventTemporalClassification(string Label, double Confidence, string Source);
 
+internal sealed record TemporalCue(string Relation, string Cue, string Evidence);
+
 internal sealed class SegmentTypeTrainingRow
 {
     public string Text { get; set; } = "";
@@ -301,6 +391,9 @@ internal sealed class MutableNarrativeEvent
     public required string Location { get; init; }
     public required string Action { get; init; }
     public required string TemporalCategory { get; init; }
+    public required string RelationToPrevious { get; init; }
+    public required string RelationCue { get; init; }
+    public required string RelationEvidence { get; init; }
     public required int Order { get; init; }
     public required int SpanStart { get; init; }
     public required int SpanEnd { get; init; }
@@ -315,6 +408,9 @@ internal sealed class MutableNarrativeEvent
         Location,
         Action,
         TemporalCategory,
+        RelationToPrevious,
+        RelationCue,
+        RelationEvidence,
         Order,
         SpanStart,
         SpanEnd,
@@ -589,12 +685,24 @@ internal static partial class TymAnalyzer
         "Tomorrow", "Today", "Yesterday", "From", "To"
     };
 
+    private static readonly HashSet<string> RomanianEntityStopwords = new(StringComparer.Ordinal)
+    {
+        "A", "Al", "Ale", "Ai", "Acest", "Aceasta", "Apoi", "Atunci", "Ani", "An",
+        "Astăzi", "Astazi", "Azi", "Când", "Cand", "Către", "Catre", "Cu", "Dar",
+        "De", "Demult", "Din", "După", "Dupa", "Ea", "El", "Ele", "Ei", "În",
+        "In", "Înainte", "Inainte", "Între", "Intre", "Ieri", "La", "Lui",
+        "Mai", "Mâine", "Maine", "O", "Pe", "Pentru", "Prin", "Spre", "Și",
+        "Si", "The", "Un", "Odinioară", "Odinioara"
+    };
+
     public static DiagramResponse Analyze(string text, DiagramOptions options)
     {
-        var events = ExtractEvents(text);
+        var language = NormalizeLanguageCode(options.Language);
+        var events = ExtractEvents(text, language);
         var candidates = BuildTimeSegmentCandidates(events);
-        var actors = BuildActors(events);
-        var locations = BuildLocations(events);
+        var actors = BuildActors(events, language);
+        var locations = BuildLocations(events, language);
+        var entityMentions = BuildEntityMentions(events);
         var locationIdByName = locations.ToDictionary(location => location.Name, location => location.Id, StringComparer.OrdinalIgnoreCase);
         var tracks = new List<MutableTrack>();
         var trackByKey = new Dictionary<string, MutableTrack>(StringComparer.OrdinalIgnoreCase);
@@ -611,12 +719,12 @@ internal static partial class TymAnalyzer
         {
             var candidate = candidates[index];
             var raw = candidate.Text;
-            var fallbackSegmentType = HeuristicClassifySegment(raw);
-            var classification = SegmentTypeClassifier.Value.Predict(raw, fallbackSegmentType);
+            var fallbackSegmentType = HeuristicClassifySegment(raw, language);
+            var classification = ClassifySegment(raw, fallbackSegmentType, language);
             var segmentType = classification.Label;
-            var entities = candidate.Actors.Count > 0 ? candidate.Actors : ExtractEntities(raw);
-            var perspective = InferPerspective(segmentType, raw, entities);
-            var key = TrackKey(entities, segmentType, candidate.TemporalCategory, perspective, raw);
+            var entities = candidate.Actors.Count > 0 ? candidate.Actors : ExtractEntities(raw, language);
+            var perspective = InferPerspective(segmentType, raw, entities, language);
+            var key = TrackKey(entities, segmentType, candidate.TemporalCategory, perspective, raw, language);
 
             if (!trackByKey.TryGetValue(key, out var track))
             {
@@ -672,11 +780,19 @@ internal static partial class TymAnalyzer
 
             if (previousSegment is not null)
             {
-                relations.Add(new TimeRelation(previousSegment.Id, "IMMEDIATELY_BEFORE", segment.Id));
+                AddSegmentTemporalRelation(relations, previousSegment, segment, candidate.Events.FirstOrDefault());
                 if (track.Id != previousSegment.TrackId)
                 {
-                    var rel = ParallelPattern().IsMatch(raw) ? "SIMULTANEOUS" : "BEFORE";
-                    relations.Add(new TimeRelation(previousSegment.TrackId, rel, track.Id));
+                    var parallelMatch = ParallelMatch(raw, language);
+                    var rel = parallelMatch.Success ? "SIMULTANEOUS" : "BEFORE";
+                    relations.Add(new TimeRelation(
+                        previousSegment.TrackId,
+                        rel,
+                        track.Id,
+                        parallelMatch.Success ? parallelMatch.Value : "",
+                        parallelMatch.Success
+                            ? "Parallel cue triggered a cross-track relation."
+                            : "Adjacent text segments belong to different time tracks."));
                     boundaries.Add(new SegmentBoundary(
                         $"B{boundaries.Count + 1}",
                         "RUPTURE",
@@ -699,7 +815,9 @@ internal static partial class TymAnalyzer
                 }
             }
 
-            if (JoinPattern().IsMatch(raw) && previousTrack is not null && previousTrack.Id != track.Id)
+            if ((IsRomanian(language) ? RomanianJoinPattern() : JoinPattern()).IsMatch(raw) &&
+                previousTrack is not null &&
+                previousTrack.Id != track.Id)
             {
                 var endpoint = new Endpoint(
                     $"EP{endpoints.Count + 1}",
@@ -719,7 +837,7 @@ internal static partial class TymAnalyzer
                     "Text indicates that separate developments meet and continue together."));
             }
 
-            if (SplitPattern().IsMatch(raw))
+            if ((IsRomanian(language) ? RomanianSplitPattern() : SplitPattern()).IsMatch(raw))
             {
                 var splitTrackIds = previousTrack is not null && previousTrack.Id != track.Id
                     ? new[] { previousTrack.Id, track.Id }
@@ -766,22 +884,31 @@ internal static partial class TymAnalyzer
                 "Last TS in text order."));
         }
 
+        var timeMl = BuildTimeMl(events, language);
         var diagram = new Diagram(
             actors,
             locations,
+            entityMentions,
             events.Select(ev => ev.ToRecord()).ToList(),
             tracks.Select(track => track.ToRecord()).ToList(),
             segments.Select(segment => segment.ToRecord()).ToList(),
             endpoints,
             relations,
-            boundaries);
+            boundaries,
+            timeMl);
         var render = TymSvgRenderer.Render(diagram, options);
         var xml = TymXmlSerializer.Serialize(diagram);
         var warnings = new List<string>
         {
             "Time segment types follow the paper labels: NAR, REM, SUP, GEN, and FIC.",
             "The XML output follows the paper notation: TT-SECTION, TIME-SECTION, EP-SECTION, and inline TS tags.",
-            "ML.NET calculates event temporal category and TS type from bundled paper-guided seed examples; replace these with an annotated corpus for production use."
+            "The diagram includes a TimeML-style layer with EVENT, TIMEX3, SIGNAL, MAKEINSTANCE, and TLINK annotations.",
+            language == "ro"
+                ? "Romanian extraction uses non-LLM rule profiles for Romanian entities, temporal cues, tense, and TimeML-like annotations."
+                : "English extraction uses non-LLM rules plus ML.NET seed classifiers for event temporal category and TS type.",
+            language == "ro"
+                ? "Romanian mode intentionally avoids the English ML.NET seed classifiers; train Romanian annotated TYM/TimeML data for production use."
+                : "ML.NET calculates event temporal category and TS type from bundled paper-guided seed examples; replace these with an annotated corpus for production use."
         };
         if (candidates.Count == 0)
         {
@@ -789,6 +916,227 @@ internal static partial class TymAnalyzer
         }
 
         return new DiagramResponse(HashId(text), TymConstants.Version, diagram, render, xml, warnings);
+    }
+
+    private static string NormalizeLanguageCode(string language)
+    {
+        return language.Trim().ToLowerInvariant() switch
+        {
+            "ro" or "ron" or "rom" or "romanian" or "română" or "romana" => "ro",
+            _ => "en"
+        };
+    }
+
+    private static bool IsRomanian(string language) => language == "ro";
+
+    private static SegmentClassification ClassifySegment(string text, string fallbackLabel, string language)
+    {
+        return IsRomanian(language)
+            ? new SegmentClassification(fallbackLabel, 0.75, "romanian_rule_segment_type")
+            : SegmentTypeClassifier.Value.Predict(text, fallbackLabel);
+    }
+
+    private static EventTemporalClassification ClassifyEventTemporal(string text, string fallbackLabel, string language)
+    {
+        return IsRomanian(language)
+            ? new EventTemporalClassification(fallbackLabel, 0.75, "romanian_rule_event_temporal")
+            : EventTemporalClassifier.Value.Predict(text, fallbackLabel);
+    }
+
+    private static MatchCollection VerbMatches(string text, string language)
+    {
+        return IsRomanian(language)
+            ? RomanianVerbPattern().Matches(text)
+            : VerbPattern().Matches(text);
+    }
+
+    private static bool HasVerb(string text, string language)
+    {
+        return IsRomanian(language)
+            ? RomanianVerbPattern().IsMatch(text)
+            : VerbPattern().IsMatch(text);
+    }
+
+    private static string[] EventBoundarySplit(string text, string language)
+    {
+        return IsRomanian(language)
+            ? RomanianEventBoundaryPattern().Split(text)
+            : EventBoundaryPattern().Split(text);
+    }
+
+    private static Match ParallelMatch(string text, string language)
+    {
+        return IsRomanian(language)
+            ? RomanianParallelPattern().Match(text)
+            : ParallelPattern().Match(text);
+    }
+
+    private static bool HasParallelCue(string text, string language)
+    {
+        return IsRomanian(language)
+            ? RomanianParallelPattern().IsMatch(text)
+            : ParallelPattern().IsMatch(text);
+    }
+
+    private static void AddSegmentTemporalRelation(
+        List<TimeRelation> relations,
+        MutableSegment previousSegment,
+        MutableSegment segment,
+        MutableNarrativeEvent? firstEvent)
+    {
+        var cue = firstEvent?.RelationCue ?? "";
+        var evidence = firstEvent?.RelationEvidence ?? "Adjacent segment in text order.";
+        var relation = firstEvent?.RelationToPrevious ?? "IMMEDIATELY_AFTER";
+
+        switch (relation)
+        {
+            case "BEFORE":
+                relations.Add(new TimeRelation(segment.Id, "BEFORE", previousSegment.Id, cue, evidence));
+                break;
+            case "SIMULTANEOUS":
+                relations.Add(new TimeRelation(previousSegment.Id, "SIMULTANEOUS", segment.Id, cue, evidence));
+                break;
+            case "AFTER":
+                relations.Add(new TimeRelation(previousSegment.Id, "BEFORE", segment.Id, cue, evidence));
+                break;
+            case "IMMEDIATELY_AFTER":
+            default:
+                relations.Add(new TimeRelation(previousSegment.Id, "IMMEDIATELY_BEFORE", segment.Id, cue, evidence));
+                break;
+        }
+    }
+
+    private static TimeMlDocument BuildTimeMl(IReadOnlyList<MutableNarrativeEvent> events, string language)
+    {
+        var timeMlEvents = new List<TimeMlEvent>();
+        var timexes = new List<TimeMlTimex3>();
+        var signals = new List<TimeMlSignal>();
+        var makeInstances = new List<TimeMlMakeInstance>();
+        var tlinks = new List<TimeMlTLink>();
+        var timexIdByAnchor = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var instanceIdByTymEvent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        for (var index = 0; index < events.Count; index++)
+        {
+            var ev = events[index];
+            var eid = $"e{index + 1}";
+            var eiid = $"ei{index + 1}";
+            var action = ev.Action.Length > 0 ? ev.Action : ev.Text;
+            var actionIndex = ev.Action.Length > 0
+                ? ev.Text.IndexOf(ev.Action, StringComparison.OrdinalIgnoreCase)
+                : -1;
+            var actionStart = actionIndex >= 0 ? ev.SpanStart + actionIndex : ev.SpanStart;
+            var actionEnd = actionIndex >= 0 ? actionStart + ev.Action.Length : ev.SpanEnd;
+
+            timeMlEvents.Add(new TimeMlEvent(
+                eid,
+                InferTimeMlEventClass(ev.Text, ev.Action, language),
+                action,
+                actionStart,
+                actionEnd,
+                ev.Id));
+
+            makeInstances.Add(new TimeMlMakeInstance(
+                eiid,
+                eid,
+                MapTimeMlTense(ev.TemporalCategory),
+                InferTimeMlAspect(ev.Text, language),
+                InferTimeMlPolarity(ev.Text, language),
+                ev.Action.Length > 0 ? "VERB" : "UNKNOWN",
+                ev.Id));
+            instanceIdByTymEvent[ev.Id] = eiid;
+
+            if (ev.TemporalAnchor.Length > 0)
+            {
+                var timexId = GetOrAddTimex3(ev, timexes, timexIdByAnchor, language);
+                tlinks.Add(new TimeMlTLink(
+                    $"l{tlinks.Count + 1}",
+                    "IS_INCLUDED",
+                    eiid,
+                    null,
+                    null,
+                    timexId,
+                    null,
+                    "event_temporal_anchor"));
+            }
+
+            if (index > 0 && instanceIdByTymEvent.TryGetValue(events[index - 1].Id, out var previousEiid))
+            {
+                var signalId = AddSignalIfPresent(ev, signals);
+                var (from, relation, to) = MapTimeMlEventRelation(ev.RelationToPrevious, previousEiid, eiid);
+                tlinks.Add(new TimeMlTLink(
+                    $"l{tlinks.Count + 1}",
+                    relation,
+                    from,
+                    to,
+                    null,
+                    null,
+                    signalId,
+                    signalId is null ? "event_text_order" : "event_relation_signal"));
+            }
+        }
+
+        return new TimeMlDocument(timeMlEvents, timexes, signals, makeInstances, tlinks);
+    }
+
+    private static string GetOrAddTimex3(
+        MutableNarrativeEvent ev,
+        List<TimeMlTimex3> timexes,
+        Dictionary<string, string> timexIdByAnchor,
+        string language)
+    {
+        var key = ev.TemporalAnchor.Trim();
+        if (timexIdByAnchor.TryGetValue(key, out var existingId))
+        {
+            return existingId;
+        }
+
+        var localIndex = ev.Text.IndexOf(ev.TemporalAnchor, StringComparison.OrdinalIgnoreCase);
+        var isExplicit = localIndex >= 0;
+        var start = isExplicit ? ev.SpanStart + localIndex : ev.SpanStart;
+        var end = isExplicit ? start + ev.TemporalAnchor.Length : start;
+        var tid = $"t{timexes.Count + 1}";
+        timexes.Add(new TimeMlTimex3(
+            tid,
+            InferTimex3Type(ev.TemporalAnchor, language),
+            NormalizeTimex3Value(ev.TemporalAnchor, ev.TemporalCategory, language),
+            ev.TemporalAnchor,
+            start,
+            end,
+            isExplicit ? "explicit_temporal_expression" : "inherited_temporal_anchor",
+            "NONE"));
+        timexIdByAnchor[key] = tid;
+        return tid;
+    }
+
+    private static string? AddSignalIfPresent(MutableNarrativeEvent ev, List<TimeMlSignal> signals)
+    {
+        if (ev.RelationCue.Length == 0)
+        {
+            return null;
+        }
+
+        var localIndex = ev.Text.IndexOf(ev.RelationCue, StringComparison.OrdinalIgnoreCase);
+        var start = localIndex >= 0 ? ev.SpanStart + localIndex : ev.SpanStart;
+        var end = localIndex >= 0 ? start + ev.RelationCue.Length : start;
+        var sid = $"s{signals.Count + 1}";
+        signals.Add(new TimeMlSignal(sid, ev.RelationCue, start, end, ev.Id, ev.RelationToPrevious));
+        return sid;
+    }
+
+    private static (string From, string Relation, string To) MapTimeMlEventRelation(
+        string relationToPrevious,
+        string previousEiid,
+        string currentEiid)
+    {
+        return relationToPrevious switch
+        {
+            "BEFORE" => (currentEiid, "BEFORE", previousEiid),
+            "SIMULTANEOUS" => (previousEiid, "SIMULTANEOUS", currentEiid),
+            "AFTER" => (previousEiid, "BEFORE", currentEiid),
+            "IMMEDIATELY_AFTER" => (previousEiid, "IBEFORE", currentEiid),
+            _ => (previousEiid, "IBEFORE", currentEiid)
+        };
     }
 
     private static List<string> SplitSegments(string text)
@@ -806,7 +1154,7 @@ internal static partial class TymAnalyzer
             .ToList();
     }
 
-    private static List<MutableNarrativeEvent> ExtractEvents(string text)
+    private static List<MutableNarrativeEvent> ExtractEvents(string text, string language)
     {
         var events = new List<MutableNarrativeEvent>();
         var previousActors = Array.Empty<string>();
@@ -821,8 +1169,8 @@ internal static partial class TymAnalyzer
             }
 
             var sentenceStart = sentenceMatch.Index + sentenceMatch.Value.IndexOf(sentence, StringComparison.Ordinal);
-            var clauses = VerbPattern().Matches(sentence).Count > 1
-                ? SplitEventClauses(sentence, sentenceStart)
+            var clauses = VerbMatches(sentence, language).Count > 1
+                ? SplitEventClauses(sentence, sentenceStart, language)
                 : [new ClauseSpan(sentence, sentenceStart, sentenceStart + sentence.Length)];
             var pendingPrefix = "";
             var pendingPrefixStart = sentenceStart;
@@ -835,7 +1183,7 @@ internal static partial class TymAnalyzer
                     continue;
                 }
 
-                if (!VerbPattern().IsMatch(eventText))
+                if (!HasVerb(eventText, language))
                 {
                     if (pendingPrefix.Length == 0)
                     {
@@ -856,25 +1204,26 @@ internal static partial class TymAnalyzer
                     pendingPrefix = "";
                 }
 
-                var actors = ExtractEntities(eventText)
-                    .Where(entity => !LooksLikeTemporalEntity(entity))
-                    .Where(entity => !LooksLikeLocationEntity(eventText, entity))
+                var actors = ExtractEntities(eventText, language)
+                    .Where(entity => !LooksLikeTemporalEntity(entity, language))
+                    .Where(entity => !LooksLikeLocationEntity(eventText, entity, language))
                     .ToList();
                 if (actors.Count == 0 && previousActors.Length > 0)
                 {
                     actors = previousActors.ToList();
                 }
 
-                var temporalAnchor = ExtractTemporalAnchor(eventText);
+                var temporalAnchor = ExtractTemporalAnchor(eventText, language);
                 if (temporalAnchor.Length == 0 && previousTemporalAnchor.Length > 0)
                 {
                     temporalAnchor = previousTemporalAnchor;
                 }
 
-                var fallbackTemporalCategory = HeuristicTemporalCategory(eventText);
-                var temporalClassification = EventTemporalClassifier.Value.Predict(eventText, fallbackTemporalCategory);
-                var location = ExtractLocation(eventText);
-                var action = ExtractAction(eventText);
+                var fallbackTemporalCategory = HeuristicTemporalCategory(eventText, language);
+                var temporalClassification = ClassifyEventTemporal(eventText, fallbackTemporalCategory, language);
+                var location = ExtractLocation(eventText, language);
+                var action = ExtractAction(eventText, language);
+                var temporalCue = InferTemporalCue(eventText, events.Count == 0, language);
 
                 events.Add(new MutableNarrativeEvent
                 {
@@ -885,6 +1234,9 @@ internal static partial class TymAnalyzer
                     Location = location,
                     Action = action,
                     TemporalCategory = temporalClassification.Label,
+                    RelationToPrevious = temporalCue.Relation,
+                    RelationCue = temporalCue.Cue,
+                    RelationEvidence = temporalCue.Evidence,
                     Order = events.Count + 1,
                     SpanStart = eventStart,
                     SpanEnd = clause.End,
@@ -907,11 +1259,11 @@ internal static partial class TymAnalyzer
         return events;
     }
 
-    private static List<ClauseSpan> SplitEventClauses(string sentence, int sentenceStart)
+    private static List<ClauseSpan> SplitEventClauses(string sentence, int sentenceStart, string language)
     {
         var spans = new List<ClauseSpan>();
         var searchStart = 0;
-        foreach (var part in EventBoundaryPattern().Split(sentence))
+        foreach (var part in EventBoundarySplit(sentence, language))
         {
             var trimmed = part.Trim();
             if (trimmed.Length == 0)
@@ -985,9 +1337,9 @@ internal static partial class TymAnalyzer
         };
     }
 
-    private static IReadOnlyList<TimeActor> BuildActors(IReadOnlyList<MutableNarrativeEvent> events)
+    private static IReadOnlyList<TimeActor> BuildActors(IReadOnlyList<MutableNarrativeEvent> events, string language)
     {
-        var actors = new List<TimeActor> { new("A0", "Narrator") };
+        var actors = new List<TimeActor> { new("A0", IsRomanian(language) ? "Narator" : "Narrator") };
         actors.AddRange(events
             .SelectMany(ev => ev.Actors)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -995,15 +1347,70 @@ internal static partial class TymAnalyzer
         return actors;
     }
 
-    private static IReadOnlyList<TimeLocation> BuildLocations(IReadOnlyList<MutableNarrativeEvent> events)
+    private static IReadOnlyList<TimeLocation> BuildLocations(IReadOnlyList<MutableNarrativeEvent> events, string language)
     {
-        var locations = new List<TimeLocation> { new("L1", "unknown", "") };
+        var unknown = IsRomanian(language) ? "necunoscut" : "unknown";
+        var locations = new List<TimeLocation> { new("L1", unknown, "") };
         locations.AddRange(events
             .Select(ev => ev.Location)
-            .Where(location => location.Length > 0 && !location.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+            .Where(location => location.Length > 0 &&
+                !location.Equals("unknown", StringComparison.OrdinalIgnoreCase) &&
+                !location.Equals("necunoscut", StringComparison.OrdinalIgnoreCase))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select((name, index) => new TimeLocation($"L{index + 2}", name, "")));
         return locations;
+    }
+
+    private static IReadOnlyList<EntityMention> BuildEntityMentions(IReadOnlyList<MutableNarrativeEvent> events)
+    {
+        var mentions = new List<EntityMention>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var ev in events)
+        {
+            foreach (var actor in ev.Actors)
+            {
+                AddEntityMention(mentions, seen, ev, actor, "PERSON", "capitalized_actor_mention", "carried_actor_context");
+            }
+
+            AddEntityMention(mentions, seen, ev, ev.Location, "LOCATION", "preposition_location_pattern");
+            AddEntityMention(mentions, seen, ev, ev.TemporalAnchor, "DATE_TIME", "temporal_expression_pattern");
+            AddEntityMention(mentions, seen, ev, ev.Action, "EVENT_ACTION", "verb_pattern");
+        }
+
+        return mentions;
+    }
+
+    private static void AddEntityMention(
+        List<EntityMention> mentions,
+        HashSet<string> seen,
+        MutableNarrativeEvent ev,
+        string text,
+        string label,
+        string exactSource,
+        string inferredSource = "")
+    {
+        if (string.IsNullOrWhiteSpace(text) || text.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var localIndex = ev.Text.IndexOf(text, StringComparison.OrdinalIgnoreCase);
+        if (localIndex < 0 && inferredSource.Length == 0)
+        {
+            return;
+        }
+
+        var start = localIndex >= 0 ? ev.SpanStart + localIndex : ev.SpanStart;
+        var end = localIndex >= 0 ? start + text.Length : start;
+        var source = localIndex >= 0 ? exactSource : inferredSource;
+        var key = $"{ev.Id}|{label}|{start}|{end}|{text}";
+        if (!seen.Add(key))
+        {
+            return;
+        }
+
+        mentions.Add(new EntityMention($"EM{mentions.Count + 1}", text, label, source, start, end, ev.Id));
     }
 
     private static bool SameSet(IReadOnlyList<string> left, IReadOnlyList<string> right)
@@ -1013,45 +1420,239 @@ internal static partial class TymAnalyzer
                 .SequenceEqual(right.OrderBy(item => item, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
     }
 
-    private static bool LooksLikeTemporalEntity(string entity)
+    private static bool LooksLikeTemporalEntity(string entity, string language)
     {
-        return TemporalEntityPattern().IsMatch(entity);
+        return IsRomanian(language)
+            ? RomanianTemporalEntityPattern().IsMatch(entity)
+            : TemporalEntityPattern().IsMatch(entity);
     }
 
-    private static bool LooksLikeLocationEntity(string text, string entity)
+    private static bool LooksLikeLocationEntity(string text, string entity, string language)
     {
-        return Regex.IsMatch(
-            text,
-            $@"\b(?:in|at|on|to|from|inside|outside|near)\s+(?:the\s+)?{Regex.Escape(entity)}\b",
-            RegexOptions.IgnoreCase);
+        var prefix = IsRomanian(language)
+            ? @"(?:în|in|la|spre|din|lângă|langa|aproape\s+de|către|catre)"
+            : @"(?:in|at|on|to|from|inside|outside|near)";
+        var article = IsRomanian(language) ? @"(?:un|o|același|aceeași|acelasi|aceeasi|the)?\s*" : @"(?:the\s+)?";
+        return Regex.IsMatch(text, $@"\b{prefix}\s+{article}{Regex.Escape(entity)}\b", RegexOptions.IgnoreCase);
     }
 
-    private static string ExtractTemporalAnchor(string text)
+    private static string ExtractTemporalAnchor(string text, string language)
     {
-        var match = TemporalAnchorPattern().Match(text);
+        var match = IsRomanian(language)
+            ? RomanianTemporalAnchorPattern().Match(text)
+            : TemporalAnchorPattern().Match(text);
         return match.Success ? match.Value.Trim() : "";
     }
 
-    private static string ExtractLocation(string text)
+    private static TemporalCue InferTemporalCue(string text, bool isFirstEvent, string language)
     {
-        var match = LocationPattern().Match(text);
-        return match.Success ? match.Groups[1].Value.Trim() : "";
+        if (isFirstEvent)
+        {
+            return new TemporalCue("NONE", "", "First event in text order.");
+        }
+
+        var parallel = IsRomanian(language) ? RomanianParallelPattern().Match(text) : ParallelPattern().Match(text);
+        if (parallel.Success)
+        {
+            return new TemporalCue("SIMULTANEOUS", parallel.Value, "Parallel cue places this event alongside the previous event.");
+        }
+
+        var retrospective = IsRomanian(language) ? RomanianRetrospectiveCuePattern().Match(text) : RetrospectiveCuePattern().Match(text);
+        if (retrospective.Success)
+        {
+            return new TemporalCue("BEFORE", retrospective.Value, "Retrospective cue places this event earlier than the previous event.");
+        }
+
+        var sequential = IsRomanian(language) ? RomanianSequentialCuePattern().Match(text) : SequentialCuePattern().Match(text);
+        if (sequential.Success)
+        {
+            return new TemporalCue("IMMEDIATELY_AFTER", sequential.Value, "Sequential cue places this event immediately after the previous event.");
+        }
+
+        var forward = IsRomanian(language) ? RomanianForwardCuePattern().Match(text) : ForwardCuePattern().Match(text);
+        if (forward.Success)
+        {
+            return new TemporalCue("AFTER", forward.Value, "Forward cue places this event after the previous event.");
+        }
+
+        return new TemporalCue("IMMEDIATELY_AFTER", "", "No explicit cue; defaulting to text-order adjacency.");
     }
 
-    private static string ExtractAction(string text)
+    private static string InferTimeMlEventClass(string text, string action, string language)
     {
-        var match = VerbPattern().Match(text);
+        if ((IsRomanian(language) ? RomanianPerceptionPattern() : PerceptionPattern()).IsMatch(text))
+        {
+            return "PERCEPTION";
+        }
+
+        if ((IsRomanian(language) ? RomanianReportingPattern() : ReportingPattern()).IsMatch(text))
+        {
+            return "REPORTING";
+        }
+
+        if ((IsRomanian(language) ? RomanianIntentionalActionPattern() : IntentionalActionPattern()).IsMatch(text))
+        {
+            return "I_ACTION";
+        }
+
+        if ((IsRomanian(language) ? RomanianRememberPattern() : RememberPattern()).IsMatch(text) ||
+            (IsRomanian(language) ? RomanianCognitiveStatePattern() : CognitiveStatePattern()).IsMatch(text))
+        {
+            return "I_STATE";
+        }
+
+        if ((IsRomanian(language) ? RomanianStatePattern() : StatePattern()).IsMatch(action.Length > 0 ? action : text))
+        {
+            return "STATE";
+        }
+
+        return "OCCURRENCE";
+    }
+
+    private static string MapTimeMlTense(string temporalCategory)
+    {
+        return temporalCategory switch
+        {
+            "Past" => "PAST",
+            "Future" => "FUTURE",
+            "Present" => "PRESENT",
+            _ => "NONE"
+        };
+    }
+
+    private static string InferTimeMlAspect(string text, string language)
+    {
+        if ((IsRomanian(language) ? RomanianPerfectiveAspectPattern() : PerfectiveAspectPattern()).IsMatch(text))
+        {
+            return "PERFECTIVE";
+        }
+
+        if ((IsRomanian(language) ? RomanianProgressiveAspectPattern() : ProgressiveAspectPattern()).IsMatch(text))
+        {
+            return "PROGRESSIVE";
+        }
+
+        return "NONE";
+    }
+
+    private static string InferTimeMlPolarity(string text, string language)
+    {
+        return (IsRomanian(language) ? RomanianNegativePolarityPattern() : NegativePolarityPattern()).IsMatch(text)
+            ? "NEG"
+            : "POS";
+    }
+
+    private static string InferTimex3Type(string text, string language)
+    {
+        if ((IsRomanian(language) ? RomanianDurationPattern() : DurationPattern()).IsMatch(text))
+        {
+            return "DURATION";
+        }
+
+        if ((IsRomanian(language) ? RomanianClockTimePattern() : ClockTimePattern()).IsMatch(text))
+        {
+            return "TIME";
+        }
+
+        if ((IsRomanian(language) ? RomanianSetTimePattern() : SetTimePattern()).IsMatch(text))
+        {
+            return "SET";
+        }
+
+        return "DATE";
+    }
+
+    private static string NormalizeTimex3Value(string text, string temporalCategory, string language)
+    {
+        var normalized = text.Trim().ToLowerInvariant();
+        var year = YearPattern().Match(normalized);
+        if (year.Success)
+        {
+            return year.Value;
+        }
+
+        if (normalized.Contains("today", StringComparison.Ordinal) ||
+            normalized.Contains("now", StringComparison.Ordinal) ||
+            normalized.Contains("astăzi", StringComparison.Ordinal) ||
+            normalized.Contains("astazi", StringComparison.Ordinal) ||
+            normalized.Contains("azi", StringComparison.Ordinal) ||
+            normalized.Contains("acum", StringComparison.Ordinal))
+        {
+            return "PRESENT_REF";
+        }
+
+        if (normalized.Contains("tomorrow", StringComparison.Ordinal) ||
+            normalized.Contains("next", StringComparison.Ordinal) ||
+            normalized.Contains("later", StringComparison.Ordinal) ||
+            normalized.Contains("mâine", StringComparison.Ordinal) ||
+            normalized.Contains("maine", StringComparison.Ordinal) ||
+            normalized.Contains("mai târziu", StringComparison.Ordinal) ||
+            normalized.Contains("mai tarziu", StringComparison.Ordinal) ||
+            normalized.Contains("viitor", StringComparison.Ordinal))
+        {
+            return "FUTURE_REF";
+        }
+
+        if (normalized.Contains("yesterday", StringComparison.Ordinal) ||
+            normalized.Contains("earlier", StringComparison.Ordinal) ||
+            normalized.Contains("ago", StringComparison.Ordinal) ||
+            normalized.Contains("before", StringComparison.Ordinal) ||
+            normalized.Contains("long ago", StringComparison.Ordinal) ||
+            normalized.Contains("back then", StringComparison.Ordinal) ||
+            normalized.Contains("ieri", StringComparison.Ordinal) ||
+            normalized.Contains("înainte", StringComparison.Ordinal) ||
+            normalized.Contains("inainte", StringComparison.Ordinal) ||
+            normalized.Contains("urmă", StringComparison.Ordinal) ||
+            normalized.Contains("urma", StringComparison.Ordinal) ||
+            normalized.Contains("demult", StringComparison.Ordinal) ||
+            normalized.Contains("odinioară", StringComparison.Ordinal) ||
+            normalized.Contains("odinioara", StringComparison.Ordinal))
+        {
+            return "PAST_REF";
+        }
+
+        return temporalCategory switch
+        {
+            "Past" => "PAST_REF",
+            "Future" => "FUTURE_REF",
+            _ => "PRESENT_REF"
+        };
+    }
+
+    private static string ExtractLocation(string text, string language)
+    {
+        var match = IsRomanian(language) ? RomanianLocationPattern().Match(text) : LocationPattern().Match(text);
+        if (match.Success)
+        {
+            return match.Groups[1].Value.Trim();
+        }
+
+        if (IsRomanian(language))
+        {
+            var peMatch = RomanianPeLocationPattern().Match(text);
+            if (peMatch.Success)
+            {
+                return peMatch.Groups[1].Value.Trim();
+            }
+        }
+
+        return "";
+    }
+
+    private static string ExtractAction(string text, string language)
+    {
+        var match = IsRomanian(language) ? RomanianVerbPattern().Match(text) : VerbPattern().Match(text);
         return match.Success ? match.Value : "";
     }
 
-    private static string HeuristicTemporalCategory(string text)
+    private static string HeuristicTemporalCategory(string text, string language)
     {
-        if (FutureTensePattern().IsMatch(text))
+        if ((IsRomanian(language) ? RomanianFutureTensePattern() : FutureTensePattern()).IsMatch(text))
         {
             return "Future";
         }
 
-        if (PastTensePattern().IsMatch(text))
+        if ((IsRomanian(language) ? RomanianPastTensePattern() : PastTensePattern()).IsMatch(text))
         {
             return "Past";
         }
@@ -1059,24 +1660,24 @@ internal static partial class TymAnalyzer
         return "Present";
     }
 
-    private static string HeuristicClassifySegment(string text)
+    private static string HeuristicClassifySegment(string text, string language)
     {
-        if (RememberPattern().IsMatch(text))
+        if ((IsRomanian(language) ? RomanianRememberPattern() : RememberPattern()).IsMatch(text))
         {
             return "REM";
         }
 
-        if (SuppositionPattern().IsMatch(text))
+        if ((IsRomanian(language) ? RomanianSuppositionPattern() : SuppositionPattern()).IsMatch(text))
         {
             return "SUP";
         }
 
-        if (GeneralPattern().IsMatch(text))
+        if ((IsRomanian(language) ? RomanianGeneralPattern() : GeneralPattern()).IsMatch(text))
         {
             return "GEN";
         }
 
-        if (FictionPattern().IsMatch(text))
+        if ((IsRomanian(language) ? RomanianFictionPattern() : FictionPattern()).IsMatch(text))
         {
             return "FIC";
         }
@@ -1084,14 +1685,16 @@ internal static partial class TymAnalyzer
         return "NAR";
     }
 
-    private static IReadOnlyList<string> ExtractEntities(string text)
+    private static IReadOnlyList<string> ExtractEntities(string text, string language)
     {
         var entities = new List<string>();
-        foreach (Match match in EntityPattern().Matches(text))
+        var stopwords = IsRomanian(language) ? RomanianEntityStopwords : EntityStopwords;
+        var matches = IsRomanian(language) ? RomanianEntityPattern().Matches(text) : EntityPattern().Matches(text);
+        foreach (Match match in matches)
         {
             var candidate = match.Value;
             var parts = candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.All(part => EntityStopwords.Contains(part)))
+            if (parts.All(part => stopwords.Contains(part)))
             {
                 continue;
             }
@@ -1105,17 +1708,18 @@ internal static partial class TymAnalyzer
         return entities;
     }
 
-    private static string InferPerspective(string segmentType, string text, IReadOnlyList<string> entities)
+    private static string InferPerspective(string segmentType, string text, IReadOnlyList<string> entities, string language)
     {
         if (segmentType == "REM" && entities.Count > 0)
         {
             return entities[0];
         }
 
-        var match = PerspectivePattern().Match(text);
-        return match.Success && !EntityStopwords.Contains(match.Groups[1].Value)
+        var stopwords = IsRomanian(language) ? RomanianEntityStopwords : EntityStopwords;
+        var match = IsRomanian(language) ? RomanianPerspectivePattern().Match(text) : PerspectivePattern().Match(text);
+        return match.Success && !stopwords.Contains(match.Groups[1].Value)
             ? match.Groups[1].Value
-            : "narrator";
+            : IsRomanian(language) ? "narator" : "narrator";
     }
 
     private static string TrackKey(
@@ -1123,9 +1727,10 @@ internal static partial class TymAnalyzer
         string segmentType,
         string temporalCategory,
         string perspective,
-        string text)
+        string text,
+        string language)
     {
-        if (ParallelPattern().IsMatch(text))
+        if (HasParallelCue(text, language))
         {
             return $"parallel:{TrackName(entities, "Narrative")}:{temporalCategory}:{perspective}";
         }
@@ -1181,6 +1786,21 @@ internal static partial class TymAnalyzer
     [GeneratedRegex(@"\b(remembered|recalled|dreamed|years earlier|long ago|back then|childhood|past)\b", RegexOptions.IgnoreCase)]
     private static partial Regex RememberPattern();
 
+    [GeneratedRegex(@"\b(saw|seen|heard|felt|noticed|watched|observed)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex PerceptionPattern();
+
+    [GeneratedRegex(@"\b(said|told|asked|answered|reported|announced|wrote|explained)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ReportingPattern();
+
+    [GeneratedRegex(@"\b(tried|attempted|decided|planned|promised|agreed|refused|started|began)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex IntentionalActionPattern();
+
+    [GeneratedRegex(@"\b(thought|believed|knew|wanted|imagined|hoped|feared|wondered|supposed)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex CognitiveStatePattern();
+
+    [GeneratedRegex(@"\b(am|is|are|was|were|be|been|being|lives?|lived|knows?|knew|has|had)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex StatePattern();
+
     [GeneratedRegex(@"\b(might|perhaps|supposed|imagined|could have|would have|if only)\b", RegexOptions.IgnoreCase)]
     private static partial Regex SuppositionPattern();
 
@@ -1199,11 +1819,134 @@ internal static partial class TymAnalyzer
     [GeneratedRegex(@"\b(meanwhile|elsewhere|at the same time|simultaneously|in another)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ParallelPattern();
 
+    [GeneratedRegex(@"\b(years earlier|earlier|long ago|back then|previously|formerly|had\s+(?:been\s+)?\w+(?:ed|en)?)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RetrospectiveCuePattern();
+
+    [GeneratedRegex(@"\b(and then|then|subsequently|next)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SequentialCuePattern();
+
+    [GeneratedRegex(@"\b(later|afterward|afterwards|eventually|finally|after\s+(?:the\s+)?\w+)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ForwardCuePattern();
+
+    [GeneratedRegex(@"\b(?:had|has|have)\s+(?:been\s+)?\w+(?:ed|en)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex PerfectiveAspectPattern();
+
+    [GeneratedRegex(@"\b(?:am|is|are|was|were|be|been|being)\s+\w+ing\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ProgressiveAspectPattern();
+
+    [GeneratedRegex(@"\b(?:not|never|no|n't)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex NegativePolarityPattern();
+
+    [GeneratedRegex(@"\b(?:for\s+)?\d+\s+(?:second|seconds|minute|minutes|hour|hours|day|days|week|weeks|month|months|year|years)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex DurationPattern();
+
+    [GeneratedRegex(@"\b(?:dawn|noon|midnight|night|morning|evening|\d{1,2}:\d{2})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ClockTimePattern();
+
+    [GeneratedRegex(@"\b(?:always|usually|often|every\s+\w+)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SetTimePattern();
+
+    [GeneratedRegex(@"\b\d{4}\b")]
+    private static partial Regex YearPattern();
+
     [GeneratedRegex(@"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b")]
     private static partial Regex EntityPattern();
 
     [GeneratedRegex(@"\b([A-Z][a-z]+)\s+(wondered|thought|remembered|imagined|believed|saw|heard)\b")]
     private static partial Regex PerspectivePattern();
+
+    [GeneratedRegex(@"[,;]\s+|\s+\b(?:și apoi|si apoi|și|si|dar|însă|insa|apoi|atunci|când|cand|în timp ce|in timp ce|pentru că|pentru ca|deoarece)\b\s+", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianEventBoundaryPattern();
+
+    [GeneratedRegex(@"\b(?:este|sunt|era|erau|fost|fi|are|avea|aveau|avut|va|vor|voi|vei|vom|veți|veti|merge|mergea|mers|mersese|pleacă|pleaca|plecat|plecase|caută|cauta|căuta|căutat|cautat|găsește|gaseste|găsit|gasit|își amintește|isi aminteste|își amintea|isi amintea|amintit|trăiește|traieste|locuiește|locuieste|locuia|dispărut|disparut|dispare|spune|spus|vede|văzut|vazut|aude|auzit|întâlnește|intalneste|întâlnit|intalnit|așteaptă|asteapta|așteptat|asteptat|călătorește|calatoreste|călătorit|calatorit|duce|dus|intră|intra|intrat|deschide|deschis|urcă|urca|urcat|urmează|urmeaza|urmărit|urmarit|crește|creste|crescut|gândește|gandeste|gândit|gandit|crede|crezut|\w+(?:at|it|ut|ase|ese|ise|use|ează|eaza|esc|ește|ind|ând|and))\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianVerbPattern();
+
+    [GeneratedRegex(@"\b(?:va|vor|voi|vei|vom|veți|veti|o\s+să|o\s+sa|mâine|maine|mai\s+târziu|mai\s+tarziu|viitor|urmează\s+să|urmeaza\s+sa)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianFutureTensePattern();
+
+    [GeneratedRegex(@"\b(?:era|erau|fusese|fuseseră|fusesera|plecase|mersese|găsit|gasit|văzut|vazut|spus|amintit|căutat|cautat|crescut|dus|ieri|odinioară|odinioara|demult|înainte|inainte|cu\s+(?:\d+\s+\w+|ani|mult\s+timp)\s+(?:în\s+urmă|in\s+urma)|\w+(?:ase|ese|ise|use|at|it|ut))\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianPastTensePattern();
+
+    [GeneratedRegex(@"\b(?:acum|astăzi|astazi|azi|ieri|mâine|maine|mai\s+devreme|mai\s+târziu|mai\s+tarziu|odinioară|odinioara|demult|cândva|candva|înainte(?:\s+de\s+\w+)?|inainte(?:\s+de\s+\w+)?|după(?:\s+de\s+\w+|\s+\w+)?|dupa(?:\s+de\s+\w+|\s+\w+)?|cu\s+(?:\d+\s+(?:ani|luni|zile|ore)|ani|mult\s+timp)\s+(?:în\s+urmă|in\s+urma)|\d{4}|Crăciun|Craciun|Paște|Paste|Paști|Pasti)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianTemporalAnchorPattern();
+
+    [GeneratedRegex(@"\b(?:în|in|la|spre|din|lângă|langa|aproape\s+de|către|catre)\s+(un\s+[\p{L}]+(?:\s+[\p{L}]+)?|o\s+[\p{L}]+(?:\s+[\p{L}]+)?|același\s+[\p{L}]+(?:\s+[\p{L}]+)?|acelasi\s+[\p{L}]+(?:\s+[\p{L}]+)?|aceeași\s+[\p{L}]+(?:\s+[\p{L}]+)?|aceeasi\s+[\p{L}]+(?:\s+[\p{L}]+)?|[A-ZĂÂÎȘȚ][\p{Ll}ăâîșț]+(?:\s+[A-ZĂÂÎȘȚ][\p{Ll}ăâîșț]+)?|[a-zăâîșț]+(?:\s+[a-zăâîșț]+)?)", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianLocationPattern();
+
+    [GeneratedRegex(@"\bpe\s+([a-zăâîșț]+(?:\s+[a-zăâîșț]+)?)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianPeLocationPattern();
+
+    [GeneratedRegex(@"\b(?:Acum|Astăzi|Astazi|Azi|Ieri|Mâine|Maine|Luni|Marți|Marti|Miercuri|Joi|Vineri|Sâmbătă|Sambata|Duminică|Duminica|Ianuarie|Februarie|Martie|Aprilie|Mai|Iunie|Iulie|August|Septembrie|Octombrie|Noiembrie|Decembrie|Crăciun|Craciun|Paște|Paste)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianTemporalEntityPattern();
+
+    [GeneratedRegex(@"\b(și-a\s+amintit|si-a\s+amintit|își\s+amintea|isi\s+amintea|amintit|amintire|odinioară|odinioara|demult|în\s+trecut|in\s+trecut)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianRememberPattern();
+
+    [GeneratedRegex(@"\b(a\s+văzut|a\s+vazut|văzut|vazut|a\s+auzit|auzit|a\s+simțit|a\s+simtit|observat|urmărit|urmarit)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianPerceptionPattern();
+
+    [GeneratedRegex(@"\b(a\s+spus|spus|a\s+întrebat|a\s+intrebat|întrebat|intrebat|a\s+răspuns|a\s+raspuns|răspuns|raspuns|a\s+scris|scris|a\s+explicat|explicat)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianReportingPattern();
+
+    [GeneratedRegex(@"\b(a\s+încercat|a\s+incercat|încercat|incercat|a\s+decis|decis|a\s+planificat|planificat|a\s+promis|promis|a\s+început|a\s+inceput|început|inceput)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianIntentionalActionPattern();
+
+    [GeneratedRegex(@"\b(s-a\s+gândit|s-a\s+gandit|gândit|gandit|a\s+crezut|crezut|a\s+știut|a\s+stiut|știut|stiut|a\s+imaginat|imaginat|a\s+sperat|sperat|a\s+temut|temut)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianCognitiveStatePattern();
+
+    [GeneratedRegex(@"\b(este|sunt|era|erau|fi|fost|trăiește|traieste|locuiește|locuieste|locuia|are|avea)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianStatePattern();
+
+    [GeneratedRegex(@"\b(poate|probabil|ar\s+putea|ar\s+fi|și-ar\s+fi\s+imaginat|si-ar\s+fi\s+imaginat|dacă|daca)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianSuppositionPattern();
+
+    [GeneratedRegex(@"\b(întotdeauna|intotdeauna|niciodată|niciodata|de\s+obicei|în\s+general|in\s+general|toată\s+lumea\s+știe|toata\s+lumea\s+stie)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianGeneralPattern();
+
+    [GeneratedRegex(@"\b(în\s+poveste|in\s+poveste|în\s+roman|in\s+roman|în\s+film|in\s+film|fictiv|inventat)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianFictionPattern();
+
+    [GeneratedRegex(@"\b(întâlnit|intalnit|găsit|gasit|reunit|s-au\s+întâlnit|s-au\s+intalnit)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianJoinPattern();
+
+    [GeneratedRegex(@"\b(plecat|separat|dispărut|disparut|singur|a\s+părăsit|a\s+parasit|s-a\s+despărțit|s-a\s+despartit)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianSplitPattern();
+
+    [GeneratedRegex(@"\b(între\s+timp|intre\s+timp|în\s+altă\s+parte|in\s+alta\s+parte|simultan|în\s+același\s+timp|in\s+acelasi\s+timp)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianParallelPattern();
+
+    [GeneratedRegex(@"\b(cu\s+(?:\d+\s+\w+|ani|mult\s+timp)\s+(?:în\s+urmă|in\s+urma)|mai\s+devreme|odinioară|odinioara|demult|în\s+trecut|in\s+trecut|înainte|inainte)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianRetrospectiveCuePattern();
+
+    [GeneratedRegex(@"\b(apoi|după\s+aceea|dupa\s+aceea|atunci|pe\s+urmă|pe\s+urma)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianSequentialCuePattern();
+
+    [GeneratedRegex(@"\b(mai\s+târziu|mai\s+tarziu|după|dupa|în\s+cele\s+din\s+urmă|in\s+cele\s+din\s+urma)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianForwardCuePattern();
+
+    [GeneratedRegex(@"\b(?:a|au|am|ai|ați|ati)\s+\w+(?:at|it|ut)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianPerfectiveAspectPattern();
+
+    [GeneratedRegex(@"\b(?:este|era|sunt|erau)\s+(?:în\s+curs\s+de|in\s+curs\s+de)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianProgressiveAspectPattern();
+
+    [GeneratedRegex(@"\b(?:nu|niciodată|niciodata|n-a|n-au|n-am)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianNegativePolarityPattern();
+
+    [GeneratedRegex(@"\b(?:timp\s+de\s+)?\d+\s+(?:secundă|secunda|secunde|minut|minute|oră|ora|ore|zi|zile|săptămână|saptamana|săptămâni|saptamani|lună|luna|luni|an|ani)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianDurationPattern();
+
+    [GeneratedRegex(@"\b(?:zori|amiază|amiaza|miezul\s+nopții|miezul\s+noptii|noapte|dimineață|dimineata|seară|seara|\d{1,2}:\d{2})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianClockTimePattern();
+
+    [GeneratedRegex(@"\b(?:întotdeauna|intotdeauna|de\s+obicei|adesea|în\s+fiecare\s+\w+|in\s+fiecare\s+\w+)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianSetTimePattern();
+
+    [GeneratedRegex(@"\b[A-ZĂÂÎȘȚ][\p{Ll}ăâîșț]+(?:\s+[A-ZĂÂÎȘȚ][\p{Ll}ăâîșț]+)?\b")]
+    private static partial Regex RomanianEntityPattern();
+
+    [GeneratedRegex(@"\b([A-ZĂÂÎȘȚ][\p{Ll}ăâîșț]+)\s+(s-a\s+gândit|s-a\s+gandit|și-a\s+amintit|si-a\s+amintit|a\s+crezut|a\s+văzut|a\s+vazut|a\s+auzit)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RomanianPerspectivePattern();
 }
 
 internal static class TymXmlSerializer
@@ -1229,6 +1972,14 @@ internal static class TymXmlSerializer
         }
         xml.AppendLine("""  </TL-SECTION>""");
 
+        xml.AppendLine("""  <ENTITY-MENTION-SECTION>""");
+        foreach (var mention in diagram.EntityMentions)
+        {
+            xml.AppendLine(
+                $"""    <ENTITY-MENTION ID="{X(mention.Id)}" TYPE="{X(mention.Label)}" SOURCE="{X(mention.Source)}" EVENT="{X(mention.EventId)}" SPANS="{mention.SpanStart}~{mention.SpanEnd}" TEXT="{X(mention.Text)}" />""");
+        }
+        xml.AppendLine("""  </ENTITY-MENTION-SECTION>""");
+
         xml.AppendLine("""  <EVENT-SECTION>""");
         foreach (var ev in diagram.Events)
         {
@@ -1237,9 +1988,41 @@ internal static class TymXmlSerializer
                 .Select(actor => actorIdByName[actor]);
             var locationId = ev.Location.Length > 0 && locationIdByName.TryGetValue(ev.Location, out var locId) ? locId : "L1";
             xml.AppendLine(
-                $"""    <EVENT ID="{X(ev.Id)}" SPANS="{ev.SpanStart}~{ev.SpanEnd}" ACTORS="{X(string.Join(",", actorIds))}" LOCATION="{X(locationId)}" TEMPORAL-ANCHOR="{X(ev.TemporalAnchor)}" TENSE="{X(ev.TemporalCategory)}" ACTION="{X(ev.Action)}" ORDER="{ev.Order}" TEXT="{X(ev.Text)}" />""");
+                $"""    <EVENT ID="{X(ev.Id)}" SPANS="{ev.SpanStart}~{ev.SpanEnd}" ACTORS="{X(string.Join(",", actorIds))}" LOCATION="{X(locationId)}" TEMPORAL-ANCHOR="{X(ev.TemporalAnchor)}" TENSE="{X(ev.TemporalCategory)}" ACTION="{X(ev.Action)}" REL-PREV="{X(ev.RelationToPrevious)}" REL-CUE="{X(ev.RelationCue)}" ORDER="{ev.Order}" TEXT="{X(ev.Text)}" />""");
         }
         xml.AppendLine("""  </EVENT-SECTION>""");
+
+        xml.AppendLine("""  <TIMEML-SECTION>""");
+        foreach (var ev in diagram.TimeMl.Events)
+        {
+            xml.AppendLine(
+                $"""    <EVENT eid="{X(ev.Eid)}" class="{X(ev.Class)}" tymEventId="{X(ev.TymEventId)}" spans="{ev.SpanStart}~{ev.SpanEnd}">{X(ev.Text)}</EVENT>""");
+        }
+
+        foreach (var timex in diagram.TimeMl.Timex3)
+        {
+            xml.AppendLine(
+                $"""    <TIMEX3 tid="{X(timex.Tid)}" type="{X(timex.Type)}" value="{X(timex.Value)}" functionInDocument="{X(timex.FunctionInDocument)}" source="{X(timex.Source)}" spans="{timex.SpanStart}~{timex.SpanEnd}">{X(timex.Text)}</TIMEX3>""");
+        }
+
+        foreach (var signal in diagram.TimeMl.Signals)
+        {
+            xml.AppendLine(
+                $"""    <SIGNAL sid="{X(signal.Sid)}" eventId="{X(signal.EventId)}" relationHint="{X(signal.RelationHint)}" spans="{signal.SpanStart}~{signal.SpanEnd}">{X(signal.Text)}</SIGNAL>""");
+        }
+
+        foreach (var instance in diagram.TimeMl.MakeInstances)
+        {
+            xml.AppendLine(
+                $"""    <MAKEINSTANCE eiid="{X(instance.Eiid)}" eventID="{X(instance.EventId)}" tense="{X(instance.Tense)}" aspect="{X(instance.Aspect)}" polarity="{X(instance.Polarity)}" pos="{X(instance.Pos)}" tymEventId="{X(instance.TymEventId)}" />""");
+        }
+
+        foreach (var tlink in diagram.TimeMl.TLinks)
+        {
+            xml.AppendLine(
+                $"""    <TLINK lid="{X(tlink.Lid)}" relType="{X(tlink.RelType)}" eventInstanceID="{X(tlink.EventInstanceId ?? "")}" relatedToEventInstance="{X(tlink.RelatedToEventInstance ?? "")}" timeID="{X(tlink.TimeId ?? "")}" relatedToTime="{X(tlink.RelatedToTime ?? "")}" signalID="{X(tlink.SignalId ?? "")}" origin="{X(tlink.Origin)}" />""");
+        }
+        xml.AppendLine("""  </TIMEML-SECTION>""");
 
         xml.AppendLine("""  <TT-SECTION>""");
         foreach (var track in diagram.Tracks)
@@ -1258,7 +2041,7 @@ internal static class TymXmlSerializer
                     ? "TREL"
                     : "TIME";
             xml.AppendLine(
-                $"""    <{tagName} ID="TI{i + 1}" FROM="{X(relation.FromId)}" REL="{X(relation.Rel.Replace("_", "-", StringComparison.Ordinal))}" TO="{X(relation.ToId)}" />""");
+                $"""    <{tagName} ID="TI{i + 1}" FROM="{X(relation.FromId)}" REL="{X(relation.Rel.Replace("_", "-", StringComparison.Ordinal))}" TO="{X(relation.ToId)}" CUE="{X(relation.Cue)}" EVIDENCE="{X(relation.Evidence)}" />""");
         }
         xml.AppendLine("""  </TIME-SECTION>""");
 
