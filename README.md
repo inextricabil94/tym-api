@@ -22,6 +22,18 @@ Generated diagram:
 
 ![Generated TYM diagram](sample_output.svg)
 
+## Minimal React UI
+
+Live UI:
+
+[https://tym-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io](https://tym-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io)
+
+Live API:
+
+[https://tym-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io](https://tym-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io)
+
+The UI is in [ui/Tym.Ui](ui/Tym.Ui). It serves a minimal React page with English and Romanian examples, calls `POST /v1/diagrams`, displays extraction counts, renders the returned SVG, and can download the SVG.
+
 ## Run
 
 ```powershell
@@ -58,6 +70,19 @@ Invoke-WebRequest `
   -ContentType 'application/json' `
   -Body (Get-Content .\sample_input.json -Raw) `
   -OutFile .\sample_output.svg
+```
+
+Run the UI locally against the Azure API:
+
+```powershell
+dotnet run --project .\ui\Tym.Ui\Tym.Ui.csproj --urls http://127.0.0.1:8780
+```
+
+Run the UI locally against a local API:
+
+```powershell
+$env:TYM_API_BASE_URL='http://127.0.0.1:8765'
+dotnet run --project .\ui\Tym.Ui\Tym.Ui.csproj --urls http://127.0.0.1:8780
 ```
 
 ## Endpoints

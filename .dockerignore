@@ -7,6 +7,7 @@ build_publish/
 build_verify/
 ClassDiagrams/
 pocs/
+ui/
 *.log
 *.user
 *.suo
