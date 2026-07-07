@@ -2098,13 +2098,14 @@ internal static class TymSvgRenderer
         var parts = new StringBuilder();
         const int marginLeft = 105;
         const int marginRight = 80;
+        const int legendHeight = 112;
         var usable = Math.Max(400, width - marginLeft - marginRight);
 
         var y = 38.0;
+        var contentBottom = y;
         if (layout is "both" or "text_order")
         {
             var chainY = y + 38;
-            parts.Append(SvgText(width / 2.0, y, "a) Text-order time segments", 16, weight: "700"));
 
             if (diagram.Segments.Count > 0)
             {
@@ -2129,12 +2130,15 @@ internal static class TymSvgRenderer
             }
 
             y = chainY + 82;
+            contentBottom = Math.Max(contentBottom, y);
         }
 
         if (layout is "both" or "time_yard")
         {
-            parts.Append(SvgText(width / 2.0, y, "b) TYM time yard", 16, weight: "700"));
-            y += 42;
+            if (layout is "time_yard")
+            {
+                y += 24;
+            }
 
             var segmentsByTrack = diagram.Tracks.ToDictionary(
                 track => track.Id,
@@ -2173,7 +2177,7 @@ internal static class TymSvgRenderer
                     var segment = items[index];
                     var x1 = marginLeft + step * index;
                     var x2 = marginLeft + step * (index + 1);
-                    var dash = segment.Type is "REM" or "SUP" or "FIC" ? "7 7" : "";
+                    var dash = segment.Type is "REM" or "SUP" or "FIC" ? "2 6" : "";
                     parts.Append(Line(x1, trackY, x2, trackY, strokeWidth: strokeWidth, dashArray: dash));
                     parts.Append(Rect(x1 - 13, trackY - 12, 26, 24));
                     parts.Append(SvgText(x1, trackY + 4, segment.Id, 10, weight: "700"));
@@ -2196,9 +2200,15 @@ internal static class TymSvgRenderer
                 var label = $"{endpoint.Id}: {endpoint.Type} at {endpoint.SegmentId}";
                 parts.Append(SvgText(marginLeft + 180 * (index % 5), endpointYBase + 18 * (index / 5), label, 11, anchor: "start"));
             }
+
+            var endpointRows = Math.Max(1, (diagram.Endpoints.Count + 4) / 5);
+            contentBottom = Math.Max(contentBottom, endpointYBase + endpointRows * 18);
         }
 
-        var height = Math.Max(240, (int)(y + Math.Max(1, diagram.Tracks.Count) * 86 + 72));
+        var legendY = contentBottom + 28;
+        parts.Append(Legend(18, legendY, width - 36));
+
+        var height = Math.Max(240, (int)(legendY + legendHeight + 24));
         var svg =
             $"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="TYM time-yard diagram">""" +
             """<rect width="100%" height="100%" fill="#ffffff"/>""" +
@@ -2255,5 +2265,64 @@ internal static class TymSvgRenderer
         return $"""
             <polygon points="{points}" fill="#dbeafe" stroke="#111827" stroke-width="1.5"/>
             """;
+    }
+
+    private static string Legend(double x, double y, double width)
+    {
+        var parts = new StringBuilder();
+        var columnWidth = Math.Max(320, (width - 34) / 2.0);
+        var leftX = x + 18;
+        var rightX = x + 18 + columnWidth + 16;
+        var itemY = y + 48;
+
+        parts.Append($"""
+            <rect x="{x:F1}" y="{y:F1}" width="{width:F1}" height="112.0" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.2" rx="6"/>
+            """);
+        parts.Append(SvgText(x + 18, y + 25, "Legend", 13, anchor: "start", weight: "700"));
+
+        parts.Append(LegendLine(leftX, itemY, "Solid line: narrative continuity"));
+        parts.Append(LegendLine(rightX, itemY, "Dotted line: REM/SUP/GEN/FIC segment", dashArray: "2 6"));
+
+        itemY += 28;
+        parts.Append(LegendTriangle(leftX, itemY, "Triangle: track start/stop"));
+        parts.Append(LegendRect(rightX, itemY, "Blue box: TS marker"));
+
+        itemY += 28;
+        parts.Append(LegendTick(leftX, itemY, "Vertical tick: segment boundary"));
+        parts.Append(LegendEndpoint(rightX, itemY, "Endpoint text: JOIN/SPLIT"));
+
+        return parts.ToString();
+    }
+
+    private static string LegendLine(double x, double y, string label, string dashArray = "")
+    {
+        return Line(x, y - 4, x + 44, y - 4, strokeWidth: "2.4", dashArray: dashArray) +
+            SvgText(x + 56, y, label, 11, anchor: "start");
+    }
+
+    private static string LegendTriangle(double x, double y, string label)
+    {
+        return Triangle(x + 10, y - 5, "start") +
+            Triangle(x + 43, y - 5, "stop") +
+            SvgText(x + 56, y, label, 11, anchor: "start");
+    }
+
+    private static string LegendRect(double x, double y, string label)
+    {
+        return Rect(x + 12, y - 17, 28, 24) +
+            SvgText(x + 26, y - 1, "TS", 9, weight: "700") +
+            SvgText(x + 56, y, label, 11, anchor: "start");
+    }
+
+    private static string LegendTick(double x, double y, string label)
+    {
+        return Line(x + 23, y - 18, x + 23, y + 7, strokeWidth: "1.5") +
+            SvgText(x + 56, y, label, 11, anchor: "start");
+    }
+
+    private static string LegendEndpoint(double x, double y, string label)
+    {
+        return SvgText(x + 12, y, "EP", 11, anchor: "start", weight: "700") +
+            SvgText(x + 56, y, label, 11, anchor: "start");
     }
 }

@@ -22,6 +22,8 @@ Generated diagram:
 
 ![Generated TYM diagram](sample_output.svg)
 
+The generated SVG includes a legend for solid lines, dotted lines, track start/stop triangles, segment boxes, boundary ticks, and inferred JOIN/SPLIT endpoint labels.
+
 ## Minimal React UI
 
 Live UI:
