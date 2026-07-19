@@ -45,6 +45,24 @@ function formatJson(value) {
   return value ? JSON.stringify(value, null, 2) : '';
 }
 
+function score(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? `${Math.round(number * 100)}%` : 'n/a';
+}
+
+function analysisValue(analysis, snakeName, camelName, fallback) {
+  if (!analysis) {
+    return fallback;
+  }
+
+  return analysis[snakeName] ?? analysis[camelName] ?? fallback;
+}
+
+function countEntries(value) {
+  return Object.entries(value || {})
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
 function timeMlSummary(timeMl) {
   if (!timeMl) {
     return '';
@@ -87,6 +105,8 @@ function App() {
   const [message, setMessage] = React.useState('');
 
   const diagram = result && result.diagram ? result.diagram : {};
+  const analysis = result && result.analysis ? result.analysis : null;
+  const warnings = result && Array.isArray(result.warnings) ? result.warnings : [];
   const timeMl = diagram.time_ml || {};
   const svgSize = parseSvgSize(svg);
   const jsonText = formatJson(result);
@@ -192,6 +212,134 @@ function App() {
     }, label);
   }
 
+  function analysisCard(label, value) {
+    return e('div', { className: 'analysis-card', key: label },
+      e('span', null, label),
+      e('b', null, value)
+    );
+  }
+
+  function countBlock(title, value) {
+    const entries = countEntries(value);
+    return e('section', { className: 'analysis-block', key: title },
+      e('h3', null, title),
+      entries.length
+        ? e('div', { className: 'count-grid' },
+            entries.map(([label, countValue]) => e('span', { className: 'count-chip', key: label },
+              e('b', null, countValue),
+              label
+            ))
+          )
+        : e('p', { className: 'muted-line' }, 'No values.')
+    );
+  }
+
+  function sourceBlock() {
+    const sources = analysisValue(analysis, 'extraction_sources', 'extractionSources', []);
+    return e('section', { className: 'analysis-block' },
+      e('h3', null, 'Extraction sources'),
+      sources.length
+        ? e('div', { className: 'source-list' }, sources.map(source => e('code', { key: source }, source)))
+        : e('p', { className: 'muted-line' }, 'No sources.')
+    );
+  }
+
+  function issueBlock() {
+    const issues = analysisValue(analysis, 'issues', 'issues', []);
+    const rows = issues.length
+      ? issues.map(issue => e('li', { className: `issue ${issue.severity || ''}`, key: issue.code || issue.message },
+          e('b', null, issue.code || 'ISSUE'),
+          e('span', null, issue.message || ''),
+          issue.evidence ? e('small', null, issue.evidence) : null
+        ))
+      : [e('li', { className: 'issue info', key: 'ok' },
+          e('b', null, 'NO_ANALYSIS_ISSUES'),
+          e('span', null, 'No analysis issues were reported.'),
+          null
+        )];
+
+    return e('section', { className: 'analysis-block' },
+      e('h3', null, 'Analysis issues'),
+      e('ul', { className: 'issue-list' }, rows),
+      warnings.length
+        ? e('div', { className: 'warnings' },
+            e('h3', null, 'Warnings'),
+            warnings.map(item => e('p', { key: item }, item))
+          )
+        : null
+    );
+  }
+
+  function dataTable(title, headers, rows, emptyText) {
+    return e('section', { className: 'analysis-block wide', key: title },
+      e('h3', null, title),
+      rows.length
+        ? e('div', { className: 'table-scroll' },
+            e('table', { className: 'data-table' },
+              e('thead', null,
+                e('tr', null, headers.map(header => e('th', { key: header }, header)))
+              ),
+              e('tbody', null,
+                rows.map((row, rowIndex) => e('tr', { key: `${title}-${rowIndex}` },
+                  row.map((cell, cellIndex) => e('td', { key: `${title}-${rowIndex}-${cellIndex}` }, cell || '-'))
+                ))
+              )
+            )
+          )
+        : e('p', { className: 'muted-line' }, emptyText)
+    );
+  }
+
+  function renderAnalysis() {
+    if (!analysis) {
+      return e('div', { className: 'empty' },
+        e('div', null,
+          e('strong', null, 'No analysis yet'),
+          e('span', null, 'Generate a diagram to inspect extractor statistics.')
+        )
+      );
+    }
+
+    const eventRows = (diagram.events || []).map(item => [
+      item.id,
+      item.temporal_category,
+      item.relation_to_previous,
+      item.relation_cue || '-',
+      score(item.confidence),
+      item.text
+    ]);
+    const segmentRows = (diagram.segments || []).map(item => [
+      item.id,
+      item.type,
+      item.track_id,
+      (item.actors || []).join(', '),
+      item.temporal_anchor || '-',
+      (item.event_ids || []).join(', '),
+      score(item.confidence)
+    ]);
+
+    return e('div', { className: 'analysis-view' },
+      e('div', { className: 'analysis-grid' },
+        analysisCard('Characters', analysisValue(analysis, 'character_count', 'characterCount', 0)),
+        analysisCard('Avg event confidence', score(analysisValue(analysis, 'average_event_confidence', 'averageEventConfidence', 0))),
+        analysisCard('Avg TS confidence', score(analysisValue(analysis, 'average_segment_confidence', 'averageSegmentConfidence', 0))),
+        analysisCard('TimeML events', analysisValue(analysis, 'time_ml_event_count', 'timeMlEventCount', 0)),
+        analysisCard('TIMEX3', analysisValue(analysis, 'time_ml_timex_count', 'timeMlTimexCount', 0)),
+        analysisCard('TLINKs', analysisValue(analysis, 'time_ml_tlink_count', 'timeMlTLinkCount', 0))
+      ),
+      e('div', { className: 'analysis-columns' },
+        countBlock('Segment types', analysisValue(analysis, 'segment_types', 'segmentTypes', {})),
+        countBlock('Temporal categories', analysisValue(analysis, 'temporal_categories', 'temporalCategories', {})),
+        countBlock('Relation types', analysisValue(analysis, 'relation_types', 'relationTypes', {})),
+        countBlock('Entity labels', analysisValue(analysis, 'entity_mention_labels', 'entityMentionLabels', {})),
+        sourceBlock(),
+        issueBlock()
+      ),
+      dataTable('Events', ['Event', 'Temporal', 'Rel prev', 'Cue', 'Confidence', 'Text'], eventRows, 'No events detected.'),
+      dataTable('Segments', ['TS', 'Type', 'Track', 'Actors', 'Anchor', 'Events', 'Confidence'], segmentRows, 'No segments detected.')
+    );
+  }
+
   function renderResultBody() {
     if (activeTab === 'json') {
       return e('pre', { className: 'code-view' }, jsonText || 'No JSON result yet.');
@@ -203,6 +351,10 @@ function App() {
 
     if (activeTab === 'timeml') {
       return e('pre', { className: 'code-view' }, timeMlText || 'No TimeML result yet.');
+    }
+
+    if (activeTab === 'analysis') {
+      return renderAnalysis();
     }
 
     return e('div', { className: 'diagram-area' },
@@ -329,6 +481,7 @@ function App() {
         e('div', { className: 'result-toolbar' },
           e('div', { className: 'tabs', role: 'tablist', 'aria-label': 'Result views' },
             resultTab('diagram', 'SVG'),
+            resultTab('analysis', 'Analysis'),
             resultTab('timeml', 'TimeML'),
             resultTab('json', 'JSON'),
             resultTab('xml', 'XML')

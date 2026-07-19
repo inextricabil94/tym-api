@@ -14,8 +14,14 @@
 
   <ItemGroup>
     <Compile Remove="ui\**\*.cs" />
+    <Compile Remove="build_verify\**\*.cs" />
+    <Compile Remove="build_publish\**\*.cs" />
     <Content Remove="ui\**" />
+    <Content Remove="build_verify\**" />
+    <Content Remove="build_publish\**" />
     <None Remove="ui\**" />
+    <None Remove="build_verify\**" />
+    <None Remove="build_publish\**" />
   </ItemGroup>
 
   <ItemGroup>

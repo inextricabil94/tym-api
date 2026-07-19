@@ -8,7 +8,7 @@ TYM is a small ASP.NET Core Minimal API for turning narrative text into time-yar
 
 This prototype now follows the implementation directions from the supplied papers more closely. It first extracts event-like clauses, attaches actors, temporal anchors, locations, actions, and a `Past`/`Present`/`Future` temporal category, then groups contiguous compatible events into time segments. ML.NET is used for event temporal-category classification and for each candidate time segment's narrative type (`NAR`, `REM`, `SUP`, `GEN`, or `FIC`). The bundled models are trained at startup from seed examples in `Program.cs`; a production implementation should replace those examples with the annotated TYM corpus.
 
-No LLM is used by the API pipeline. The extraction path is deterministic rules plus ML.NET classifiers, and the renderer is deterministic JSON/SVG/XML generation. The JSON/XML output now also includes a TimeML-style layer with `EVENT`, `TIMEX3`, `SIGNAL`, `MAKEINSTANCE`, and `TLINK` annotations so the TYM diagram can be compared with standard temporal NLP tooling.
+No LLM is used by the API pipeline. The extraction path is deterministic rules plus ML.NET classifiers, and the renderer is deterministic JSON/SVG/XML generation. The JSON/XML output now also includes a TimeML-style layer with `EVENT`, `TIMEX3`, `SIGNAL`, `MAKEINSTANCE`, and `TLINK` annotations so the TYM diagram can be compared with standard temporal NLP tooling. Each response also includes an `analysis` object with extractor counts, confidence averages, classifier sources, distribution statistics, and quality issues.
 
 English is the default extraction language. Romanian narrative text is supported with `options.language = "ro"` using Romanian rule profiles for named-entity candidates, temporal anchors, temporal signals, event tense, TimeML-style labels, and TYM segment/track creation.
 
@@ -38,7 +38,7 @@ Live API:
 
 [https://tym-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io](https://tym-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io)
 
-The UI is in [ui/Tym.Ui](ui/Tym.Ui). It serves a minimal React page with English and Romanian examples, calls `POST /v1/diagrams`, displays extraction counts, renders the returned SVG, supports fit/zoom inspection, exposes TimeML/JSON/XML result tabs, and can download SVG/JSON/XML outputs.
+The UI is in [ui/Tym.Ui](ui/Tym.Ui). It serves a minimal React page with English and Romanian examples, calls `POST /v1/diagrams`, displays extraction counts, renders the returned SVG, supports fit/zoom inspection, exposes Analysis/TimeML/JSON/XML result tabs, and can download SVG/JSON/XML outputs.
 
 ## Run
 
@@ -172,11 +172,12 @@ The API boundary is intentionally separate from extraction. The current pipeline
 1. split text into event-like clauses using punctuation, conjunction, and verb cues
 2. extract actor, temporal anchor, location, action, and offset features
 3. classify each event as `Past`, `Present`, or `Future` with ML.NET for English, or Romanian temporal rules for Romanian
-4. concatenate adjacent events with compatible temporal category and actor unity into `TS`
+4. concatenate adjacent events with compatible temporal category and actor unity into `TS`, while forcing a new segment when explicit retrospective, forward, simultaneous, or changed-anchor cues indicate a temporal boundary
 5. classify each `TS` as `NAR`, `REM`, `SUP`, `GEN`, or `FIC` with ML.NET for English, or Romanian narrative-mode rules for Romanian
 6. infer TT membership, boundaries, endpoints, and relations
 7. emit TimeML-style EVENT/TIMEX3/SIGNAL/MAKEINSTANCE/TLINK annotations
-8. render JSON, SVG, and paper-style XML
+8. emit analysis statistics and quality issues
+9. render JSON, SVG, and paper-style XML
 
 The renderer consumes normalized TYM JSON, so extraction can be upgraded independently.
 

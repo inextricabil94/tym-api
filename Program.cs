@@ -136,9 +136,35 @@ public sealed record DiagramResponse(
     string Id,
     string ModelVersion,
     Diagram Diagram,
+    AnalysisReport Analysis,
     RenderResult Render,
     string Xml,
     IReadOnlyList<string> Warnings);
+
+public sealed record AnalysisReport(
+    int CharacterCount,
+    int EventCount,
+    int SegmentCount,
+    int TrackCount,
+    int RelationCount,
+    int TimeMlEventCount,
+    int TimeMlTimexCount,
+    [property: JsonPropertyName("time_ml_tlink_count")]
+    int TimeMlTLinkCount,
+    double AverageEventConfidence,
+    double AverageSegmentConfidence,
+    IReadOnlyDictionary<string, int> SegmentTypes,
+    IReadOnlyDictionary<string, int> TemporalCategories,
+    IReadOnlyDictionary<string, int> RelationTypes,
+    IReadOnlyDictionary<string, int> EntityMentionLabels,
+    IReadOnlyList<string> ExtractionSources,
+    IReadOnlyList<AnalysisIssue> Issues);
+
+public sealed record AnalysisIssue(
+    string Severity,
+    string Code,
+    string Message,
+    string Evidence);
 
 public sealed record Diagram(
     IReadOnlyList<TimeActor> Actors,
@@ -896,6 +922,7 @@ internal static partial class TymAnalyzer
             relations,
             boundaries,
             timeMl);
+        var analysis = BuildAnalysis(text, diagram);
         var render = TymSvgRenderer.Render(diagram, options);
         var xml = TymXmlSerializer.Serialize(diagram);
         var warnings = new List<string>
@@ -915,7 +942,119 @@ internal static partial class TymAnalyzer
             warnings.Add("No text segments were detected.");
         }
 
-        return new DiagramResponse(HashId(text), TymConstants.Version, diagram, render, xml, warnings);
+        foreach (var issue in analysis.Issues.Where(issue => issue.Severity != "info"))
+        {
+            warnings.Add($"{issue.Code}: {issue.Message}");
+        }
+
+        return new DiagramResponse(HashId(text), TymConstants.Version, diagram, analysis, render, xml, warnings);
+    }
+
+    private static AnalysisReport BuildAnalysis(string sourceText, Diagram diagram)
+    {
+        var issues = new List<AnalysisIssue>();
+        var averageEventConfidence = AverageScore(diagram.Events.Select(ev => ev.Confidence));
+        var averageSegmentConfidence = AverageScore(diagram.Segments.Select(segment => segment.Confidence));
+        var eventsWithoutActors = diagram.Events.Count(ev => ev.Actors.Count == 0);
+        var segmentsWithoutAnchors = diagram.Segments.Count(segment => segment.TemporalAnchor.Length == 0);
+
+        if (diagram.Events.Count == 0)
+        {
+            issues.Add(new AnalysisIssue(
+                "warning",
+                "NO_EVENTS",
+                "No event-like clauses were extracted.",
+                "The input did not match the configured verb and sentence patterns."));
+        }
+
+        if (eventsWithoutActors > 0)
+        {
+            issues.Add(new AnalysisIssue(
+                "info",
+                "EVENTS_WITHOUT_ACTORS",
+                $"{eventsWithoutActors} event(s) do not have an explicit or carried actor.",
+                "Actor extraction uses named-entity candidates and previous-actor carry-forward."));
+        }
+
+        if (segmentsWithoutAnchors > 0)
+        {
+            issues.Add(new AnalysisIssue(
+                "info",
+                "SEGMENTS_WITHOUT_TIMEX",
+                $"{segmentsWithoutAnchors} segment(s) have no explicit temporal anchor.",
+                "Temporal anchors are optional in TYM; use TIMEX3 annotations when exact time evidence is needed."));
+        }
+
+        if (diagram.Segments.Count > 1 && diagram.Relations.Count == 0)
+        {
+            issues.Add(new AnalysisIssue(
+                "warning",
+                "NO_SEGMENT_RELATIONS",
+                "Multiple segments were produced without temporal relations.",
+                "The relation layer depends on adjacency and lexical cue detection."));
+        }
+
+        if (averageEventConfidence > 0 && averageEventConfidence < 0.55)
+        {
+            issues.Add(new AnalysisIssue(
+                "warning",
+                "LOW_EVENT_CONFIDENCE",
+                "Average event temporal-category confidence is below 0.55.",
+                "Use more temporal cues or train the ML.NET classifier on an annotated TYM/TimeML corpus."));
+        }
+
+        if (averageSegmentConfidence > 0 && averageSegmentConfidence < 0.60)
+        {
+            issues.Add(new AnalysisIssue(
+                "warning",
+                "LOW_SEGMENT_CONFIDENCE",
+                "Average segment type confidence is below 0.60.",
+                "Segment labels fall back to rules when the seed classifier is uncertain."));
+        }
+
+        var extractionSources = diagram.Events
+            .Select(ev => ev.Classifier)
+            .Concat(diagram.Segments.Select(segment => segment.Classifier))
+            .Concat(diagram.EntityMentions.Select(mention => mention.Source))
+            .Where(source => source.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(source => source, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new AnalysisReport(
+            sourceText.Length,
+            diagram.Events.Count,
+            diagram.Segments.Count,
+            diagram.Tracks.Count,
+            diagram.Relations.Count,
+            diagram.TimeMl.Events.Count,
+            diagram.TimeMl.Timex3.Count,
+            diagram.TimeMl.TLinks.Count,
+            averageEventConfidence,
+            averageSegmentConfidence,
+            CountBy(diagram.Segments, segment => segment.Type),
+            CountBy(diagram.Events, ev => ev.TemporalCategory),
+            CountBy(diagram.Relations, relation => relation.Rel),
+            CountBy(diagram.EntityMentions, mention => mention.Label),
+            extractionSources,
+            issues);
+    }
+
+    private static double AverageScore(IEnumerable<double> values)
+    {
+        var scores = values.ToList();
+        return scores.Count == 0 ? 0 : Math.Round(scores.Average(), 3);
+    }
+
+    private static IReadOnlyDictionary<string, int> CountBy<T>(IEnumerable<T> values, Func<T, string> selector)
+    {
+        return values
+            .Select(selector)
+            .Where(value => value.Length > 0)
+            .GroupBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
     }
 
     private static string NormalizeLanguageCode(string language)
@@ -1300,8 +1439,7 @@ internal static partial class TymAnalyzer
             }
 
             var previous = current[^1];
-            if (previous.TemporalCategory == currentEvent.TemporalCategory &&
-                SameSet(previous.Actors, currentEvent.Actors))
+            if (ShouldMergeIntoCurrentSegment(previous, currentEvent))
             {
                 current.Add(currentEvent);
                 continue;
@@ -1317,6 +1455,34 @@ internal static partial class TymAnalyzer
         }
 
         return candidates;
+    }
+
+    private static bool ShouldMergeIntoCurrentSegment(MutableNarrativeEvent previous, MutableNarrativeEvent current)
+    {
+        if (previous.TemporalCategory != current.TemporalCategory ||
+            !SameSet(previous.Actors, current.Actors))
+        {
+            return false;
+        }
+
+        if (HasExplicitTemporalSegmentBoundary(current))
+        {
+            return false;
+        }
+
+        return previous.TemporalAnchor.Length == 0 ||
+            current.TemporalAnchor.Length == 0 ||
+            previous.TemporalAnchor.Equals(current.TemporalAnchor, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasExplicitTemporalSegmentBoundary(MutableNarrativeEvent current)
+    {
+        if (current.RelationCue.Length == 0)
+        {
+            return false;
+        }
+
+        return current.RelationToPrevious is "BEFORE" or "AFTER" or "SIMULTANEOUS";
     }
 
     private static TimeSegmentCandidate CreateCandidate(IReadOnlyList<MutableNarrativeEvent> events)
