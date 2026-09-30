@@ -18,6 +18,8 @@
 
 - The tiny sample POCs measure component availability, counts, and runtime. Do not present those measurements as accuracy or generalization results.
 - For model evaluation, report accuracy, macro F1, per-class precision and recall, TS boundary scores, and temporal-relation accuracy. Prefer chapter/document-level splits to random event-level splits to reduce context leakage.
+- The checked-in seed examples are synthetic demo inputs, not gold labels. Keep human annotations private unless publication is permitted; split gold data by chapter/document before creating synthetic descendants, and keep descendants in training only.
+- `pocs/model-evaluation` currently computes classification metrics only. Do not claim it evaluates event-span boundaries or end-to-end temporal graph consistency.
 - Preserve annotated corpus files and their licensing/privacy constraints. Do not add corpus text to commits without confirming it is intended for publication.
 
 ## Useful commands

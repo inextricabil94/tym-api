@@ -10,6 +10,8 @@
     <Content Update="openapi.yaml" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="sample_input.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="sample_input_ro.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="data\seed-examples.jsonl" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Remove="data\seed-examples.jsonl" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,7 +6,7 @@ TYM is a small ASP.NET Core Minimal API for turning narrative text into time-yar
 - a time-yard view, where segments are arranged by narrative tracks
 - start/stop markers, joins/splits, rupture/commute hints, and segment labels
 
-This prototype implements an interpretable baseline for the updated TYM paper. It extracts event-like clauses, attaches actors, temporal anchors, locations, actions, and a `Past`/`Present`/`Future` temporal category, then groups contiguous compatible events into time segments. ML.NET is used for event temporal-category classification and for each candidate time segment's narrative type (`NAR`, `REM`, `SUP`, `GEN`, or `FIC`). The bundled models are trained at startup from seed examples in `Program.cs`; they are not the CNN evaluated in the paper and are not trained on the annotated TYM corpus.
+This prototype implements an interpretable baseline for the updated TYM paper. It extracts event-like clauses, attaches actors, temporal anchors, locations, actions, and a `Past`/`Present`/`Future` temporal category, then groups contiguous compatible events into time segments. ML.NET is used for event temporal-category classification and for each candidate time segment's narrative type (`NAR`, `REM`, `SUP`, `GEN`, or `FIC`). The bundled models are trained at startup from synthetic seed examples in [data/seed-examples.jsonl](data/seed-examples.jsonl); they are not the CNN evaluated in the paper and are not trained on the annotated TYM corpus.
 
 No transformer or LLM is used by the API pipeline. Extraction uses deterministic rules plus small ML.NET seed classifiers, and rendering is deterministic JSON/SVG/XML generation. Event JSON and XML include per-attribute provenance for actors, temporal anchors, locations, actions, temporal categories, and relations. This marks explicit pattern matches, previous-event carry-forward, model/rule classifications, text-order defaults, and missing values so inferred information can be audited. The JSON/XML output also includes a TimeML-style layer with `EVENT`, `TIMEX3`, `SIGNAL`, `MAKEINSTANCE`, and `TLINK` annotations. Each response's `analysis` object reports extractor counts, confidence averages, provenance source counts, and quality issues.
 
@@ -16,7 +16,11 @@ English is the default extraction language. Romanian narrative text is supported
 
 The paper reports its original CNN baseline on 2,000 extracted events: 58.9% accuracy and approximately 58.7% macro F1, producing 93 time segments. Those are paper results; they are not results from this API's ML.NET seed classifiers or the small framework POCs in this repository. The POCs report component availability, counts, and runtime for a few sample texts, not model-quality metrics.
 
-The current API implements the transparent rules/seed-model baseline and auditable provenance. Transformer event representations, sequence-based TS boundary detection, pairwise temporal-relation models, schema-constrained LLM extraction, human correction, and larger chapter/document-level evaluation splits are research directions from the paper, not currently implemented or experimentally validated features. See [AGENTS.md](AGENTS.md) for project contribution and evaluation conventions.
+The current API implements the transparent rules/seed-model baseline and auditable provenance. Transformer event representations, sequence-based TS boundary detection, pairwise temporal-relation models, schema-constrained LLM extraction, and human correction remain proposed work. The new evaluation utility creates grouped split manifests and scores supplied classification predictions, but it does not train on the annotated corpus or establish model-quality results. See [AGENTS.md](AGENTS.md) for project contribution and evaluation conventions.
+
+## Training data and evaluation
+
+The checked-in seed examples are explicitly marked synthetic and unreviewed. They support the existing demo classifiers only; they are not a gold set or evidence of model quality. Keep corpus annotations private unless their license and privacy terms allow publication. The [data README](data/README.md) describes the data fields, and the [model evaluation scaffold](pocs/model-evaluation/README.md) contains a chapter/document-grouped split and classification-metrics utility. It includes no corpus data or precomputed accuracy claims.
 
 ## Example
 

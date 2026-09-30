@@ -414,6 +414,87 @@ internal sealed class EventTemporalTrainingRow
     public string Label { get; set; } = "";
 }
 
+internal sealed record TrainingSeedExample(
+    string Id,
+    string Task,
+    string Text,
+    string Label,
+    string Language,
+    [property: JsonPropertyName("source_type")] string SourceType,
+    [property: JsonPropertyName("source_group")] string SourceGroup,
+    [property: JsonPropertyName("review_status")] string ReviewStatus,
+    [property: JsonPropertyName("parent_id")] string? ParentId,
+    [property: JsonPropertyName("document_id")] string? DocumentId,
+    [property: JsonPropertyName("chapter_id")] string? ChapterId);
+
+internal static class TrainingSeedData
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    public static IReadOnlyList<TrainingSeedExample> Load(string task)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "data", "seed-examples.jsonl");
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException(
+                $"The versioned training seed file was not found at '{path}'.",
+                path);
+        }
+
+        var examples = new List<TrainingSeedExample>();
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var lineNumber = 0;
+        foreach (var line in File.ReadLines(path))
+        {
+            lineNumber++;
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            var example = JsonSerializer.Deserialize<TrainingSeedExample>(line, JsonOptions)
+                ?? throw new InvalidDataException($"Training seed line {lineNumber} is empty or invalid.");
+
+            if (string.IsNullOrWhiteSpace(example.Id)
+                || string.IsNullOrWhiteSpace(example.Task)
+                || string.IsNullOrWhiteSpace(example.Text)
+                || string.IsNullOrWhiteSpace(example.Label)
+                || string.IsNullOrWhiteSpace(example.Language)
+                || string.IsNullOrWhiteSpace(example.SourceGroup))
+            {
+                throw new InvalidDataException($"Training seed line {lineNumber} is missing required fields.");
+            }
+
+            if (!ids.Add(example.Id))
+            {
+                throw new InvalidDataException($"Training seed id '{example.Id}' is duplicated.");
+            }
+
+            if (example.SourceType != "synthetic_seed" || example.ReviewStatus != "unreviewed")
+            {
+                throw new InvalidDataException(
+                    $"Training seed '{example.Id}' must remain marked synthetic_seed and unreviewed.");
+            }
+
+            if (example.DocumentId is not null || example.ChapterId is not null)
+            {
+                throw new InvalidDataException(
+                    $"Training seed '{example.Id}' must not claim document or chapter provenance.");
+            }
+
+            examples.Add(example);
+        }
+
+        var selected = examples.Where(example => example.Task == task).ToArray();
+        return selected.Length > 0
+            ? selected
+            : throw new InvalidDataException($"No training seed rows were found for task '{task}'.");
+    }
+}
+
 internal sealed class EventTemporalPrediction
 {
     [ColumnName("PredictedLabelText")]
@@ -494,7 +575,13 @@ internal sealed class TymSegmentTypeClassifier
     public static TymSegmentTypeClassifier Train()
     {
         var mlContext = new MLContext(seed: 42);
-        var trainingData = mlContext.Data.LoadFromEnumerable(SeedRows());
+        var trainingRows = TrainingSeedData.Load("segment_type")
+            .Select(example => new SegmentTypeTrainingRow
+            {
+                Text = example.Text,
+                Label = example.Label
+            });
+        var trainingData = mlContext.Data.LoadFromEnumerable(trainingRows);
         var pipeline = mlContext.Transforms.Conversion.MapValueToKey("LabelKey", nameof(SegmentTypeTrainingRow.Label))
             .Append(mlContext.Transforms.Text.FeaturizeText("Features", nameof(SegmentTypeTrainingRow.Text)))
             .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("LabelKey", "Features"))
@@ -546,65 +633,6 @@ internal sealed class TymSegmentTypeClassifier
         }
     }
 
-    private static IEnumerable<SegmentTypeTrainingRow> SeedRows()
-    {
-        return
-        [
-            Row("Adam walked through the market.", "NAR"),
-            Row("Margaret opened the door.", "NAR"),
-            Row("Karl travelled across the island.", "NAR"),
-            Row("The soldiers arrived before noon.", "NAR"),
-            Row("She waited in the kitchen.", "NAR"),
-            Row("He searched for Margaret after the storm.", "NAR"),
-            Row("They entered the house together.", "NAR"),
-            Row("The boy crossed the street and stopped near the gate.", "NAR"),
-            Row("Adam and Johan grew up in the same house.", "NAR"),
-            Row("Adam disappeared before dawn.", "NAR"),
-            Row("Meanwhile, Karl traveled alone across the island.", "NAR"),
-
-            Row("Years earlier, Karl had carried Adam through the rain.", "REM"),
-            Row("Margaret remembered her mother.", "REM"),
-            Row("She recalled the words from childhood.", "REM"),
-            Row("Back then Adam lived in the orphanage.", "REM"),
-            Row("Long ago he had met Johan.", "REM"),
-            Row("He dreamed of his father's old house.", "REM"),
-            Row("In the past, she had waited for him there.", "REM"),
-            Row("The old voice returned from memory.", "REM"),
-
-            Row("Perhaps Adam would find her.", "SUP"),
-            Row("She imagined that Karl might return.", "SUP"),
-            Row("If only he could have stayed.", "SUP"),
-            Row("He supposed the road might be safe.", "SUP"),
-            Row("They might meet again before dawn.", "SUP"),
-            Row("She believed he would have escaped.", "SUP"),
-            Row("Maybe the soldiers had already left.", "SUP"),
-            Row("It could have happened another way.", "SUP"),
-
-            Row("People usually remember home by its smells.", "GEN"),
-            Row("Everyone knows that islands change slowly.", "GEN"),
-            Row("The sea always takes back what it is given.", "GEN"),
-            Row("Children generally fear dark rooms.", "GEN"),
-            Row("A person never knows the end of a journey.", "GEN"),
-            Row("Mothers usually wait for letters.", "GEN"),
-            Row("Stories often preserve what families forget.", "GEN"),
-            Row("Time always moves differently in exile.", "GEN"),
-
-            Row("In the story the prince crossed a river.", "FIC"),
-            Row("In the film the city burned all night.", "FIC"),
-            Row("The fictional detective found a hidden map.", "FIC"),
-            Row("The invented kingdom had no clocks.", "FIC"),
-            Row("In the play Margaret spoke to a stranger.", "FIC"),
-            Row("The novel described an impossible war.", "FIC"),
-            Row("The movie showed a child walking through fire.", "FIC"),
-            Row("Inside the tale, the island floated away.", "FIC")
-        ];
-    }
-
-    private static SegmentTypeTrainingRow Row(string text, string label) => new()
-    {
-        Text = text,
-        Label = label
-    };
 }
 
 internal sealed class TymEventTemporalClassifier
@@ -627,7 +655,13 @@ internal sealed class TymEventTemporalClassifier
     public static TymEventTemporalClassifier Train()
     {
         var mlContext = new MLContext(seed: 42);
-        var trainingData = mlContext.Data.LoadFromEnumerable(SeedRows());
+        var trainingRows = TrainingSeedData.Load("event_temporal")
+            .Select(example => new EventTemporalTrainingRow
+            {
+                Text = example.Text,
+                Label = example.Label
+            });
+        var trainingData = mlContext.Data.LoadFromEnumerable(trainingRows);
         var pipeline = mlContext.Transforms.Conversion.MapValueToKey("LabelKey", nameof(EventTemporalTrainingRow.Label))
             .Append(mlContext.Transforms.Text.FeaturizeText("Features", nameof(EventTemporalTrainingRow.Text)))
             .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("LabelKey", "Features"))
@@ -674,44 +708,6 @@ internal sealed class TymEventTemporalClassifier
         }
     }
 
-    private static IEnumerable<EventTemporalTrainingRow> SeedRows()
-    {
-        return
-        [
-            Row("Years earlier Karl had carried Adam through the rain", "Past"),
-            Row("She remembered her mother in Jakarta", "Past"),
-            Row("He was five years old", "Past"),
-            Row("Before he came here", "Past"),
-            Row("Long ago Margaret lived in another house", "Past"),
-            Row("Karl had been imprisoned", "Past"),
-            Row("The soldiers left yesterday", "Past"),
-            Row("Adam recalled the orphanage", "Past"),
-
-            Row("This is Adam", "Present"),
-            Row("Now he is sixteen", "Present"),
-            Row("She waits in the kitchen", "Present"),
-            Row("Adam searches for Margaret", "Present"),
-            Row("Margaret finds Adam at the doorway", "Present"),
-            Row("Karl travels alone across the island", "Present"),
-            Row("The narrator describes the house", "Present"),
-            Row("They are walking to the truck", "Present"),
-
-            Row("Adam will find Margaret", "Future"),
-            Row("She would return before dawn", "Future"),
-            Row("He is going to leave soon", "Future"),
-            Row("Karl might come back", "Future"),
-            Row("They shall meet tomorrow", "Future"),
-            Row("The soldiers could arrive later", "Future"),
-            Row("Margaret would have escaped", "Future"),
-            Row("The child will remember this", "Future")
-        ];
-    }
-
-    private static EventTemporalTrainingRow Row(string text, string label) => new()
-    {
-        Text = text,
-        Label = label
-    };
 }
 
 internal static partial class TymAnalyzer
