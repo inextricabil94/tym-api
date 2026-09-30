@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: TYM Diagram API
-  version: 0.6.0
-  description: API for generating paper-guided Time Yards Model diagrams and TimeML-style temporal annotations from English or Romanian narrative text.
+  version: 0.7.0
+  description: API for generating Time Yards Model diagrams and TimeML-style temporal annotations with per-attribute extraction provenance from English or Romanian narrative text.
 servers:
   - url: http://127.0.0.1:8765
 paths:
@@ -271,6 +271,7 @@ components:
         - temporal_categories
         - relation_types
         - entity_mention_labels
+        - provenance_sources
         - extraction_sources
         - issues
       properties:
@@ -312,6 +313,11 @@ components:
             type: integer
         entity_mention_labels:
           type: object
+          additionalProperties:
+            type: integer
+        provenance_sources:
+          type: object
+          description: Counts of methods used for event-level attribute extraction and inference.
           additionalProperties:
             type: integer
         extraction_sources:
@@ -394,6 +400,40 @@ components:
           type: integer
         event_id:
           type: string
+    AttributeProvenance:
+      type: object
+      required:
+        - source
+        - evidence
+      properties:
+        source:
+          type: string
+          description: Extraction or inference method used for this attribute.
+        evidence:
+          type: string
+          description: Short evidence note, including when a value was carried forward or unavailable.
+    EventProvenance:
+      type: object
+      required:
+        - actors
+        - temporal_anchor
+        - location
+        - action
+        - temporal_category
+        - relation
+      properties:
+        actors:
+          $ref: "#/components/schemas/AttributeProvenance"
+        temporal_anchor:
+          $ref: "#/components/schemas/AttributeProvenance"
+        location:
+          $ref: "#/components/schemas/AttributeProvenance"
+        action:
+          $ref: "#/components/schemas/AttributeProvenance"
+        temporal_category:
+          $ref: "#/components/schemas/AttributeProvenance"
+        relation:
+          $ref: "#/components/schemas/AttributeProvenance"
     NarrativeEvent:
       type: object
       required:
@@ -412,6 +452,7 @@ components:
         - span_end
         - confidence
         - classifier
+        - provenance
       properties:
         id:
           type: string
@@ -457,6 +498,8 @@ components:
           maximum: 1
         classifier:
           type: string
+        provenance:
+          $ref: "#/components/schemas/EventProvenance"
     TimeTrack:
       type: object
       required:
@@ -509,6 +552,7 @@ components:
             - FIC
         perspective:
           type: string
+          description: Perspective identifier. The current baseline uses the author (English) or autor (Romanian) assumption.
         text_order:
           type: integer
         story_order:

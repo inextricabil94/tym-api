@@ -300,18 +300,26 @@ function App() {
       );
     }
 
-    const eventRows = (diagram.events || []).map(item => [
-      item.id,
-      item.temporal_category,
-      item.relation_to_previous,
-      item.relation_cue || '-',
-      score(item.confidence),
-      item.text
-    ]);
+    const eventRows = (diagram.events || []).map(item => {
+      const provenance = item.provenance || {};
+      return [
+        item.id,
+        item.temporal_category,
+        item.relation_to_previous,
+        item.relation_cue || '-',
+        provenance.actors?.source || '-',
+        provenance.temporal_anchor?.source || '-',
+        provenance.temporal_category?.source || item.classifier || '-',
+        provenance.relation?.source || '-',
+        score(item.confidence),
+        item.text
+      ];
+    });
     const segmentRows = (diagram.segments || []).map(item => [
       item.id,
       item.type,
       item.track_id,
+      item.perspective || '-',
       (item.actors || []).join(', '),
       item.temporal_anchor || '-',
       (item.event_ids || []).join(', '),
@@ -332,11 +340,12 @@ function App() {
         countBlock('Temporal categories', analysisValue(analysis, 'temporal_categories', 'temporalCategories', {})),
         countBlock('Relation types', analysisValue(analysis, 'relation_types', 'relationTypes', {})),
         countBlock('Entity labels', analysisValue(analysis, 'entity_mention_labels', 'entityMentionLabels', {})),
+        countBlock('Provenance methods', analysisValue(analysis, 'provenance_sources', 'provenanceSources', {})),
         sourceBlock(),
         issueBlock()
       ),
-      dataTable('Events', ['Event', 'Temporal', 'Rel prev', 'Cue', 'Confidence', 'Text'], eventRows, 'No events detected.'),
-      dataTable('Segments', ['TS', 'Type', 'Track', 'Actors', 'Anchor', 'Events', 'Confidence'], segmentRows, 'No segments detected.')
+      dataTable('Events', ['Event', 'Temporal', 'Rel prev', 'Cue', 'Actor source', 'Anchor source', 'Category source', 'Relation source', 'Confidence', 'Text'], eventRows, 'No events detected.'),
+      dataTable('Segments', ['TS', 'Type', 'Track', 'Perspective', 'Actors', 'Anchor', 'Events', 'Confidence'], segmentRows, 'No segments detected.')
     );
   }
 

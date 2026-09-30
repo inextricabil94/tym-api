@@ -6,11 +6,17 @@ TYM is a small ASP.NET Core Minimal API for turning narrative text into time-yar
 - a time-yard view, where segments are arranged by narrative tracks
 - start/stop markers, joins/splits, rupture/commute hints, and segment labels
 
-This prototype now follows the implementation directions from the supplied papers more closely. It first extracts event-like clauses, attaches actors, temporal anchors, locations, actions, and a `Past`/`Present`/`Future` temporal category, then groups contiguous compatible events into time segments. ML.NET is used for event temporal-category classification and for each candidate time segment's narrative type (`NAR`, `REM`, `SUP`, `GEN`, or `FIC`). The bundled models are trained at startup from seed examples in `Program.cs`; a production implementation should replace those examples with the annotated TYM corpus.
+This prototype implements an interpretable baseline for the updated TYM paper. It extracts event-like clauses, attaches actors, temporal anchors, locations, actions, and a `Past`/`Present`/`Future` temporal category, then groups contiguous compatible events into time segments. ML.NET is used for event temporal-category classification and for each candidate time segment's narrative type (`NAR`, `REM`, `SUP`, `GEN`, or `FIC`). The bundled models are trained at startup from seed examples in `Program.cs`; they are not the CNN evaluated in the paper and are not trained on the annotated TYM corpus.
 
-No LLM is used by the API pipeline. The extraction path is deterministic rules plus ML.NET classifiers, and the renderer is deterministic JSON/SVG/XML generation. The JSON/XML output now also includes a TimeML-style layer with `EVENT`, `TIMEX3`, `SIGNAL`, `MAKEINSTANCE`, and `TLINK` annotations so the TYM diagram can be compared with standard temporal NLP tooling. Each response also includes an `analysis` object with extractor counts, confidence averages, classifier sources, distribution statistics, and quality issues.
+No transformer or LLM is used by the API pipeline. Extraction uses deterministic rules plus small ML.NET seed classifiers, and rendering is deterministic JSON/SVG/XML generation. Event JSON and XML include per-attribute provenance for actors, temporal anchors, locations, actions, temporal categories, and relations. This marks explicit pattern matches, previous-event carry-forward, model/rule classifications, text-order defaults, and missing values so inferred information can be audited. The JSON/XML output also includes a TimeML-style layer with `EVENT`, `TIMEX3`, `SIGNAL`, `MAKEINSTANCE`, and `TLINK` annotations. Each response's `analysis` object reports extractor counts, confidence averages, provenance source counts, and quality issues.
 
-English is the default extraction language. Romanian narrative text is supported with `options.language = "ro"` using Romanian rule profiles for named-entity candidates, temporal anchors, temporal signals, event tense, TimeML-style labels, and TYM segment/track creation.
+English is the default extraction language. Romanian narrative text is supported with `options.language = "ro"` using Romanian rule profiles for named-entity candidates, temporal anchors, temporal signals, event tense, TimeML-style labels, and TYM segment/track creation. Both languages use the paper's single-author perspective baseline (`author`/`autor`); speaker attribution, focalization changes, and coreference resolution remain future work. When an actor is absent, the current heuristic carries forward the previous event's actor set and marks that choice in provenance.
+
+## Alignment with the Updated Paper
+
+The paper reports its original CNN baseline on 2,000 extracted events: 58.9% accuracy and approximately 58.7% macro F1, producing 93 time segments. Those are paper results; they are not results from this API's ML.NET seed classifiers or the small framework POCs in this repository. The POCs report component availability, counts, and runtime for a few sample texts, not model-quality metrics.
+
+The current API implements the transparent rules/seed-model baseline and auditable provenance. Transformer event representations, sequence-based TS boundary detection, pairwise temporal-relation models, schema-constrained LLM extraction, human correction, and larger chapter/document-level evaluation splits are research directions from the paper, not currently implemented or experimentally validated features. See [AGENTS.md](AGENTS.md) for project contribution and evaluation conventions.
 
 ## Example
 
@@ -38,7 +44,7 @@ Live API:
 
 [https://tym-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io](https://tym-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io)
 
-The UI is in [ui/Tym.Ui](ui/Tym.Ui). It serves a minimal React page with English and Romanian examples, calls `POST /v1/diagrams`, displays extraction counts, renders the returned SVG, supports fit/zoom inspection, exposes Analysis/TimeML/JSON/XML result tabs, and can download SVG/JSON/XML outputs.
+The UI is in [ui/Tym.Ui](ui/Tym.Ui). It serves a minimal React page with English and Romanian examples, calls `POST /v1/diagrams`, displays extraction counts and event-level provenance, renders the returned SVG, supports fit/zoom inspection, exposes Analysis/TimeML/JSON/XML result tabs, and can download SVG/JSON/XML outputs.
 
 ## Run
 
@@ -109,7 +115,7 @@ http://127.0.0.1:8765/openapi.yaml
 
 ## Core Data Model
 
-`NarrativeEvent` is the event-level unit suggested by the second paper:
+`NarrativeEvent` is the event-level unit described in the updated paper:
 
 - `id`: stable event id, such as `EV1`
 - `actors`: person entities participating in the event, with carry-forward when absent
@@ -118,6 +124,7 @@ http://127.0.0.1:8765/openapi.yaml
 - `action`: detected verb/action cue
 - `temporal_category`: `Past`, `Present`, or `Future`
 - `span_start`, `span_end`: source character offsets
+- `provenance`: per-attribute `source` and `evidence` for actors, temporal anchors, locations, actions, temporal categories, and relations
 
 `TimeSegment` corresponds to `TS` in the paper:
 
@@ -125,7 +132,7 @@ http://127.0.0.1:8765/openapi.yaml
 - `text`: source span
 - `track_id`: owning time track
 - `type`: `NAR`, `REM`, `SUP`, `GEN`, or `FIC`
-- `perspective`: narrator, character, or unknown
+- `perspective`: `author` (English) or `autor` (Romanian), following the paper's single-author baseline
 - `text_order`: source order index
 - `story_order`: layout order inside the track
 - `actors`: stable character set for the segment
@@ -165,6 +172,8 @@ For Romanian (`language = "ro"`), event temporal category and segment type are c
 - `make_instances`: event instances with tense, aspect, polarity, and POS
 - `tlinks`: event-event and event-time temporal links using TimeML-style relation labels such as `IBEFORE`, `BEFORE`, `SIMULTANEOUS`, and `IS_INCLUDED`
 
+`analysis.provenance_sources` counts the methods attached to event attributes. The source names distinguish explicit pattern extraction, carry-forward heuristics, classifier/rule outputs, text-order defaults, and unavailable values.
+
 ## Production Notes
 
 The API boundary is intentionally separate from extraction. The current pipeline is:
@@ -173,11 +182,13 @@ The API boundary is intentionally separate from extraction. The current pipeline
 2. extract actor, temporal anchor, location, action, and offset features
 3. classify each event as `Past`, `Present`, or `Future` with ML.NET for English, or Romanian temporal rules for Romanian
 4. concatenate adjacent events with compatible temporal category and actor unity into `TS`, while forcing a new segment when explicit retrospective, forward, simultaneous, or changed-anchor cues indicate a temporal boundary
-5. classify each `TS` as `NAR`, `REM`, `SUP`, `GEN`, or `FIC` with ML.NET for English, or Romanian narrative-mode rules for Romanian
+5. classify each `TS` as `NAR`, `REM`, `SUP`, `GEN`, or `FIC` with the ML.NET seed model for English, or Romanian narrative-mode rules for Romanian
 6. infer TT membership, boundaries, endpoints, and relations
 7. emit TimeML-style EVENT/TIMEX3/SIGNAL/MAKEINSTANCE/TLINK annotations
 8. emit analysis statistics and quality issues
 9. render JSON, SVG, and paper-style XML
+
+The current baseline fixes narrative perspective to the author and labels carried actor/anchor values with their provenance. It does not perform coreference resolution or speaker/focalizer attribution.
 
 The renderer consumes normalized TYM JSON, so extraction can be upgraded independently.
 

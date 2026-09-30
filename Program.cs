@@ -26,7 +26,7 @@ app.MapGet("/", () => Results.Json(new
 {
     service = "tym-api",
     version = TymConstants.Version,
-    extraction = "non-llm article-guided rules plus ML.NET seed classifiers plus TimeML-style temporal annotations",
+    extraction = "non-llm rules plus ML.NET seed classifiers, per-attribute provenance, and TimeML-style temporal annotations",
     supportedLanguages = new[] { "en", "ro" },
     endpoints = new[]
     {
@@ -157,6 +157,7 @@ public sealed record AnalysisReport(
     IReadOnlyDictionary<string, int> TemporalCategories,
     IReadOnlyDictionary<string, int> RelationTypes,
     IReadOnlyDictionary<string, int> EntityMentionLabels,
+    IReadOnlyDictionary<string, int> ProvenanceSources,
     IReadOnlyList<string> ExtractionSources,
     IReadOnlyList<AnalysisIssue> Issues);
 
@@ -196,6 +197,18 @@ public sealed record EntityMention(
     int SpanEnd,
     string EventId);
 
+public sealed record AttributeProvenance(
+    string Source,
+    string Evidence);
+
+public sealed record EventProvenance(
+    AttributeProvenance Actors,
+    AttributeProvenance TemporalAnchor,
+    AttributeProvenance Location,
+    AttributeProvenance Action,
+    AttributeProvenance TemporalCategory,
+    AttributeProvenance Relation);
+
 public sealed record NarrativeEvent(
     string Id,
     string Text,
@@ -211,7 +224,8 @@ public sealed record NarrativeEvent(
     int SpanStart,
     int SpanEnd,
     double Confidence,
-    string Classifier);
+    string Classifier,
+    EventProvenance Provenance);
 
 public sealed record TimeTrack(
     string Id,
@@ -321,7 +335,7 @@ public sealed record RenderResult(
 
 internal static class TymConstants
 {
-    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.6";
+    public const string Version = "tym-dotnet-paper-guided-nonllm-provenance-v0.7";
 }
 
 internal sealed class MutableTrack
@@ -425,6 +439,7 @@ internal sealed class MutableNarrativeEvent
     public required int SpanEnd { get; init; }
     public required double Confidence { get; init; }
     public required string Classifier { get; init; }
+    public required EventProvenance Provenance { get; init; }
 
     public NarrativeEvent ToRecord() => new(
         Id,
@@ -441,7 +456,8 @@ internal sealed class MutableNarrativeEvent
         SpanStart,
         SpanEnd,
         Confidence,
-        Classifier);
+        Classifier,
+        Provenance);
 }
 
 internal sealed class TimeSegmentCandidate
@@ -702,6 +718,14 @@ internal static partial class TymAnalyzer
 {
     private static readonly Lazy<TymSegmentTypeClassifier> SegmentTypeClassifier = new(TymSegmentTypeClassifier.Train);
     private static readonly Lazy<TymEventTemporalClassifier> EventTemporalClassifier = new(TymEventTemporalClassifier.Train);
+    private static readonly HashSet<string> AuxiliaryVerbForms = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "am", "is", "are", "was", "were", "be", "been", "being",
+        "have", "has", "had", "do", "does", "did", "will", "shall",
+        "would", "could", "might", "must", "can", "going",
+        "este", "sunt", "era", "erau", "fost", "fi", "are", "avea",
+        "aveau", "avut", "va", "vor", "voi", "vei", "vom", "veți", "veti"
+    };
 
     private static readonly HashSet<string> EntityStopwords = new(StringComparer.Ordinal)
     {
@@ -749,7 +773,7 @@ internal static partial class TymAnalyzer
             var classification = ClassifySegment(raw, fallbackSegmentType, language);
             var segmentType = classification.Label;
             var entities = candidate.Actors.Count > 0 ? candidate.Actors : ExtractEntities(raw, language);
-            var perspective = InferPerspective(segmentType, raw, entities, language);
+            var perspective = IsRomanian(language) ? "autor" : "author";
             var key = TrackKey(entities, segmentType, candidate.TemporalCategory, perspective, raw, language);
 
             if (!trackByKey.TryGetValue(key, out var track))
@@ -931,6 +955,9 @@ internal static partial class TymAnalyzer
             "The XML output follows the paper notation: TT-SECTION, TIME-SECTION, EP-SECTION, and inline TS tags.",
             "The diagram includes a TimeML-style layer with EVENT, TIMEX3, SIGNAL, MAKEINSTANCE, and TLINK annotations.",
             language == "ro"
+                ? "Romanian extraction uses the paper's single-author perspective baseline; speaker and focalizer changes are future work."
+                : "Narrative perspective uses the paper's single-author baseline; speaker and focalizer changes are future work.",
+            language == "ro"
                 ? "Romanian extraction uses non-LLM rule profiles for Romanian entities, temporal cues, tense, and TimeML-like annotations."
                 : "English extraction uses non-LLM rules plus ML.NET seed classifiers for event temporal category and TS type.",
             language == "ro"
@@ -1014,6 +1041,15 @@ internal static partial class TymAnalyzer
 
         var extractionSources = diagram.Events
             .Select(ev => ev.Classifier)
+            .Concat(diagram.Events.SelectMany(ev => new[]
+            {
+                ev.Provenance.Actors.Source,
+                ev.Provenance.TemporalAnchor.Source,
+                ev.Provenance.Location.Source,
+                ev.Provenance.Action.Source,
+                ev.Provenance.TemporalCategory.Source,
+                ev.Provenance.Relation.Source
+            }))
             .Concat(diagram.Segments.Select(segment => segment.Classifier))
             .Concat(diagram.EntityMentions.Select(mention => mention.Source))
             .Where(source => source.Length > 0)
@@ -1036,6 +1072,15 @@ internal static partial class TymAnalyzer
             CountBy(diagram.Events, ev => ev.TemporalCategory),
             CountBy(diagram.Relations, relation => relation.Rel),
             CountBy(diagram.EntityMentions, mention => mention.Label),
+            CountBy(diagram.Events.SelectMany(ev => new[]
+            {
+                ev.Provenance.Actors.Source,
+                ev.Provenance.TemporalAnchor.Source,
+                ev.Provenance.Location.Source,
+                ev.Provenance.Action.Source,
+                ev.Provenance.TemporalCategory.Source,
+                ev.Provenance.Relation.Source
+            }), source => source),
             extractionSources,
             issues);
     }
@@ -1347,15 +1392,19 @@ internal static partial class TymAnalyzer
                     .Where(entity => !LooksLikeTemporalEntity(entity, language))
                     .Where(entity => !LooksLikeLocationEntity(eventText, entity, language))
                     .ToList();
+                var actorSource = actors.Count > 0 ? "capitalized_actor_heuristic" : "not_detected";
                 if (actors.Count == 0 && previousActors.Length > 0)
                 {
                     actors = previousActors.ToList();
+                    actorSource = "previous_event_actor_carry_forward";
                 }
 
                 var temporalAnchor = ExtractTemporalAnchor(eventText, language);
+                var temporalAnchorSource = temporalAnchor.Length > 0 ? "temporal_expression_pattern" : "not_detected";
                 if (temporalAnchor.Length == 0 && previousTemporalAnchor.Length > 0)
                 {
                     temporalAnchor = previousTemporalAnchor;
+                    temporalAnchorSource = "previous_event_anchor_carry_forward";
                 }
 
                 var fallbackTemporalCategory = HeuristicTemporalCategory(eventText, language);
@@ -1363,6 +1412,13 @@ internal static partial class TymAnalyzer
                 var location = ExtractLocation(eventText, language);
                 var action = ExtractAction(eventText, language);
                 var temporalCue = InferTemporalCue(eventText, events.Count == 0, language);
+                var provenance = new EventProvenance(
+                    new AttributeProvenance(actorSource, actors.Count == 0 ? "No actor candidate was detected." : string.Join(", ", actors)),
+                    new AttributeProvenance(temporalAnchorSource, temporalAnchor.Length == 0 ? "No temporal expression was detected." : temporalAnchor),
+                    new AttributeProvenance(location.Length > 0 ? "preposition_location_pattern" : "not_detected", location.Length > 0 ? location : "No location phrase was detected."),
+                    new AttributeProvenance(action.Length > 0 ? "verb_pattern" : "not_detected", action.Length > 0 ? action : "No action cue was detected."),
+                    new AttributeProvenance(temporalClassification.Source, $"Predicted {temporalClassification.Label} with confidence {temporalClassification.Confidence:0.###}."),
+                    new AttributeProvenance(temporalCue.Cue.Length > 0 ? "temporal_cue_rule" : "text_order_default", temporalCue.Evidence));
 
                 events.Add(new MutableNarrativeEvent
                 {
@@ -1380,7 +1436,8 @@ internal static partial class TymAnalyzer
                     SpanStart = eventStart,
                     SpanEnd = clause.End,
                     Confidence = temporalClassification.Confidence,
-                    Classifier = temporalClassification.Source
+                    Classifier = temporalClassification.Source,
+                    Provenance = provenance
                 });
 
                 if (actors.Count > 0)
@@ -1807,8 +1864,21 @@ internal static partial class TymAnalyzer
 
     private static string ExtractAction(string text, string language)
     {
-        var match = IsRomanian(language) ? RomanianVerbPattern().Match(text) : VerbPattern().Match(text);
-        return match.Success ? match.Value : "";
+        var matches = VerbMatches(text, language).Cast<Match>().ToList();
+        if (matches.Count == 0)
+        {
+            return "";
+        }
+
+        for (var index = 0; index < matches.Count; index++)
+        {
+            if (!AuxiliaryVerbForms.Contains(matches[index].Value) || index == matches.Count - 1)
+            {
+                return matches[index].Value;
+            }
+        }
+
+        return matches[^1].Value;
     }
 
     private static string HeuristicTemporalCategory(string text, string language)
@@ -1872,20 +1942,6 @@ internal static partial class TymAnalyzer
         }
 
         return entities;
-    }
-
-    private static string InferPerspective(string segmentType, string text, IReadOnlyList<string> entities, string language)
-    {
-        if (segmentType == "REM" && entities.Count > 0)
-        {
-            return entities[0];
-        }
-
-        var stopwords = IsRomanian(language) ? RomanianEntityStopwords : EntityStopwords;
-        var match = IsRomanian(language) ? RomanianPerspectivePattern().Match(text) : PerspectivePattern().Match(text);
-        return match.Success && !stopwords.Contains(match.Groups[1].Value)
-            ? match.Groups[1].Value
-            : IsRomanian(language) ? "narator" : "narrator";
     }
 
     private static string TrackKey(
@@ -2018,9 +2074,6 @@ internal static partial class TymAnalyzer
     [GeneratedRegex(@"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b")]
     private static partial Regex EntityPattern();
 
-    [GeneratedRegex(@"\b([A-Z][a-z]+)\s+(wondered|thought|remembered|imagined|believed|saw|heard)\b")]
-    private static partial Regex PerspectivePattern();
-
     [GeneratedRegex(@"[,;]\s+|\s+\b(?:și apoi|si apoi|și|si|dar|însă|insa|apoi|atunci|când|cand|în timp ce|in timp ce|pentru că|pentru ca|deoarece)\b\s+", RegexOptions.IgnoreCase)]
     private static partial Regex RomanianEventBoundaryPattern();
 
@@ -2111,8 +2164,6 @@ internal static partial class TymAnalyzer
     [GeneratedRegex(@"\b[A-ZĂÂÎȘȚ][\p{Ll}ăâîșț]+(?:\s+[A-ZĂÂÎȘȚ][\p{Ll}ăâîșț]+)?\b")]
     private static partial Regex RomanianEntityPattern();
 
-    [GeneratedRegex(@"\b([A-ZĂÂÎȘȚ][\p{Ll}ăâîșț]+)\s+(s-a\s+gândit|s-a\s+gandit|și-a\s+amintit|si-a\s+amintit|a\s+crezut|a\s+văzut|a\s+vazut|a\s+auzit)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex RomanianPerspectivePattern();
 }
 
 internal static class TymXmlSerializer
@@ -2154,7 +2205,7 @@ internal static class TymXmlSerializer
                 .Select(actor => actorIdByName[actor]);
             var locationId = ev.Location.Length > 0 && locationIdByName.TryGetValue(ev.Location, out var locId) ? locId : "L1";
             xml.AppendLine(
-                $"""    <EVENT ID="{X(ev.Id)}" SPANS="{ev.SpanStart}~{ev.SpanEnd}" ACTORS="{X(string.Join(",", actorIds))}" LOCATION="{X(locationId)}" TEMPORAL-ANCHOR="{X(ev.TemporalAnchor)}" TENSE="{X(ev.TemporalCategory)}" ACTION="{X(ev.Action)}" REL-PREV="{X(ev.RelationToPrevious)}" REL-CUE="{X(ev.RelationCue)}" ORDER="{ev.Order}" TEXT="{X(ev.Text)}" />""");
+                $"""    <EVENT ID="{X(ev.Id)}" SPANS="{ev.SpanStart}~{ev.SpanEnd}" ACTORS="{X(string.Join(",", actorIds))}" ACTOR-SOURCE="{X(ev.Provenance.Actors.Source)}" ACTOR-EVIDENCE="{X(ev.Provenance.Actors.Evidence)}" LOCATION="{X(locationId)}" LOCATION-SOURCE="{X(ev.Provenance.Location.Source)}" LOCATION-EVIDENCE="{X(ev.Provenance.Location.Evidence)}" TEMPORAL-ANCHOR="{X(ev.TemporalAnchor)}" TEMPORAL-SOURCE="{X(ev.Provenance.TemporalAnchor.Source)}" TEMPORAL-EVIDENCE="{X(ev.Provenance.TemporalAnchor.Evidence)}" TENSE="{X(ev.TemporalCategory)}" TENSE-SOURCE="{X(ev.Provenance.TemporalCategory.Source)}" TENSE-EVIDENCE="{X(ev.Provenance.TemporalCategory.Evidence)}" ACTION="{X(ev.Action)}" ACTION-SOURCE="{X(ev.Provenance.Action.Source)}" ACTION-EVIDENCE="{X(ev.Provenance.Action.Evidence)}" REL-PREV="{X(ev.RelationToPrevious)}" REL-CUE="{X(ev.RelationCue)}" REL-SOURCE="{X(ev.Provenance.Relation.Source)}" REL-EVIDENCE="{X(ev.Provenance.Relation.Evidence)}" ORDER="{ev.Order}" TEXT="{X(ev.Text)}" />""");
         }
         xml.AppendLine("""  </EVENT-SECTION>""");
 
