@@ -21,12 +21,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.UseCors();
+ModelArtifacts.ValidateConfiguration();
 
 app.MapGet("/", () => Results.Json(new
 {
     service = "tym-api",
     version = TymConstants.Version,
-    extraction = "non-llm rules plus ML.NET seed classifiers, per-attribute provenance, and TimeML-style temporal annotations",
+    extraction = "non-llm rules plus ML.NET seed fallback or saved classifiers, per-attribute provenance, and TimeML-style temporal annotations",
     supportedLanguages = new[] { "en", "ro" },
     endpoints = new[]
     {
@@ -394,6 +395,57 @@ internal sealed record EventTemporalClassification(string Label, double Confiden
 
 internal sealed record TemporalCue(string Relation, string Cue, string Evidence);
 
+internal static class ModelArtifacts
+{
+    public static bool IsExplicitlyConfigured =>
+        !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("TYM_MODEL_DIR"));
+
+    public static string PathFor(string task)
+    {
+        var configuredDirectory = Environment.GetEnvironmentVariable("TYM_MODEL_DIR");
+        var directory = string.IsNullOrWhiteSpace(configuredDirectory)
+            ? Path.Combine(AppContext.BaseDirectory, "models")
+            : Path.GetFullPath(configuredDirectory);
+        return Path.Combine(directory, $"{task}_en.zip");
+    }
+
+    public static void ValidateConfiguration()
+    {
+        if (!IsExplicitlyConfigured)
+        {
+            return;
+        }
+
+        var missing = new[] { "segment_type", "event_temporal" }
+            .Select(PathFor)
+            .Where(path => !File.Exists(path))
+            .ToArray();
+        if (missing.Length > 0)
+        {
+            throw new FileNotFoundException(
+                $"TYM_MODEL_DIR must contain both English ML.NET model artifacts. Missing: {string.Join(", ", missing)}");
+        }
+    }
+
+    public static ITransformer? Load(MLContext mlContext, string task)
+    {
+        var path = PathFor(task);
+        if (File.Exists(path))
+        {
+            return mlContext.Model.Load(path, out _);
+        }
+
+        if (IsExplicitlyConfigured)
+        {
+            throw new FileNotFoundException(
+                $"TYM_MODEL_DIR is configured, but the required English '{task}' model was not found at '{path}'.",
+                path);
+        }
+
+        return null;
+    }
+}
+
 internal sealed class SegmentTypeTrainingRow
 {
     public string Text { get; set; } = "";
@@ -566,15 +618,27 @@ internal sealed class TymSegmentTypeClassifier
 
     private readonly PredictionEngine<SegmentTypeTrainingRow, SegmentTypePrediction> _engine;
     private readonly object _predictionLock = new();
+    private readonly string _modelSource;
 
-    private TymSegmentTypeClassifier(PredictionEngine<SegmentTypeTrainingRow, SegmentTypePrediction> engine)
+    private TymSegmentTypeClassifier(
+        PredictionEngine<SegmentTypeTrainingRow, SegmentTypePrediction> engine,
+        string modelSource)
     {
         _engine = engine;
+        _modelSource = modelSource;
     }
 
     public static TymSegmentTypeClassifier Train()
     {
         var mlContext = new MLContext(seed: 42);
+        var savedModel = ModelArtifacts.Load(mlContext, "segment_type");
+        if (savedModel is not null)
+        {
+            return new TymSegmentTypeClassifier(
+                mlContext.Model.CreatePredictionEngine<SegmentTypeTrainingRow, SegmentTypePrediction>(savedModel),
+                "mlnet_trained_model");
+        }
+
         var trainingRows = TrainingSeedData.Load("segment_type")
             .Select(example => new SegmentTypeTrainingRow
             {
@@ -589,7 +653,8 @@ internal sealed class TymSegmentTypeClassifier
 
         var model = pipeline.Fit(trainingData);
         return new TymSegmentTypeClassifier(
-            mlContext.Model.CreatePredictionEngine<SegmentTypeTrainingRow, SegmentTypePrediction>(model));
+            mlContext.Model.CreatePredictionEngine<SegmentTypeTrainingRow, SegmentTypePrediction>(model),
+            "mlnet_seed_model");
     }
 
     public SegmentClassification Predict(string text, string fallbackLabel)
@@ -624,7 +689,7 @@ internal sealed class TymSegmentTypeClassifier
                 return new SegmentClassification(fallbackLabel, 0.0, "heuristic_fallback_conflict");
             }
 
-            var source = label == prediction.PredictedLabel ? "mlnet_seed_model" : "heuristic_fallback";
+            var source = label == prediction.PredictedLabel ? _modelSource : "heuristic_fallback";
             return new SegmentClassification(label, confidence, source);
         }
         catch
@@ -646,15 +711,27 @@ internal sealed class TymEventTemporalClassifier
 
     private readonly PredictionEngine<EventTemporalTrainingRow, EventTemporalPrediction> _engine;
     private readonly object _predictionLock = new();
+    private readonly string _modelSource;
 
-    private TymEventTemporalClassifier(PredictionEngine<EventTemporalTrainingRow, EventTemporalPrediction> engine)
+    private TymEventTemporalClassifier(
+        PredictionEngine<EventTemporalTrainingRow, EventTemporalPrediction> engine,
+        string modelSource)
     {
         _engine = engine;
+        _modelSource = modelSource;
     }
 
     public static TymEventTemporalClassifier Train()
     {
         var mlContext = new MLContext(seed: 42);
+        var savedModel = ModelArtifacts.Load(mlContext, "event_temporal");
+        if (savedModel is not null)
+        {
+            return new TymEventTemporalClassifier(
+                mlContext.Model.CreatePredictionEngine<EventTemporalTrainingRow, EventTemporalPrediction>(savedModel),
+                "mlnet_trained_model");
+        }
+
         var trainingRows = TrainingSeedData.Load("event_temporal")
             .Select(example => new EventTemporalTrainingRow
             {
@@ -669,7 +746,8 @@ internal sealed class TymEventTemporalClassifier
 
         var model = pipeline.Fit(trainingData);
         return new TymEventTemporalClassifier(
-            mlContext.Model.CreatePredictionEngine<EventTemporalTrainingRow, EventTemporalPrediction>(model));
+            mlContext.Model.CreatePredictionEngine<EventTemporalTrainingRow, EventTemporalPrediction>(model),
+            "mlnet_event_temporal_model");
     }
 
     public EventTemporalClassification Predict(string text, string fallbackLabel)
@@ -700,7 +778,7 @@ internal sealed class TymEventTemporalClassifier
                 return new EventTemporalClassification(fallbackLabel, 0.0, "heuristic_fallback_explicit_tense");
             }
 
-            return new EventTemporalClassification(prediction.PredictedLabel, confidence, "mlnet_event_temporal_model");
+            return new EventTemporalClassification(prediction.PredictedLabel, confidence, _modelSource);
         }
         catch
         {
@@ -955,11 +1033,27 @@ internal static partial class TymAnalyzer
                 : "Narrative perspective uses the paper's single-author baseline; speaker and focalizer changes are future work.",
             language == "ro"
                 ? "Romanian extraction uses non-LLM rule profiles for Romanian entities, temporal cues, tense, and TimeML-like annotations."
-                : "English extraction uses non-LLM rules plus ML.NET seed classifiers for event temporal category and TS type.",
-            language == "ro"
-                ? "Romanian mode intentionally avoids the English ML.NET seed classifiers; train Romanian annotated TYM/TimeML data for production use."
-                : "ML.NET calculates event temporal category and TS type from bundled paper-guided seed examples; replace these with an annotated corpus for production use."
+                : "English extraction uses non-LLM rules plus ML.NET classifiers for event temporal category and TS type."
         };
+        if (language == "ro")
+        {
+            warnings.Add("Romanian mode intentionally avoids the English ML.NET classifiers; train Romanian annotated TYM/TimeML data before using a Romanian model.");
+        }
+        else
+        {
+            var classifierSources = diagram.Events.Select(ev => ev.Classifier)
+                .Concat(diagram.Segments.Select(segment => segment.Classifier))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (classifierSources.Overlaps(["mlnet_seed_model", "mlnet_event_temporal_model"]))
+            {
+                warnings.Add("At least one ML.NET classifier used bundled paper-guided seed examples. These synthetic demo rows are unreviewed and do not establish generalization.");
+            }
+
+            if (classifierSources.Contains("mlnet_trained_model"))
+            {
+                warnings.Add("At least one classifier used a saved ML.NET artifact. Evaluate it on document-held-out, human-adjudicated data before making performance claims.");
+            }
+        }
         if (candidates.Count == 0)
         {
             warnings.Add("No text segments were detected.");
@@ -1032,7 +1126,7 @@ internal static partial class TymAnalyzer
                 "warning",
                 "LOW_SEGMENT_CONFIDENCE",
                 "Average segment type confidence is below 0.60.",
-                "Segment labels fall back to rules when the seed classifier is uncertain."));
+                "Segment labels fall back to rules when the classifier is uncertain."));
         }
 
         var extractionSources = diagram.Events

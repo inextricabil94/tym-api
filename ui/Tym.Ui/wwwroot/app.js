@@ -103,6 +103,19 @@ function App() {
   const [zoom, setZoom] = React.useState(0.75);
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState('');
+  const [theme, setTheme] = React.useState(() => {
+    try {
+      return localStorage.getItem('tym-theme') || 'light';
+    } catch {
+      return 'light';
+    }
+  });
+  const [selectedItem, setSelectedItem] = React.useState(null);
+  const [resultInputText, setResultInputText] = React.useState('');
+  const [eventCategoryFilter, setEventCategoryFilter] = React.useState('all');
+  const [actorFilter, setActorFilter] = React.useState('all');
+  const [minimumConfidence, setMinimumConfidence] = React.useState(0);
+  const sourceTextArea = React.useRef(null);
 
   const diagram = result && result.diagram ? result.diagram : {};
   const analysis = result && result.analysis ? result.analysis : null;
@@ -115,12 +128,24 @@ function App() {
   const statusClass = busy ? 'busy' : message ? 'error' : result ? 'ready' : '';
   const statusText = busy ? 'Generating' : message ? 'Needs attention' : result ? 'Ready' : 'Idle';
 
+  React.useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem('tym-theme', theme);
+    } catch {
+      // Keep the chosen theme for this session when storage is disabled.
+    }
+  }, [theme]);
+
   function loadExample(example) {
     setSelectedExample(example.id);
     setText(example.text);
     setLanguage(example.language);
     setHighlightEntity(example.highlight);
     setMessage('');
+    setSelectedItem(null);
+    setResult(null);
+    setSvg('');
   }
 
   async function generate() {
@@ -162,6 +187,8 @@ function App() {
 
       setResult(data);
       setSvg(returnedSvg);
+      setResultInputText(trimmedText);
+      setSelectedItem(null);
       setActiveTab('diagram');
 
       if (!returnedSvg) {
@@ -219,6 +246,92 @@ function App() {
     );
   }
 
+  function selectSourceSpan(start, end) {
+    const currentText = text.trim();
+    if (!sourceTextArea.current || !resultInputText || currentText !== resultInputText) {
+      setMessage('The input has changed since this analysis. Generate a fresh result to jump to its source span.');
+      return;
+    }
+
+    const baseOffset = text.indexOf(resultInputText);
+    const spanStart = Math.max(0, baseOffset + Number(start || 0));
+    const spanEnd = Math.max(spanStart, baseOffset + Number(end || start || 0));
+    sourceTextArea.current.focus();
+    sourceTextArea.current.setSelectionRange(spanStart, spanEnd);
+    sourceTextArea.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setMessage('');
+  }
+
+  function selectEvent(eventItem) {
+    setSelectedItem({ kind: 'event', id: eventItem.id });
+    selectSourceSpan(eventItem.span_start, eventItem.span_end);
+  }
+
+  function selectSegment(segmentItem) {
+    setSelectedItem({ kind: 'segment', id: segmentItem.id });
+    selectSourceSpan(segmentItem.span_start, segmentItem.span_end);
+  }
+
+  function selectionDetails() {
+    if (!selectedItem) {
+      return e('section', { className: 'selection-detail muted-detail' },
+        e('strong', null, 'Inspect a source span'),
+        e('span', null, 'Select an event or time segment below to highlight its text and inspect its fields.')
+      );
+    }
+
+    const selected = selectedItem.kind === 'event'
+      ? (diagram.events || []).find(item => item.id === selectedItem.id)
+      : (diagram.segments || []).find(item => item.id === selectedItem.id);
+    if (!selected) {
+      return null;
+    }
+
+    const isEvent = selectedItem.kind === 'event';
+    const provenance = isEvent ? (selected.provenance || {}) : {};
+    const fields = isEvent
+      ? [
+          ['Temporal category', selected.temporal_category],
+          ['Actors', (selected.actors || []).join(', ') || 'Unassigned'],
+          ['Temporal anchor', selected.temporal_anchor || 'Not identified'],
+          ['Location', selected.location || 'Not identified'],
+          ['Relation', `${selected.relation_to_previous || 'Unspecified'}${selected.relation_cue ? ` · ${selected.relation_cue}` : ''}`],
+          ['Confidence', score(selected.confidence)],
+          ...Object.entries(provenance).map(([name, item]) => [
+            `${name.replaceAll('_', ' ')} evidence`,
+            item && item.evidence ? `${item.source || 'unknown'} · ${item.evidence}` : (item?.source || 'unknown')
+          ])
+        ]
+      : [
+          ['Type', selected.type],
+          ['Track', selected.track_id],
+          ['Perspective', selected.perspective],
+          ['Actors', (selected.actors || []).join(', ') || 'Unassigned'],
+          ['Temporal category', selected.temporal_category],
+          ['Temporal anchor', selected.temporal_anchor || 'Not identified'],
+          ['Events', (selected.event_ids || []).join(', ') || 'None'],
+          ['Classifier', selected.classifier || 'unknown'],
+          ['Confidence', score(selected.confidence)]
+        ];
+
+    return e('section', { className: 'selection-detail' },
+      e('div', { className: 'selection-heading' },
+        e('div', null,
+          e('strong', null, `${selected.id} · ${isEvent ? 'Event' : 'Time segment'}`),
+          e('p', null, selected.text || '')
+        ),
+        e('button', {
+          className: 'tool',
+          type: 'button',
+          onClick: () => selectSourceSpan(selected.span_start, selected.span_end)
+        }, 'Jump to text')
+      ),
+      e('dl', { className: 'detail-grid' }, fields.map(([label, value]) =>
+        e(React.Fragment, { key: label }, e('dt', null, label), e('dd', null, value || 'Not identified'))
+      ))
+    );
+  }
+
   function countBlock(title, value) {
     const entries = countEntries(value);
     return e('section', { className: 'analysis-block', key: title },
@@ -270,7 +383,7 @@ function App() {
     );
   }
 
-  function dataTable(title, headers, rows, emptyText) {
+  function dataTable(title, headers, rows, emptyText, onSelect) {
     return e('section', { className: 'analysis-block wide', key: title },
       e('h3', null, title),
       rows.length
@@ -280,8 +393,17 @@ function App() {
                 e('tr', null, headers.map(header => e('th', { key: header }, header)))
               ),
               e('tbody', null,
-                rows.map((row, rowIndex) => e('tr', { key: `${title}-${rowIndex}` },
-                  row.map((cell, cellIndex) => e('td', { key: `${title}-${rowIndex}-${cellIndex}` }, cell || '-'))
+                rows.map((row, rowIndex) => e('tr', { key: row.key || `${title}-${rowIndex}`,
+                    className: onSelect && selectedItem?.id === row.key ? 'selected-row' : '' },
+                  row.cells.map((cell, cellIndex) => e('td', { key: `${title}-${rowIndex}-${cellIndex}` },
+                    cellIndex === 0 && onSelect
+                      ? e('button', {
+                          className: 'row-select',
+                          type: 'button',
+                          'aria-pressed': selectedItem?.id === row.key,
+                          onClick: () => onSelect(row.item)
+                        }, cell || '-')
+                      : (cell || '-')))
                 ))
               )
             )
@@ -300,31 +422,45 @@ function App() {
       );
     }
 
-    const eventRows = (diagram.events || []).map(item => {
+    const allEvents = diagram.events || [];
+    const actorNames = Array.from(new Set(allEvents.flatMap(item => item.actors || []))).sort((a, b) => a.localeCompare(b));
+    const eventRows = allEvents.filter(item =>
+      (eventCategoryFilter === 'all' || item.temporal_category === eventCategoryFilter)
+      && (actorFilter === 'all' || (item.actors || []).includes(actorFilter))
+      && Number(item.confidence || 0) >= minimumConfidence
+    ).map(item => {
       const provenance = item.provenance || {};
-      return [
-        item.id,
-        item.temporal_category,
-        item.relation_to_previous,
-        item.relation_cue || '-',
-        provenance.actors?.source || '-',
-        provenance.temporal_anchor?.source || '-',
-        provenance.temporal_category?.source || item.classifier || '-',
-        provenance.relation?.source || '-',
-        score(item.confidence),
-        item.text
-      ];
+      return {
+        key: item.id,
+        item,
+        cells: [
+          item.id,
+          item.temporal_category,
+          item.relation_to_previous,
+          item.relation_cue || '-',
+          provenance.actors?.source || '-',
+          provenance.temporal_anchor?.source || '-',
+          provenance.temporal_category?.source || item.classifier || '-',
+          provenance.relation?.source || '-',
+          score(item.confidence),
+          item.text
+        ]
+      };
     });
-    const segmentRows = (diagram.segments || []).map(item => [
-      item.id,
-      item.type,
-      item.track_id,
-      item.perspective || '-',
-      (item.actors || []).join(', '),
-      item.temporal_anchor || '-',
-      (item.event_ids || []).join(', '),
-      score(item.confidence)
-    ]);
+    const segmentRows = (diagram.segments || []).map(item => ({
+      key: item.id,
+      item,
+      cells: [
+        item.id,
+        item.type,
+        item.track_id,
+        item.perspective || '-',
+        (item.actors || []).join(', '),
+        item.temporal_anchor || '-',
+        (item.event_ids || []).join(', '),
+        score(item.confidence)
+      ]
+    }));
 
     return e('div', { className: 'analysis-view' },
       e('div', { className: 'analysis-grid' },
@@ -344,8 +480,35 @@ function App() {
         sourceBlock(),
         issueBlock()
       ),
-      dataTable('Events', ['Event', 'Temporal', 'Rel prev', 'Cue', 'Actor source', 'Anchor source', 'Category source', 'Relation source', 'Confidence', 'Text'], eventRows, 'No events detected.'),
-      dataTable('Segments', ['TS', 'Type', 'Track', 'Perspective', 'Actors', 'Anchor', 'Events', 'Confidence'], segmentRows, 'No segments detected.')
+      e('section', { className: 'analysis-block wide event-explorer' },
+        e('div', { className: 'explorer-heading' },
+          e('div', null,
+            e('h3', null, 'Event explorer'),
+            e('p', { className: 'muted-line' }, `${eventRows.length} of ${allEvents.length} events shown · select an ID to highlight its source span.`)
+          ),
+          e('div', { className: 'filters' },
+            e('label', null, 'Temporal category',
+              e('select', { value: eventCategoryFilter, onChange: event => setEventCategoryFilter(event.target.value) },
+                e('option', { value: 'all' }, 'All'),
+                ...Array.from(new Set(allEvents.map(item => item.temporal_category).filter(Boolean))).sort().map(value => e('option', { key: value, value }, value))
+              )
+            ),
+            e('label', null, 'Actor',
+              e('select', { value: actorFilter, onChange: event => setActorFilter(event.target.value) },
+                e('option', { value: 'all' }, 'All actors'),
+                ...actorNames.map(value => e('option', { key: value, value }, value))
+              )
+            ),
+            e('label', { className: 'confidence-filter' }, `Minimum confidence ${Math.round(minimumConfidence * 100)}%`,
+              e('input', { type: 'range', min: '0', max: '0.9', step: '0.05', value: minimumConfidence,
+                onChange: event => setMinimumConfidence(Number(event.target.value)) })
+            )
+          )
+        ),
+        dataTable('Events', ['Event', 'Temporal', 'Rel prev', 'Cue', 'Actor source', 'Anchor source', 'Category source', 'Relation source', 'Confidence', 'Text'], eventRows, 'No events match these filters.', selectEvent)
+      ),
+      selectionDetails(),
+      dataTable('Time segments', ['TS', 'Type', 'Track', 'Perspective', 'Actors', 'Anchor', 'Events', 'Confidence'], segmentRows, 'No segments detected.', selectSegment)
     );
   }
 
@@ -393,12 +556,20 @@ function App() {
   return e('main', { className: 'shell' },
     e('header', { className: 'topbar' },
       e('div', { className: 'brand' },
-        e('strong', null, 'TYM Diagram UI'),
-        e('span', null, 'Natural-language text to temporal-segment diagram')
+        e('strong', null, 'TYM Workbench'),
+        e('span', null, 'Narrative time analysis · inspect every source span')
       ),
-      e('div', { className: 'status' },
-        e('span', { className: `status-dot ${statusClass}` }),
-        e('span', null, statusText)
+      e('div', { className: 'topbar-actions' },
+        e('button', {
+          className: 'theme-toggle',
+          type: 'button',
+          'aria-pressed': theme === 'dark',
+          onClick: () => setTheme(value => value === 'dark' ? 'light' : 'dark')
+        }, theme === 'dark' ? 'Use light theme' : 'Use dark theme'),
+        e('div', { className: 'status' },
+          e('span', { className: `status-dot ${statusClass}` }),
+          e('span', null, statusText)
+        )
       )
     ),
     e('section', { className: 'workspace' },
@@ -467,6 +638,7 @@ function App() {
             e('textarea', {
               id: 'text',
               className: 'text-input',
+              ref: sourceTextArea,
               value: text,
               onChange: event => setText(event.target.value)
             })

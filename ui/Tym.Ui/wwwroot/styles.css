@@ -9,6 +9,21 @@
   --accent-strong: #115e59;
   --warning: #9a3412;
   --shadow: 0 16px 42px rgba(21, 24, 28, 0.09);
+  --accent-ink: #ffffff;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #252927;
+  --panel: #1d2220;
+  --ink: #eef4f0;
+  --muted: #a8b8af;
+  --line: #3b4841;
+  --accent: #58dca3;
+  --accent-strong: #34c88c;
+  --warning: #ffbd85;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
+  --accent-ink: #10281e;
 }
 
 * {
@@ -48,8 +63,29 @@ button {
   gap: 16px;
   padding: 18px clamp(16px, 4vw, 42px);
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.74);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
   backdrop-filter: blur(10px);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.theme-toggle {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  background: var(--panel);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
 }
 
 .brand {
@@ -136,7 +172,7 @@ button {
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #f8faf9;
+  background: color-mix(in srgb, var(--panel) 82%, var(--bg));
 }
 
 .tab {
@@ -148,7 +184,7 @@ button {
 }
 
 .tab.active {
-  color: #ffffff;
+  color: var(--accent-ink);
   background: var(--accent);
 }
 
@@ -176,7 +212,7 @@ button {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fbfcfb;
+  background: var(--panel);
   color: var(--ink);
   outline: none;
 }
@@ -226,7 +262,7 @@ button {
   min-height: 42px;
   padding: 0 16px;
   border-radius: 8px;
-  color: #ffffff;
+  color: var(--accent-ink);
   background: var(--accent);
   font-weight: 700;
 }
@@ -240,7 +276,7 @@ button {
   padding: 0 12px;
   border-radius: 8px;
   color: var(--accent-strong);
-  background: #e8f3f1;
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
   font-weight: 650;
 }
 
@@ -281,13 +317,13 @@ button {
   border: 1px solid var(--line);
   border-radius: 7px;
   color: var(--ink);
-  background: #fbfcfb;
+  background: var(--panel);
   font-weight: 700;
 }
 
 .tool.active {
   border-color: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink);
   background: var(--accent);
 }
 
@@ -310,7 +346,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
-  background: #fbfcfb;
+  background: color-mix(in srgb, var(--panel) 82%, var(--bg));
 }
 
 .metric b {
@@ -328,8 +364,8 @@ button {
   overflow: auto;
   padding: 16px;
   background:
-    linear-gradient(#eef1ed 1px, transparent 1px),
-    linear-gradient(90deg, #eef1ed 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--line) 52%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 52%, transparent) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
@@ -388,7 +424,7 @@ button {
   max-height: 760px;
   overflow: auto;
   padding: 16px;
-  background: #f8faf9;
+  background: var(--bg);
 }
 
 .analysis-grid {
@@ -402,7 +438,7 @@ button {
 .analysis-block {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--panel);
 }
 
 .analysis-card {
@@ -459,7 +495,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--muted);
-  background: #fbfcfb;
+  background: color-mix(in srgb, var(--panel) 82%, var(--bg));
   font-size: 12px;
 }
 
@@ -471,8 +507,8 @@ button {
   padding: 5px 7px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  color: #0f172a;
-  background: #f1f5f9;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--panel) 70%, var(--bg));
   font-size: 11px;
 }
 
@@ -490,12 +526,12 @@ button {
   padding: 9px;
   border-left: 3px solid #94a3b8;
   border-radius: 6px;
-  background: #f8fafc;
+  background: color-mix(in srgb, var(--panel) 84%, var(--bg));
 }
 
 .issue.warning {
   border-left-color: #d97706;
-  background: #fff7ed;
+  background: color-mix(in srgb, var(--warning) 10%, var(--panel));
 }
 
 .issue b {
@@ -545,7 +581,7 @@ button {
 
 .data-table th {
   color: var(--muted);
-  background: #fbfcfb;
+  background: color-mix(in srgb, var(--panel) 82%, var(--bg));
   font-weight: 700;
 }
 
@@ -568,6 +604,135 @@ button {
   color: var(--warning);
   font-size: 13px;
   min-height: 20px;
+}
+
+.event-explorer {
+  padding-bottom: 0;
+}
+
+.explorer-heading,
+.selection-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.explorer-heading h3 {
+  margin-bottom: 4px;
+}
+
+.explorer-heading p {
+  margin: 0 0 12px;
+}
+
+.filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filters label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.filters select {
+  min-width: 120px;
+  min-height: 33px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--panel);
+}
+
+.filters input[type="range"] {
+  width: 140px;
+  accent-color: var(--accent);
+}
+
+.confidence-filter {
+  min-width: 148px;
+}
+
+.row-select {
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  font-weight: 750;
+}
+
+.row-select:hover,
+.row-select[aria-pressed="true"] {
+  color: #062a1d;
+  background: var(--accent);
+}
+
+.selected-row td {
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+}
+
+.selection-detail {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.selection-heading {
+  align-items: center;
+}
+
+.selection-heading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.25fr) minmax(0, 1fr);
+  gap: 6px 12px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.detail-grid dt {
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.detail-grid dd {
+  margin: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.muted-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  border-left-color: var(--line);
+}
+
+.muted-detail strong {
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 @media (max-width: 980px) {
@@ -596,12 +761,21 @@ button {
   .analysis-columns {
     grid-template-columns: 1fr;
   }
+
+  .explorer-heading {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 640px) {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .panel-header,
@@ -634,6 +808,20 @@ button {
 
   .analysis-grid {
     grid-template-columns: repeat(2, minmax(94px, 1fr));
+  }
+
+  .selection-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .detail-grid dd {
+    margin-bottom: 7px;
   }
 
   .diagram-area {

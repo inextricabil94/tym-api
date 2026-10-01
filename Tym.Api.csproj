@@ -18,12 +18,15 @@
     <Compile Remove="ui\**\*.cs" />
     <Compile Remove="build_verify\**\*.cs" />
     <Compile Remove="build_publish\**\*.cs" />
+    <Compile Remove="tools\**\*.cs" />
     <Content Remove="ui\**" />
     <Content Remove="build_verify\**" />
     <Content Remove="build_publish\**" />
+    <Content Remove="tools\**" />
     <None Remove="ui\**" />
     <None Remove="build_verify\**" />
     <None Remove="build_publish\**" />
+    <None Remove="tools\**" />
   </ItemGroup>
 
   <ItemGroup>

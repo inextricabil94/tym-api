@@ -6,9 +6,9 @@ TYM is a small ASP.NET Core Minimal API for turning narrative text into time-yar
 - a time-yard view, where segments are arranged by narrative tracks
 - start/stop markers, joins/splits, rupture/commute hints, and segment labels
 
-This prototype implements an interpretable baseline for the updated TYM paper. It extracts event-like clauses, attaches actors, temporal anchors, locations, actions, and a `Past`/`Present`/`Future` temporal category, then groups contiguous compatible events into time segments. ML.NET is used for event temporal-category classification and for each candidate time segment's narrative type (`NAR`, `REM`, `SUP`, `GEN`, or `FIC`). The bundled models are trained at startup from synthetic seed examples in [data/seed-examples.jsonl](data/seed-examples.jsonl); they are not the CNN evaluated in the paper and are not trained on the annotated TYM corpus.
+This prototype implements an interpretable baseline for the updated TYM paper. It extracts event-like clauses, attaches actors, temporal anchors, locations, actions, and a `Past`/`Present`/`Future` temporal category, then groups contiguous compatible events into time segments. ML.NET classifies event temporal categories and candidate segment narrative types (`NAR`, `REM`, `SUP`, `GEN`, or `FIC`). By default the API trains its seed baseline from [data/seed-examples.jsonl](data/seed-examples.jsonl); it can instead load explicitly trained English ML.NET artifacts. Neither model is the CNN evaluated in the paper, and neither should be described as trained on the paper's annotated TYM corpus unless that corpus was actually used.
 
-No transformer or LLM is used by the API pipeline. Extraction uses deterministic rules plus small ML.NET seed classifiers, and rendering is deterministic JSON/SVG/XML generation. Event JSON and XML include per-attribute provenance for actors, temporal anchors, locations, actions, temporal categories, and relations. This marks explicit pattern matches, previous-event carry-forward, model/rule classifications, text-order defaults, and missing values so inferred information can be audited. The JSON/XML output also includes a TimeML-style layer with `EVENT`, `TIMEX3`, `SIGNAL`, `MAKEINSTANCE`, and `TLINK` annotations. Each response's `analysis` object reports extractor counts, confidence averages, provenance source counts, and quality issues.
+No transformer or LLM is used by the API pipeline. Extraction uses deterministic rules plus ML.NET seed or saved classifiers, and rendering is deterministic JSON/SVG/XML generation. Event JSON and XML include per-attribute provenance for actors, temporal anchors, locations, actions, temporal categories, and relations. This marks explicit pattern matches, previous-event carry-forward, model/rule classifications, text-order defaults, and missing values so inferred information can be audited. The JSON/XML output also includes a TimeML-style layer with `EVENT`, `TIMEX3`, `SIGNAL`, `MAKEINSTANCE`, and `TLINK` annotations. Each response's `analysis` object reports extractor counts, confidence averages, provenance source counts, and quality issues.
 
 English is the default extraction language. Romanian narrative text is supported with `options.language = "ro"` using Romanian rule profiles for named-entity candidates, temporal anchors, temporal signals, event tense, TimeML-style labels, and TYM segment/track creation. Both languages use the paper's single-author perspective baseline (`author`/`autor`); speaker attribution, focalization changes, and coreference resolution remain future work. When an actor is absent, the current heuristic carries forward the previous event's actor set and marks that choice in provenance.
 
@@ -16,11 +16,11 @@ English is the default extraction language. Romanian narrative text is supported
 
 The paper reports its original CNN baseline on 2,000 extracted events: 58.9% accuracy and approximately 58.7% macro F1, producing 93 time segments. Those are paper results; they are not results from this API's ML.NET seed classifiers or the small framework POCs in this repository. The POCs report component availability, counts, and runtime for a few sample texts, not model-quality metrics.
 
-The current API implements the transparent rules/seed-model baseline and auditable provenance. Transformer event representations, sequence-based TS boundary detection, pairwise temporal-relation models, schema-constrained LLM extraction, and human correction remain proposed work. The new evaluation utility creates grouped split manifests and scores supplied classification predictions, but it does not train on the annotated corpus or establish model-quality results. See [AGENTS.md](AGENTS.md) for project contribution and evaluation conventions.
+The current API implements the transparent rules/seed-model baseline and auditable provenance. Transformer event representations, sequence-based TS boundary detection, pairwise temporal-relation models, schema-constrained LLM extraction, and human correction remain proposed work. The ML.NET modeling CLI now trains saved classifiers and evaluates supplied adjudicated data with grouped splits; because this repo contains no human TYM corpus, it establishes no model-quality results by itself. See [AGENTS.md](AGENTS.md) for project contribution and evaluation conventions.
 
 ## Training data and evaluation
 
-The checked-in seed examples are explicitly marked synthetic and unreviewed. They support the existing demo classifiers only; they are not a gold set or evidence of model quality. Keep corpus annotations private unless their license and privacy terms allow publication. The [data README](data/README.md) describes the data fields, and the [model evaluation scaffold](pocs/model-evaluation/README.md) contains a chapter/document-grouped split and classification-metrics utility. It includes no corpus data or precomputed accuracy claims.
+The checked-in seed examples are explicitly marked synthetic and unreviewed. They can be used to exercise training code; they are not a gold set or evidence of model quality. Keep corpus annotations private unless their license and privacy terms allow publication. The [data README](data/README.md) describes the data fields, and the [ML.NET training/evaluation guide](pocs/model-evaluation/README.md) documents chapter/document-grouped evaluation, synthetic training controls, and unlabeled clustering. It includes no corpus data or precomputed accuracy claims.
 
 ## Example
 
@@ -145,7 +145,7 @@ http://127.0.0.1:8765/openapi.yaml
 - `temporal_category`: `Past`, `Present`, or `Future`
 - `event_ids`: events grouped into this segment
 - `confidence`: ML.NET classifier confidence for `type`
-- `classifier`: `mlnet_seed_model` or `heuristic_fallback`
+- `classifier`: a seed model (for example `mlnet_seed_model`), a saved model (`mlnet_trained_model`), or a heuristic fallback
 
 For Romanian (`language = "ro"`), event temporal category and segment type are currently rule-based (`romanian_rule_event_temporal`, `romanian_rule_segment_type`) because the bundled ML.NET seed examples are English.
 
@@ -186,7 +186,7 @@ The API boundary is intentionally separate from extraction. The current pipeline
 2. extract actor, temporal anchor, location, action, and offset features
 3. classify each event as `Past`, `Present`, or `Future` with ML.NET for English, or Romanian temporal rules for Romanian
 4. concatenate adjacent events with compatible temporal category and actor unity into `TS`, while forcing a new segment when explicit retrospective, forward, simultaneous, or changed-anchor cues indicate a temporal boundary
-5. classify each `TS` as `NAR`, `REM`, `SUP`, `GEN`, or `FIC` with the ML.NET seed model for English, or Romanian narrative-mode rules for Romanian
+5. classify each `TS` as `NAR`, `REM`, `SUP`, `GEN`, or `FIC` with the ML.NET saved model or seed fallback for English, or Romanian narrative-mode rules for Romanian
 6. infer TT membership, boundaries, endpoints, and relations
 7. emit TimeML-style EVENT/TIMEX3/SIGNAL/MAKEINSTANCE/TLINK annotations
 8. emit analysis statistics and quality issues
@@ -195,6 +195,60 @@ The API boundary is intentionally separate from extraction. The current pipeline
 The current baseline fixes narrative perspective to the author and labels carried actor/anchor values with their provenance. It does not perform coreference resolution or speaker/focalizer attribution.
 
 The renderer consumes normalized TYM JSON, so extraction can be upgraded independently.
+
+## ML.NET training, evaluation, and unlabeled discovery
+
+The `tools/Tym.Modeling` console project trains and evaluates ML.NET classifiers. The checked-in `data/seed-examples.jsonl` rows are small, hand-authored synthetic demonstrations; training on them is a pipeline smoke check, not evidence of useful generalization. No human-annotated TYM corpus is included in this repository.
+
+Train one task and language from labelled JSONL. `--model-out` filenames are consumed by the API when `TYM_MODEL_DIR` points to the containing directory:
+
+```powershell
+dotnet run --project .\tools\Tym.Modeling -- train `
+  --data .\data\seed-examples.jsonl `
+  --task event_temporal `
+  --language en `
+  --model-out .\artifacts\event_temporal_en.zip
+```
+
+Use `segment_type_en.zip` for the segment classifier. The API will load saved English artifacts from `TYM_MODEL_DIR`; without that setting, it trains the built-in seed baselines at startup. If `TYM_MODEL_DIR` is explicitly set, both required English model artifacts must exist. Romanian remains rule-based.
+
+For a research evaluation, provide UTF-8 JSONL where each record has `id`, `task`, `text`, `label`, `language`, `source_type`, `review_status`, `document_id`, and `chapter_id`. Use `source_type: "human_gold"` and `review_status: "adjudicated"` for gold rows. Gold records may use `gold_label` instead of `label`. The evaluator creates or reuses whole-chapter or whole-document partitions:
+
+```powershell
+dotnet run --project .\tools\Tym.Modeling -- evaluate `
+  --data C:\data\tym-gold.jsonl `
+  --language en `
+  --group-by chapter `
+  --splits-out C:\data\tym-splits.json `
+  --report C:\data\tym-metrics.json
+```
+
+The report includes accuracy, macro-F1, per-class precision/recall/F1, support, confusion matrices, and ML.NET log-loss metrics. Use the same manifest across comparisons. Optional `--train-seeds C:\data\synthetic-train.jsonl` adds explicitly marked synthetic rows to the training fold only; rows with `parent_id` must descend from a human-gold training chapter/document. Compare human-only training with human-plus-synthetic training on the identical held-out set. Do not use synthetic labels in dev/test or tune against the final test split.
+
+For unlabeled narratives, the `cluster` command uses ML.NET `FeaturizeText` n-gram features with K-Means. Input JSONL needs only `id` and `text`, with optional `language`:
+
+```powershell
+dotnet run --project .\tools\Tym.Modeling -- cluster `
+  --data C:\data\unlabeled-narratives.jsonl `
+  --language en `
+  --clusters 8 `
+  --model-out .\artifacts\narrative-clusters.zip `
+  --assignments-out C:\data\cluster-assignments.jsonl `
+  --report C:\data\cluster-summary.json
+```
+
+These clusters are exploratory lexical groupings, not learned TYM categories or accuracy estimates. Use them to inspect coverage, find recurring cue patterns and outliers, and guide human annotation or targeted synthetic generation. ML.NET's built-in clustering is centroid-based K-Means over the selected features; it does not discover contextual semantics by itself. Check cluster stability across seeds and feature choices, then validate any interpretation with annotators and held-out human gold.
+
+### Recommended synthetic-data and unsupervised-learning protocol
+
+1. Split human annotations by document or chapter **before** generating descendants. Keep the test set human-authored, adjudicated, and untouched.
+2. Build contrast sets around explicit TYM phenomena: retrospective and prospective shifts, temporal adverbials, tense/aspect conflicts, remembered or imagined events, habitual/general statements, fiction/reporting frames, nominalized events, long-distance links, and ambiguous cues. Vary names, verbs, syntax, and discourse context so the classifier cannot win from template identity alone.
+3. Record `parent_id`, `generator_version`, `phenomenon`, `transformation`, and `review_status` for every generated row. Start with deterministic templates and audited label-preserving transformations. Treat model/LLM-proposed labels as noisy candidates until a human checks them.
+4. Use unlabeled clustering to surface modes, rare expressions, and candidate annotation strata. Have annotators review samples from clusters and outliers; never convert cluster IDs directly into gold labels.
+5. Run controlled ablations: human-only vs. human-plus-synthetic, increasing synthetic-to-gold ratios, phenomenon-specific augmentation, and generator holdouts. Report the paired results on the same chapter/document-held-out gold split, plus class-wise errors and graph consistency.
+6. Track span-boundary precision/recall/F1, temporal-link performance, and whole-graph consistency separately from this CLI's current classification scores. Synthetic examples are a way to probe coverage and improve training; they are not a substitute for independent human evaluation.
+
+The present CLI implements grouped classification evaluation and unlabeled K-Means exploration. Span and graph-level evaluators, a synthetic corpus generator, and contextual embedding pipelines remain research work; the repo does not claim those results today.
 
 ## Non-LLM Framework POCs
 

@@ -1,54 +1,86 @@
-# Grouped TYM model evaluation
+# ML.NET model training, evaluation, and data discovery
 
-This first evaluation utility is for classification predictions, including the API's current `segment_type` and `event_temporal` labels. It creates train/dev/test partitions by whole chapter or document and reports accuracy, macro-F1, per-class precision/recall/F1, support, and a confusion matrix. It uses only the Python standard library (Python 3.10+).
+The production-facing training code lives in [`tools/Tym.Modeling`](../../tools/Tym.Modeling). It provides three commands:
 
-It is a scaffold, not an evaluation result: no annotated corpus is included, and no metrics are reported by this repository. The tool rejects seed, synthetic, weakly labeled, and unadjudicated examples as evaluation gold. It does not yet score event-span boundaries or end-to-end temporal graph consistency.
+- `train`: fit and save a supervised multiclass ML.NET text classifier.
+- `evaluate`: train on a document- or chapter-grouped training partition and report held-out metrics on adjudicated human gold.
+- `cluster`: fit an unsupervised ML.NET K-Means model on unlabeled narrative text and write cluster assignments for analyst review.
 
-## Input rows
+The repo includes 43 synthetic segment-type seeds and 24 synthetic event-temporal seeds. They are demo inputs only. There is no annotated TYM corpus in the repo, and no accuracy or generalization result can be computed from the checked-in seeds.
 
-Provide one UTF-8 JSON object per line. Gold annotations must include:
+## Input schemas
+
+Use one UTF-8 JSON object per line. For gold annotations, include a unique `id`, `task`, `text`, `label` (or `gold_label`), `language`, `source_type`, `review_status`, `document_id`, and `chapter_id`:
 
 ```json
-{"id":"doc1-ch1-e1","task":"event_temporal","document_id":"doc1","chapter_id":"ch1","gold_label":"Past","source_type":"human_gold","review_status":"adjudicated"}
+{"id":"work-a-ch03-e01","task":"event_temporal","text":"By dawn, Mara had returned.","label":"Past","language":"en","source_type":"human_gold","review_status":"adjudicated","document_id":"work-a","chapter_id":"ch03"}
 ```
 
-Add `text` and source offsets such as `span_start` and `span_end` to your private annotation records as needed by the model pipeline. For predictions, preserve the gold fields and add `predicted_label`. IDs must be unique within each file.
+Human rows must use `source_type: "human_gold"` and `review_status: "adjudicated"` for evaluation. Training also accepts rows marked `source_type: "synthetic_seed"` and `review_status: "unreviewed"`. Add `parent_id` when a synthetic row descends from a gold example. Optional `generator_version`, `phenomenon`, and `transformation` metadata is accepted and summarized in the model manifest, but never enters the model features.
 
-## Create the split manifest
+For unlabeled clustering, rows need only `id` and `text`; an optional `language` restricts the selection:
 
-For a single annotated novel, hold out whole chapters:
+```json
+{"id":"story-12-sentence-4","text":"Mara remembered the summer house.","language":"en"}
+```
+
+The modeling CLI does not read labels in cluster inputs or map clusters to TYM classes.
+
+## Train and load an artifact
 
 ```powershell
-python .\pocs\model-evaluation\evaluate_predictions.py make-splits `
-  --gold C:\data\tym-gold.jsonl `
-  --output C:\data\tym-splits.json `
+dotnet run --project .\tools\Tym.Modeling -- train `
+  --data .\data\seed-examples.jsonl `
+  --task segment_type `
+  --language en `
+  --model-out .\artifacts\segment_type_en.zip
+```
+
+Repeat with `--task event_temporal` and output `event_temporal_en.zip`. Configure the API's `TYM_MODEL_DIR` to that directory. If the setting is explicit but an expected model is missing, the API fails clearly instead of silently using the seed model. Without `TYM_MODEL_DIR`, the API retains its seed-trained fallback. Romanian remains rule-based.
+
+The 43/24-row training smoke runs on the checked-in seeds only show that serialization and the ML.NET pipeline run. They must not be reported as classifier evaluation results.
+
+## Evaluate with group-safe splits
+
+```powershell
+dotnet run --project .\tools\Tym.Modeling -- evaluate `
+  --data C:\data\tym-adjudicated.jsonl `
+  --language en `
   --group-by chapter `
-  --seed 42
+  --splits-out C:\data\tym-splits.json `
+  --report C:\data\tym-evaluation.json
 ```
 
-For multiple independent works, prefer holding out whole documents:
+The split manifest stores hashes of document/chapter group identifiers rather than raw group names. At least three independent groups are required. Use `--group-by document` when multiple works are available; for a single work, hold out whole chapters. Reuse the same manifest for all ablations. Validate that each partition contains the classes needed for interpretation; group-level splitting can produce class imbalance or a class absent from a partition.
+
+The report includes accuracy, macro-F1, per-class precision/recall/F1/support, a confusion matrix, and ML.NET micro/macro accuracy plus log-loss measures. This CLI scores event and segment **classification** rows. It does not currently score span-boundary F1, temporal relation extraction, or whole-graph consistency.
+
+Each trained `.zip` model is accompanied by a `.zip.manifest.json` sidecar containing the task, language, trainer/featurizer names, random seed, row count, labels/source types, synthetic-parent coverage, counts by phenomenon/transformation/generator version, and model SHA-256. The manifest excludes text and raw document/chapter identifiers.
+
+To measure the incremental value of synthetic examples, evaluate once with only the gold data and again with `--train-seeds C:\data\synthetic-train.jsonl`. Use the exact same held-out manifest both times. Synthetic rows enter the training fold only. If a seed has `parent_id`, its parent must map to the training partition. A model trained with a saved split may use `--split train` (default) or `--split dev`; the test partition is reserved for final scoring.
+
+## Explore unlabeled text
 
 ```powershell
-python .\pocs\model-evaluation\evaluate_predictions.py make-splits `
-  --gold C:\data\tym-gold.jsonl `
-  --output C:\data\tym-splits.json `
-  --group-by document
+dotnet run --project .\tools\Tym.Modeling -- cluster `
+  --data C:\data\unlabeled-narratives.jsonl `
+  --language en `
+  --clusters 8 `
+  --model-out .\artifacts\narrative-clusters.zip `
+  --assignments-out C:\data\cluster-assignments.jsonl `
+  --report C:\data\cluster-summary.json
 ```
 
-At least three distinct groups are required. The default ratios are 70% train, 15% dev, and 15% test by row count; assignment is by whole group, so actual ratios can differ and class balance is not guaranteed. Inspect the manifest summary before training. The manifest stores hashes of group IDs rather than text or raw document/chapter IDs.
+This fits ML.NET `FeaturizeText` n-gram features followed by centroid-based K-Means. Its average distance and Davies-Bouldin index describe geometric cohesion/separation in that feature space; they are not semantic accuracy. Inspect representative examples and outliers, repeat with different seeds and feature choices, and ask annotators to validate the discovered groups. The ML.NET clustering implementation is not a contextual language-model pretrainer.
 
-Create synthetic or weakly labeled descendants only after making the split. Keep them in training with their source example's group; never use them as held-out gold or to tune decisions against the test set.
+## Recommended synthetic data design
 
-## Score held-out predictions
+1. Write an annotation manual and split existing human annotations by document/chapter **before** generating any descendants. Keep the final test set human-authored, adjudicated, and locked.
+2. Create contrast sets that isolate TYM phenomena: temporal anchors and tense/aspect conflicts; retrospective/prospective shifts; remembered and imagined events; habitual/general statements; fiction and reporting frames; nominalized events; long-distance links; and ambiguous or absent cues.
+3. Vary names, predicates, syntax, lengths, and discourse context independently of class. Avoid making a generator template, cue word, or character name a shortcut for the label.
+4. Start with deterministic, auditable templates and transformations whose label-preservation assumptions are explicit. LLM paraphrases and model-proposed labels are candidates, not adjudicated truth; check for semantic drift and template artifacts before they enter train.
+5. Record parent, generator version, phenomenon, transformation, and review status. Generate descendants only from training parents; cap synthetic/gold ratios and compare a no-synthetic baseline against several controlled mixtures.
+6. Use unlabeled clustering to find recurring modes, coverage gaps, and hard examples to annotate. Sample from clusters and outliers, double-annotate a subset, adjudicate disagreements, and never treat a cluster ID as a gold TYM label.
+7. Report paired results on the same document/chapter-held-out human gold: accuracy and macro-F1, class-wise results, span boundaries, relation quality, calibration, and graph consistency. Include generator/phenomenon ablations and error analysis.
 
-The prediction file may contain predictions for multiple groups. The evaluator uses only the selected held-out split from the manifest and requires adjudicated human-gold labels:
-
-```powershell
-python .\pocs\model-evaluation\evaluate_predictions.py evaluate `
-  --predictions C:\data\tym-heldout-predictions.jsonl `
-  --splits C:\data\tym-splits.json `
-  --split test `
-  --output C:\data\tym-test-metrics.json
-```
-
-Run `--split dev` for development metrics. Use dev, not test, to select thresholds or tune the model. Keep the test set for the final comparison. For temporal links, make each annotated relation pair a row with a task such as `temporal_relation`; for boundary labels, use a task such as `segment_boundary`. Both receive ordinary classification metrics in this scaffold.
+The current repo implements train/evaluate and unlabeled K-Means workflows. A controlled synthetic corpus generator, calibrated sample filtering, contextual embeddings, boundary/link models, and graph-level evaluators are next research steps—not implemented results.

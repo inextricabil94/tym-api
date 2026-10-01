@@ -590,7 +590,7 @@ components:
           description: Confidence score returned by the ML.NET segment classifier.
         classifier:
           type: string
-          description: Classifier source used for this segment, such as mlnet_seed_model or heuristic_fallback.
+          description: Classifier source used for this segment, such as mlnet_seed_model, mlnet_trained_model, or heuristic_fallback.
     Endpoint:
       type: object
       required:

@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ui", "ui", "{FA674B5A-3394-
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tym.Ui", "ui\Tym.Ui\Tym.Ui.csproj", "{AF743F63-608F-48CD-8DD5-E284088A48C4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tym.Modeling", "tools\Tym.Modeling\Tym.Modeling.csproj", "{A1D6A90F-347A-4D3B-A745-AFC010B85C14}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{AF743F63-608F-48CD-8DD5-E284088A48C4}.Debug|x86.Build.0 = Debug|Any CPU
 		{AF743F63-608F-48CD-8DD5-E284088A48C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AF743F63-608F-48CD-8DD5-E284088A48C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1D6A90F-347A-4D3B-A745-AFC010B85C14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1D6A90F-347A-4D3B-A745-AFC010B85C14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1D6A90F-347A-4D3B-A745-AFC010B85C14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1D6A90F-347A-4D3B-A745-AFC010B85C14}.Release|Any CPU.Build.0 = Release|Any CPU
 		{AF743F63-608F-48CD-8DD5-E284088A48C4}.Release|x64.ActiveCfg = Release|Any CPU
 		{AF743F63-608F-48CD-8DD5-E284088A48C4}.Release|x64.Build.0 = Release|Any CPU
 		{AF743F63-608F-48CD-8DD5-E284088A48C4}.Release|x86.ActiveCfg = Release|Any CPU
