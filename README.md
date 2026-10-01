@@ -22,7 +22,7 @@ The current API implements the transparent rules/seed-model baseline and auditab
 
 The checked-in seed examples are explicitly marked synthetic and unreviewed. They can be used to exercise training code; they are not a gold set or evidence of model quality. Keep corpus annotations private unless their license and privacy terms allow publication. The [data README](data/README.md) describes the data fields, and the [ML.NET training/evaluation guide](pocs/model-evaluation/README.md) documents chapter/document-grouped evaluation, synthetic training controls, and unlabeled clustering. It includes no corpus data or precomputed accuracy claims.
 
-The proposed [2027 corpus and synthetic-data plan](docs/research/2027-corpus-and-synthetic-data-plan.md) separates target-domain human gold, public comparator corpora, and unlabeled discovery data. It maps distinct corpus/training questions to EACL, COLING, NAACL, ACL, and EMNLP audiences. The [PowerPoint roadmap](docs/research/TYM_MLNET_Synthetic_Research_Roadmap_2027_Corpus_and_Conference_Fit.pptx) presents the same plan. These are research proposals; they do not claim that the proposed corpora or evaluations are already in the repository.
+The [2027 corpus and synthetic-data plan](docs/research/2027-corpus-and-synthetic-data-plan.md) separates target-domain human gold, public comparator corpora, and unlabeled discovery data. It maps distinct corpus/training questions to EACL, COLING, NAACL, ACL, and EMNLP audiences. The [annotation pilot note](docs/research/ro-timebank-and-annotation-pilot.md) documents the newly supplied Romanian/English TYM XML pair, the separate ISO-TimeML role of Ro-TimeBank, and the limits of training from one parallel story. The [master project prompt](docs/research/MASTER_PROJECT_PROMPT.md) consolidates the requested research, engineering, UI, presentation, and delivery goals. The [PowerPoint roadmap](docs/research/TYM_MLNET_Synthetic_Research_Roadmap_2027_RoTimeBank_Annotation_Pilot.pptx) presents the updated research plan. These are research proposals and pilot artifacts; they do not claim a held-out score or a state-of-the-art result.
 
 ## Example
 
@@ -200,9 +200,9 @@ The renderer consumes normalized TYM JSON, so extraction can be upgraded indepen
 
 ## ML.NET training, evaluation, and unlabeled discovery
 
-The `tools/Tym.Modeling` console project trains and evaluates ML.NET classifiers. The checked-in `data/seed-examples.jsonl` rows are small, hand-authored synthetic demonstrations; training on them is a pipeline smoke check, not evidence of useful generalization. No human-annotated TYM corpus is included in this repository.
+The `tools/Tym.Modeling` console project trains and evaluates ML.NET classifiers. The checked-in `data/seed-examples.jsonl` rows are small, hand-authored synthetic demonstrations; training on them is a pipeline smoke check, not evidence of useful generalization. User-supplied XML and Ro-TimeBank corpus data are not checked into this repository.
 
-Train one task and language from labelled JSONL. `--model-out` filenames are consumed by the API when `TYM_MODEL_DIR` points to the containing directory:
+Train one task and language from labelled JSONL. `--model-out` filenames are consumed by the API when `TYM_MODEL_DIR` points to the containing directory. The current CLI trains the ML.NET `FeaturizeText` + `SdcaMaximumEntropy` text-feature baseline:
 
 ```powershell
 dotnet run --project .\tools\Tym.Modeling -- train `
@@ -211,6 +211,24 @@ dotnet run --project .\tools\Tym.Modeling -- train `
   --language en `
   --model-out .\artifacts\event_temporal_en.zip
 ```
+
+Convert the supplied custom TYM XML annotations to a private, train-only JSONL file:
+
+```powershell
+python .\tools\Tym.Modeling\import-tym-xml.py `
+  --romanian C:\private\hln_varianta_romana.xml `
+  --english C:\private\motiw_varianta_engleza.xml `
+  --out C:\private\tym-attached-annotations.jsonl `
+  --report C:\private\tym-import-report.json
+
+dotnet run --project .\tools\Tym.Modeling -- train `
+  --data C:\private\tym-attached-annotations.jsonl `
+  --task segment_type `
+  --language ro `
+  --model-out C:\private\models\segment_type_ro_sdca.zip
+```
+
+The paired XML files are one story, so train/evaluation metrics from this data are not a generalization result. Their `provided_annotation/adjudication_unknown` rows are accepted only by `train`; `evaluate` remains restricted to independently adjudicated human gold. Keep the input XML, converted JSONL, and resulting model artifacts outside Git unless their source and derivative rights are explicitly cleared. See [the annotation pilot note](docs/research/ro-timebank-and-annotation-pilot.md).
 
 Use `segment_type_en.zip` for the segment classifier. The API will load saved English artifacts from `TYM_MODEL_DIR`; without that setting, it trains the built-in seed baselines at startup. If `TYM_MODEL_DIR` is explicitly set, both required English model artifacts must exist. Romanian remains rule-based.
 

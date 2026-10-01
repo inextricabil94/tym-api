@@ -13,6 +13,10 @@ Each JSONL object records:
 
 For reviewed corpus annotations, keep the corpus outside this repository unless its license and privacy terms explicitly permit publication. Use `source_type: "human_gold"`, `review_status: "adjudicated"`, stable document/chapter IDs, and a task-specific `gold_label`. Preserve source offsets in `span_start` and `span_end` when the task is span-based. Synthetic or weakly labeled examples should use their own `source_type`, retain a `parent_id` when derived from another example, and never be described as human gold.
 
+The modeling CLI additionally permits local `provided_annotation` rows with `review_status: "adjudication_unknown"` in the `train` command only. These rows cannot enter grouped evaluation or be called human gold. The private importer at `tools/Tym.Modeling/import-tym-xml.py` converts the supplied custom TYM `<TAGS>` pair to this format; it excludes annotator-written summaries/actor IDs/location IDs from features, skips unresolved relation endpoints with a count, and marks the translated versions as one source group. Keep the generated JSONL and models outside GitHub.
+
+The separate Ro-TimeBank XML archive uses ISO-TimeML and its rights differ from these TYM annotations. It needs its own audited adapter and label crosswalk; do not map its event/TIMEX/TLINK tags to TYM segment or relation labels by name alone.
+
 ## Grouped evaluation scaffold
 
 See [`pocs/model-evaluation/README.md`](../pocs/model-evaluation/README.md) for a standard-library Python tool that creates chapter- or document-held-out split manifests and scores per-class precision/recall/F1, macro-F1, accuracy, and confusion matrices. The tool accepts only adjudicated human-gold rows. Create splits before producing synthetic descendants, then keep every descendant of a gold example in that example's training group. The evaluator does not yet score exact span boundaries or whole-graph consistency.

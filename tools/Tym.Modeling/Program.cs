@@ -71,6 +71,11 @@ internal static class Program
 
             var selectedGold = selected.Where(row => row.SourceType == "human_gold").ToList();
             var selectedSeeds = selected.Where(row => row.SourceType == "synthetic_seed").ToList();
+            if (selected.Any(row => row.SourceType == "provided_annotation"))
+            {
+                throw new InvalidDataException(
+                    "Provided annotations cannot use the gold split manifest until their source work is joined to the human-gold manifest. Train them without --splits.");
+            }
             ValidateManifestCoverage(selectedGold, manifest);
             ValidateTrainSeedParents(selectedSeeds, selectedGold, manifest);
             selected = FilterBySplit(selected, manifest, split);
@@ -99,6 +104,9 @@ internal static class Program
             training_rows = selected.Count,
             labels = selected.Select(row => row.Label).Distinct(StringComparer.Ordinal).Order().ToArray(),
             source_types = selected.Select(row => row.SourceType).Distinct(StringComparer.Ordinal).Order().ToArray(),
+            research_limit = selected.Any(row => row.SourceType == "provided_annotation")
+                ? "Exploratory training only: provided annotations have unknown adjudication status and cover one parallel story. No generalization claim is supported."
+                : null,
             synthetic_provenance = new
             {
                 rows = trainedSynthetic.Count,
@@ -721,10 +729,11 @@ internal static class Program
         {
             var isGold = row.SourceType == "human_gold" && row.ReviewStatus == "adjudicated";
             var isSeed = row.SourceType == "synthetic_seed" && row.ReviewStatus == "unreviewed";
-            if (!isGold && !isSeed)
+            var isProvided = row.SourceType == "provided_annotation" && row.ReviewStatus == "adjudication_unknown";
+            if (!isGold && !isSeed && !isProvided)
             {
                 throw new InvalidDataException(
-                    $"Training accepts adjudicated human_gold or explicitly marked synthetic_seed rows. Row '{row.Id}' is {row.SourceType}/{row.ReviewStatus}.");
+                    $"Training accepts adjudicated human_gold, explicitly marked synthetic_seed, or provided_annotation/adjudication_unknown rows. Row '{row.Id}' is {row.SourceType}/{row.ReviewStatus}.");
             }
         }
     }
@@ -829,7 +838,7 @@ internal static class Program
         Console.WriteLine("Evaluate on chapter- or document-held-out human gold:");
         Console.WriteLine("  dotnet run --project tools/Tym.Modeling -- evaluate --data C:/data/tym-gold.jsonl --group-by chapter --language en --splits-out C:/data/tym-splits.json --report C:/data/tym-metrics.json");
         Console.WriteLine();
-        Console.WriteLine("Evaluation requires human_gold/adjudicated rows. Optional --train-seeds rows are used in the training fold only.");
+        Console.WriteLine("Evaluation requires human_gold/adjudicated rows. Optional synthetic rows are train-only; provided_annotation/adjudication_unknown rows are accepted only by the training command.");
         Console.WriteLine();
         Console.WriteLine("Explore unlabeled text with ML.NET K-Means (cluster IDs are not TYM labels):");
         Console.WriteLine("  dotnet run --project tools/Tym.Modeling -- cluster --data C:/data/unlabeled.jsonl --clusters 8 --model-out models/unlabeled_clusters.zip --assignments-out C:/data/clusters.jsonl");

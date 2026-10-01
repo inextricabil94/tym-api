@@ -45,6 +45,14 @@ If n-gram clusters do not capture the desired semantics, evaluate an embedding r
 4. **Audit and preserve lineage.** Record parent/work ID, phenomenon, transformation, generator and prompt version, language, intended label, review status, and reviewer. Deduplicate descendants against all splits. Human-audit a stratified sample from every generator × phenomenon slice before admitting that slice to training; exclude disputed cases or represent their uncertainty explicitly.
 5. **Keep pseudo-labeling separate.** Unlabeled cluster assignments or model predictions are not gold labels. If pseudo-labeling is later studied, compare it as its own noisy-label condition and report confidence filtering and human-audit error.
 
+### User-supplied TYM annotations and Ro-TimeBank
+
+The supplied Romanian and English `<TAGS>` files are near-parallel annotations of one story (375/376 segments, 375 shared spans), with temporal relations between TYM segments. They are useful for validating the importer and for train-only pilot models, but their shared narrative forbids a random train/test split and they do not provide an independent held-out work. The adapter marks these records `provided_annotation/adjudication_unknown`; the evaluation command continues to accept only independently adjudicated `human_gold` records. Details, mappings, and the Ro-TimeBank separation are in [the annotation pilot note](ro-timebank-and-annotation-pilot.md).
+
+Ro-TimeBank adds separate ISO-TimeML tasks over translated English news: event, time-expression, signal, and temporal-link annotations. Its 183 documents and 181 aligned pairs are valuable for Romanian temporal IE transfer experiments after a schema audit. They do not supply TYM narrative-frame labels. The reported 99.18% transfer figure is annotation transfer/coverage after corrections, not model accuracy. The archive terms restrict use and distribution, so corpus text and models trained from it stay outside public commits unless rights are cleared.
+
+ML.NET's TorchSharp integration offers a pretrained NAS-BERT/RoBERTa text-classification trainer, but the local attempt failed during checkpoint loading (`Mismatched state_dict sizes: expected 60, but found 142 entries`), matching an open ML.NET NAS-BERT trainer issue. That optional dependency was removed rather than leaving a broken path. The implemented SDCA text baseline is trainable; a multilingual encoder such as XLM-R plus a document-level graph model is the research SOTA direction, and span extraction/graph evaluation still need implementation. No current model should be called state of the art from one annotated story.
+
 ### Controlled comparisons
 
 Use the same human-gold evaluation set and split manifest for every condition:
