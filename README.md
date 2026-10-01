@@ -22,6 +22,8 @@ The current API implements the transparent rules/seed-model baseline and auditab
 
 The checked-in seed examples are explicitly marked synthetic and unreviewed. They can be used to exercise training code; they are not a gold set or evidence of model quality. Keep corpus annotations private unless their license and privacy terms allow publication. The [data README](data/README.md) describes the data fields, and the [ML.NET training/evaluation guide](pocs/model-evaluation/README.md) documents chapter/document-grouped evaluation, synthetic training controls, and unlabeled clustering. It includes no corpus data or precomputed accuracy claims.
 
+The proposed [2027 corpus and synthetic-data plan](docs/research/2027-corpus-and-synthetic-data-plan.md) separates target-domain human gold, public comparator corpora, and unlabeled discovery data. It maps distinct corpus/training questions to EACL, COLING, NAACL, ACL, and EMNLP audiences. The [PowerPoint roadmap](docs/research/TYM_MLNET_Synthetic_Research_Roadmap_2027_Corpus_and_Conference_Fit.pptx) presents the same plan. These are research proposals; they do not claim that the proposed corpora or evaluations are already in the repository.
+
 ## Example
 
 Input text:
