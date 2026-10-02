@@ -1,0 +1,270 @@
+{
+  "schema_version": 1,
+  "status": "full_data_inference_artifacts",
+  "completed_utc": "2026-10-02T10:59:03.2823278+00:00",
+  "framework": "ML.NET 5.0.0 / .NET 10",
+  "input_sha256": "4d37e1a0fc48e8dd06a89c04e541c19fbb4cc0b999818221c7965866dfbfd880",
+  "models": [
+    {
+      "model_id": "timebank_alink_ro_structured",
+      "manifest": {
+        "schema_version": 1,
+        "model_id": "timebank_alink_ro_structured",
+        "task": "timebank_alink",
+        "language": "ro",
+        "input_format": "structured_target_v1",
+        "trainer": "SdcaMaximumEntropy",
+        "featurizer": "ML.NET FeaturizeText per structured channel, concatenated",
+        "feature_channels": [
+          "SourceContext",
+          "TargetContext",
+          "SourceMention",
+          "TargetMention"
+        ],
+        "seed": 42,
+        "maximum_iterations": 100,
+        "training_rows": 199,
+        "labels": [
+          "CONTINUES",
+          "CULMINATES",
+          "INITIATES",
+          "REINITIATES",
+          "TERMINATES"
+        ],
+        "source_types": [
+          "provided_annotation"
+        ],
+        "source_groups": [
+          "ro-timebank-isotimeml"
+        ],
+        "document_count": 87,
+        "input_sha256": "4d37e1a0fc48e8dd06a89c04e541c19fbb4cc0b999818221c7965866dfbfd880",
+        "model_sha256": "05d7aa156812469644c6a72bd3166c36fd03e6c53ed51f7444c3378697b70b5b",
+        "framework": "ML.NET 5.0.0 / .NET 10",
+        "trained_utc": "2026-10-02T10:58:48.7584315+00:00",
+        "research_limit": "Full-data exploratory classifier conditional on supplied target mentions or ordered endpoints. Provided annotations have unknown adjudication status. No training-set accuracy or book-gold claim is made."
+      },
+      "seconds": 1.6264577
+    },
+    {
+      "model_id": "timebank_event_class_ro_structured",
+      "manifest": {
+        "schema_version": 1,
+        "model_id": "timebank_event_class_ro_structured",
+        "task": "timebank_event_class",
+        "language": "ro",
+        "input_format": "structured_target_v1",
+        "trainer": "SdcaMaximumEntropy",
+        "featurizer": "ML.NET FeaturizeText per structured channel, concatenated",
+        "feature_channels": [
+          "TargetContext",
+          "TargetMention"
+        ],
+        "seed": 42,
+        "maximum_iterations": 100,
+        "training_rows": 5947,
+        "labels": [
+          "ASPECTUAL",
+          "I_ACTION",
+          "I_STATE",
+          "OCCURRENCE",
+          "PERCEPTION",
+          "REPORTING",
+          "STATE"
+        ],
+        "source_types": [
+          "provided_annotation"
+        ],
+        "source_groups": [
+          "ro-timebank-isotimeml"
+        ],
+        "document_count": 157,
+        "input_sha256": "4d37e1a0fc48e8dd06a89c04e541c19fbb4cc0b999818221c7965866dfbfd880",
+        "model_sha256": "108c21e3adb5d11447388ec38489ebff83529aab1ca2631701f36576f906a763",
+        "framework": "ML.NET 5.0.0 / .NET 10",
+        "trained_utc": "2026-10-02T10:58:51.5917748+00:00",
+        "research_limit": "Full-data exploratory classifier conditional on supplied target mentions or ordered endpoints. Provided annotations have unknown adjudication status. No training-set accuracy or book-gold claim is made."
+      },
+      "seconds": 2.8147687
+    },
+    {
+      "model_id": "timebank_event_tense_ro_structured",
+      "manifest": {
+        "schema_version": 1,
+        "model_id": "timebank_event_tense_ro_structured",
+        "task": "timebank_event_tense",
+        "language": "ro",
+        "input_format": "structured_target_v1",
+        "trainer": "SdcaMaximumEntropy",
+        "featurizer": "ML.NET FeaturizeText per structured channel, concatenated",
+        "feature_channels": [
+          "TargetContext",
+          "TargetMention"
+        ],
+        "seed": 42,
+        "maximum_iterations": 100,
+        "training_rows": 5920,
+        "labels": [
+          "FUTURE",
+          "INFINITIVE",
+          "NONE",
+          "PAST",
+          "PASTPART",
+          "PRESENT",
+          "PRESPART"
+        ],
+        "source_types": [
+          "provided_annotation"
+        ],
+        "source_groups": [
+          "ro-timebank-isotimeml"
+        ],
+        "document_count": 157,
+        "input_sha256": "4d37e1a0fc48e8dd06a89c04e541c19fbb4cc0b999818221c7965866dfbfd880",
+        "model_sha256": "93199a4ebc0e56f69651832a986fbd825027116219de86d48cce749b2693e99a",
+        "framework": "ML.NET 5.0.0 / .NET 10",
+        "trained_utc": "2026-10-02T10:58:53.6545651+00:00",
+        "research_limit": "Full-data exploratory classifier conditional on supplied target mentions or ordered endpoints. Provided annotations have unknown adjudication status. No training-set accuracy or book-gold claim is made."
+      },
+      "seconds": 2.061213
+    },
+    {
+      "model_id": "timebank_slink_ro_structured",
+      "manifest": {
+        "schema_version": 1,
+        "model_id": "timebank_slink_ro_structured",
+        "task": "timebank_slink",
+        "language": "ro",
+        "input_format": "structured_target_v1",
+        "trainer": "SdcaMaximumEntropy",
+        "featurizer": "ML.NET FeaturizeText per structured channel, concatenated",
+        "feature_channels": [
+          "SourceContext",
+          "TargetContext",
+          "SourceMention",
+          "TargetMention",
+          "Signal"
+        ],
+        "seed": 42,
+        "maximum_iterations": 100,
+        "training_rows": 2133,
+        "labels": [
+          "CONDITIONAL",
+          "COUNTER_FACTIVE",
+          "EVIDENTIAL",
+          "FACTIVE",
+          "MODAL",
+          "NEG_EVIDENTIAL"
+        ],
+        "source_types": [
+          "provided_annotation"
+        ],
+        "source_groups": [
+          "ro-timebank-isotimeml"
+        ],
+        "document_count": 157,
+        "input_sha256": "4d37e1a0fc48e8dd06a89c04e541c19fbb4cc0b999818221c7965866dfbfd880",
+        "model_sha256": "6e9fcddd11181271669275d50a3ca1fc77c5d33e79fe632bde6bd4efb498cf3c",
+        "framework": "ML.NET 5.0.0 / .NET 10",
+        "trained_utc": "2026-10-02T10:58:55.4546498+00:00",
+        "research_limit": "Full-data exploratory classifier conditional on supplied target mentions or ordered endpoints. Provided annotations have unknown adjudication status. No training-set accuracy or book-gold claim is made."
+      },
+      "seconds": 1.7994872
+    },
+    {
+      "model_id": "timebank_timex_type_ro_structured",
+      "manifest": {
+        "schema_version": 1,
+        "model_id": "timebank_timex_type_ro_structured",
+        "task": "timebank_timex_type",
+        "language": "ro",
+        "input_format": "structured_target_v1",
+        "trainer": "SdcaMaximumEntropy",
+        "featurizer": "ML.NET FeaturizeText per structured channel, concatenated",
+        "feature_channels": [
+          "TargetContext",
+          "TargetMention"
+        ],
+        "seed": 42,
+        "maximum_iterations": 100,
+        "training_rows": 1144,
+        "labels": [
+          "DATE",
+          "DURATION",
+          "SET",
+          "TIME"
+        ],
+        "source_types": [
+          "provided_annotation"
+        ],
+        "source_groups": [
+          "ro-timebank-isotimeml"
+        ],
+        "document_count": 157,
+        "input_sha256": "4d37e1a0fc48e8dd06a89c04e541c19fbb4cc0b999818221c7965866dfbfd880",
+        "model_sha256": "d506881dba7f7f7230447dcf00a0d888892c4a049e9912d8f7f7466f25fb46d9",
+        "framework": "ML.NET 5.0.0 / .NET 10",
+        "trained_utc": "2026-10-02T10:58:55.92052+00:00",
+        "research_limit": "Full-data exploratory classifier conditional on supplied target mentions or ordered endpoints. Provided annotations have unknown adjudication status. No training-set accuracy or book-gold claim is made."
+      },
+      "seconds": 0.462879
+    },
+    {
+      "model_id": "timebank_tlink_ro_structured",
+      "manifest": {
+        "schema_version": 1,
+        "model_id": "timebank_tlink_ro_structured",
+        "task": "timebank_tlink",
+        "language": "ro",
+        "input_format": "structured_target_v1",
+        "trainer": "SdcaMaximumEntropy",
+        "featurizer": "ML.NET FeaturizeText per structured channel, concatenated",
+        "feature_channels": [
+          "SourceContext",
+          "TargetContext",
+          "SourceMention",
+          "TargetMention",
+          "Signal"
+        ],
+        "seed": 42,
+        "maximum_iterations": 100,
+        "training_rows": 4808,
+        "labels": [
+          "AFTER",
+          "BEFORE",
+          "BEGINS",
+          "BEGUN_BY",
+          "DURING",
+          "DURING_INV",
+          "ENDED_BY",
+          "ENDS",
+          "IAFTER",
+          "IBEFORE",
+          "IDENTITY",
+          "INCLUDES",
+          "IS_INCLUDED",
+          "SIMULTANEOUS"
+        ],
+        "source_types": [
+          "provided_annotation"
+        ],
+        "source_groups": [
+          "ro-timebank-isotimeml"
+        ],
+        "document_count": 157,
+        "input_sha256": "4d37e1a0fc48e8dd06a89c04e541c19fbb4cc0b999818221c7965866dfbfd880",
+        "model_sha256": "ad64cf756f0fb2db70b006e6988cff19abfcb2105c3d6c581a9d694bc8fb8be3",
+        "framework": "ML.NET 5.0.0 / .NET 10",
+        "trained_utc": "2026-10-02T10:59:03.2745295+00:00",
+        "research_limit": "Full-data exploratory classifier conditional on supplied target mentions or ordered endpoints. Provided annotations have unknown adjudication status. No training-set accuracy or book-gold claim is made."
+      },
+      "seconds": 7.3568241
+    }
+  ],
+  "seconds": 16.2187918,
+  "limitations": [
+    "The separate grouped cross-validation report supplies diagnostic scores; these full-data artifacts are not evaluated on their own training rows.",
+    "Whole-text baseline models are retained with separate model IDs.",
+    "Raw text and private book clustering weights are excluded from this aggregate report and deployment."
+  ]
+}

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore ML.NET corpus classifiers and review narrative and temporal annotations in English and Romanian.">
+  <title>TYM Corpus Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/config.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#workbench">Skip to prediction</a>
+  <header class="site-header wrap">
+    <a class="wordmark" href="/" aria-label="TYM Corpus Lab home">TYM <span>Corpus Lab</span></a>
+    <nav aria-label="Main navigation">
+      <a href="#workbench">Try a model</a>
+      <a href="#document-workbench">Review a document</a>
+      <a href="#research">Research notes</a>
+      <a id="diagram-link" href="https://tym-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io" target="_blank" rel="noopener noreferrer">Diagram studio <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+  <main>
+    <section class="intro wrap" aria-labelledby="page-title">
+      <p class="eyebrow">NARRATIVE &amp; TEMPORAL SEMANTICS</p>
+      <h1 id="page-title">Read the text.<br><em>Explore the prediction.</em></h1>
+      <div class="intro-bottom">
+        <p><span id="model-total">16</span> corpus classifiers for narrative segments, event attributes, and temporal relations. Choose an English or Romanian model, edit an example, and inspect its output.</p>
+        <p class="research-context">An exploratory ML.NET lexical baseline.<br>Independent accuracy has not been measured.</p>
+      </div>
+    </section>
+
+    <section class="workbench wrap" id="workbench" aria-labelledby="workbench-title">
+      <div class="section-heading">
+        <h2 id="workbench-title">Prediction workbench</h2>
+        <p id="catalog-status" role="status" aria-live="polite">Connecting to the model catalog…</p>
+      </div>
+      <div class="workbench-layout">
+        <aside class="model-column" aria-label="Selected model information">
+          <label class="field-label" for="model-select">Select a classifier</label>
+          <select id="model-select" aria-describedby="model-description" disabled><option>Loading models…</option></select>
+          <p id="model-description" class="model-description">Model information will appear here.</p>
+          <dl class="metadata">
+            <div><dt>Language</dt><dd id="model-language">—</dd></div>
+            <div><dt>Training examples</dt><dd id="model-rows">—</dd></div>
+            <div><dt>Source documents</dt><dd id="model-documents">—</dd></div>
+            <div class="wide"><dt>Label vocabulary</dt><dd id="model-labels">—</dd></div>
+            <div class="wide"><dt>Training provenance</dt><dd id="model-provenance">Provided annotations. Adjudication status unknown.</dd></div>
+          </dl>
+          <button id="reload-catalog" class="text-button" type="button" hidden>Reconnect to the API</button>
+        </aside>
+        <div class="editor-column">
+          <form id="prediction-form">
+            <div class="editor-heading">
+              <label class="field-label" for="input-text">Your text</label>
+              <div class="example-actions" aria-label="Load an editable example">
+                <button class="text-button" id="example-one" type="button">Example 1</button>
+                <button class="text-button" id="example-two" type="button">Example 2</button>
+              </div>
+            </div>
+            <p id="input-hint" class="input-hint">Start with an example and change its wording.</p>
+            <textarea id="input-text" name="text" rows="9" maxlength="50000" spellcheck="false" aria-describedby="input-hint input-count" placeholder="Loading an editable example…" required></textarea>
+            <div class="editor-bottom">
+              <span id="input-count">0 / 50,000 characters</span>
+              <button class="primary-button" id="predict-button" type="submit" disabled>Predict label <span aria-hidden="true">↗</span></button>
+            </div>
+          </form>
+          <p class="request-status" id="request-status" role="status" aria-live="polite"></p>
+          <section id="prediction-result" class="prediction-result" aria-labelledby="result-title" aria-live="polite" hidden>
+            <p class="eyebrow" id="result-title">MODEL OUTPUT</p>
+            <div class="label-line"><strong id="predicted-label"></strong><span id="label-meaning"></span></div>
+            <p id="prediction-limit" class="result-limit"></p>
+            <details><summary>Inspect the response</summary><pre id="response-json"></pre></details>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="document-workbench wrap" id="document-workbench" aria-labelledby="document-title">
+      <p class="eyebrow">FROM CANDIDATE EXTRACTION TO HUMAN REVIEW</p>
+      <h2 id="document-title">Review a document</h2>
+      <p class="document-intro">Analyze a passage, check its source spans, then correct the annotations. Rules propose mentions and ML.NET proposes narrative modes. Relations are supplied by you. A reviewed annotation records your decision; it has not been adjudicated as gold data.</p>
+      <form id="document-form">
+        <div class="document-options">
+          <div><label for="document-language" class="field-label">Document language</label><select id="document-language"><option value="en">English</option><option value="ro">Romanian</option></select></div>
+          <div><label for="document-date" class="field-label">Document date <span class="optional">(optional)</span></label><input id="document-date" type="date" aria-describedby="date-hint"><small id="date-hint">Only anchors explicitly relative time expressions.</small></div>
+          <button type="button" id="document-example" class="text-button">Load an original example</button>
+        </div>
+        <label class="field-label" for="document-text">Source passage</label>
+        <p class="input-hint" id="document-input-hint">Paste English or Romanian prose. The source remains unchanged after analysis; offsets count UTF-16 code units, with start inclusive and end exclusive.</p>
+        <textarea id="document-text" rows="7" maxlength="50000" required aria-describedby="document-input-hint"></textarea>
+        <div class="editor-bottom"><span class="optional">Analyze again to begin a new draft from edited source text.</span><button id="analyze-button" class="primary-button" type="submit">Analyze passage</button></div>
+      </form>
+      <p id="document-status" class="request-status" role="status" aria-live="polite"></p>
+      <div id="document-results" hidden>
+        <div class="document-summary"><strong id="document-id"></strong><span id="document-review-state">Draft annotations</span><span id="document-offset-info"></span></div>
+        <p id="document-limit" class="result-limit"></p>
+        <div class="source-layout">
+          <div>
+            <h3>Preserved source</h3><p class="input-hint">Select text here to add an annotation. The text below is an immutable copy of the analyzed passage.</p>
+            <textarea id="preserved-source" rows="8" readonly aria-label="Preserved analyzed source"></textarea>
+            <div class="span-tools"><span id="selection-info">Select a source span.</span><button id="add-segment" type="button" class="text-button">Add time segment</button><select id="new-mention-kind" aria-label="Kind of new mention"><option>EVENT</option><option>TIME</option><option>ACTOR</option><option>LOCATION</option></select><button id="add-mention" type="button" class="text-button">Add mention</button></div>
+          </div>
+          <div><h3>Selected span and evidence</h3><div id="source-highlight" class="source-highlight" aria-label="Source span preview"></div><pre id="annotation-evidence">Select an annotation to inspect its field provenance.</pre></div>
+        </div>
+        <div class="annotation-section"><h3>Time segments <span class="optional">TYM narrative modes</span></h3><p class="input-hint">Click a span to inspect its source. Changing a label returns that field to draft. Review is always explicit.</p><div class="table-scroll"><table><caption class="sr-only">Editable narrative time segments</caption><thead><tr><th scope="col">ID / span</th><th scope="col">Source text</th><th scope="col">Narrative mode</th><th scope="col">Review</th><th scope="col">Actions</th></tr></thead><tbody id="segment-rows"></tbody></table></div></div>
+        <div class="annotation-section"><h3>Mentions <span class="optional">time, event, actor, location</span></h3><div class="table-scroll"><table><caption class="sr-only">Editable source mentions</caption><thead><tr><th scope="col">ID / span</th><th scope="col">Source text</th><th scope="col">Kind</th><th scope="col">Normalized value</th><th scope="col">Review</th><th scope="col">Actions</th></tr></thead><tbody id="mention-rows"></tbody></table></div></div>
+        <div class="annotation-section">
+          <h3>Directed relations</h3><p class="input-hint">Choose a schema and ordered endpoints. TYM connects segments; TLINK connects event/time mentions; SLINK and ALINK connect events. Unlinked annotations have unknown order.</p>
+          <form id="relation-form" class="relation-form">
+            <div><label class="field-label" for="relation-family">Family</label><select id="relation-family"><option>TYM</option><option>TLINK</option><option>SLINK</option><option>ALINK</option></select></div>
+            <div><label class="field-label" for="relation-from">From</label><select id="relation-from"></select></div>
+            <div><label class="field-label" for="relation-to">To</label><select id="relation-to"></select></div>
+            <div><label class="field-label" for="relation-label">Relation</label><select id="relation-label"></select></div>
+            <button id="add-relation" type="submit" class="primary-button">Add draft relation</button>
+          </form>
+          <div class="table-scroll"><table><caption class="sr-only">Editable directed relations</caption><thead><tr><th scope="col">ID / family</th><th scope="col">From → To</th><th scope="col">Label</th><th scope="col">Review</th><th scope="col">Actions</th></tr></thead><tbody id="relation-rows"></tbody></table></div>
+        </div>
+        <div class="validation-bar"><button id="validate-document" type="button" class="primary-button">Validate reviewed graph</button><button id="export-document" type="button" class="secondary-button" disabled>Download annotation JSON</button><span id="validation-state" role="status" aria-live="polite">Validate after editing to enable export.</span></div>
+        <div id="validation-diagnostics" role="status" aria-live="polite"></div>
+        <div class="graph-section"><h3>Reviewed temporal graph</h3><p id="graph-scope" class="input-hint">Only explicitly reviewed temporal relations contribute to story order. Draft, subordinate, and aspectual links do not establish a timeline.</p><div id="temporal-graph" class="temporal-graph"></div><p id="simultaneous-info" class="input-hint"></p></div>
+      </div>
+    </section>
+
+    <section class="research-section wrap" id="research" aria-labelledby="research-title">
+      <div class="research-heading"><p class="eyebrow">HOW TO READ THESE RESULTS</p><h2 id="research-title">Evidence with its limits</h2></div>
+      <div class="research-copy">
+        <p>The four TYM classifiers learn segment types and temporal relations from a parallel English and Romanian story. Ro-TimeBank supplies six ISO-TimeML tasks, each with a lexical baseline and a structured text variant. Their label families describe different tasks; model comparisons are informational.</p>
+        <p>These lexical baselines can miss explicit cues and return plausible but incorrect labels. A prediction snapshot records model behavior. It provides no estimate of accuracy on independent narratives.</p>
+        <p>For TimeBank tasks, mark the intended mention with <code>[TARGET]</code> and <code>[/TARGET]</code>. Relation predictions follow the source and target order shown in the example. The tools score supplied text and do not automatically annotate an entire document.</p>
+        <div class="results-links" aria-label="Research result downloads">
+          <span>Research results</span>
+          <a id="pdf-link" href="/results/Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf">PDF report <span aria-hidden="true">↗</span></a>
+          <a id="pptx-link" href="/results/TYM_MLNET_Updated_Results_20261002.pptx">Editable presentation <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer wrap"><span>TYM Corpus Lab</span><p>A separate workspace for corpus model inference. Source annotations and model weights remain outside this frontend.</p><a href="#page-title">Back to top</a></footer>
+</body>
+</html>

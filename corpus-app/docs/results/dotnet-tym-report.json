@@ -1,0 +1,62 @@
+{
+  "importer": "C#/.NET",
+  "output_rows": 1515,
+  "files": [
+    {
+      "language": "ro",
+      "segments": 375,
+      "relations_in_xml": 383,
+      "relations_imported": 382,
+      "relations_skipped_missing_segment_endpoint": 1,
+      "tasks": {
+        "segment_type": {
+          "NAR": 313,
+          "GEN": 4,
+          "FIC": 25,
+          "REM": 33
+        },
+        "temporal_relation": {
+          "IMMEDIATELY_BEFORE": 20,
+          "IMMEDIATELY_AFTER": 211,
+          "SIMULTANEOUS": 77,
+          "BEFORE": 36,
+          "AFTER": 38
+        }
+      },
+      "provenance": "provided_annotation/adjudication_unknown",
+      "source_group": "provided-hln-motiw-narrative",
+      "notes": [
+        "Parallel translations belong to one source work.",
+        "Source offsets require reconciliation with any separately supplied raw edition."
+      ]
+    },
+    {
+      "language": "en",
+      "segments": 376,
+      "relations_in_xml": 382,
+      "relations_imported": 382,
+      "relations_skipped_missing_segment_endpoint": 0,
+      "tasks": {
+        "segment_type": {
+          "NAR": 314,
+          "GEN": 4,
+          "FIC": 25,
+          "REM": 33
+        },
+        "temporal_relation": {
+          "IMMEDIATELY_BEFORE": 24,
+          "IMMEDIATELY_AFTER": 218,
+          "SIMULTANEOUS": 84,
+          "BEFORE": 32,
+          "AFTER": 24
+        }
+      },
+      "provenance": "provided_annotation/adjudication_unknown",
+      "source_group": "provided-hln-motiw-narrative",
+      "notes": [
+        "Parallel translations belong to one source work.",
+        "Source offsets require reconciliation with any separately supplied raw edition."
+      ]
+    }
+  ]
+}

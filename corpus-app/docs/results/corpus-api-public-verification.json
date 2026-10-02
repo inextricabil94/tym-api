@@ -1,0 +1,10 @@
+{
+  "verified_utc": "2026-10-02T11:11:49.740862+00:00",
+  "api_url": "https://tym-corpus-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io",
+  "free_text_snapshots_matched": 32,
+  "source_preserved": true,
+  "spans_exact": true,
+  "document_valid": true,
+  "story_order": "unknown",
+  "private_books_sent": false
+}

@@ -1,0 +1,86 @@
+[
+  {
+    "model_id": "timebank_alink_ro_structured",
+    "id": "free-ro-initiation",
+    "text": "From: a început\nFrom context: Ploaia [TARGET] a început [/TARGET] să cadă.\nSignal: să\nTo: cadă\nTo context: Ploaia a început să [TARGET] cadă [/TARGET].",
+    "expected_label": "INITIATES",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_alink_ro_structured",
+    "id": "free-ro-continuation",
+    "text": "From: a continuat\nFrom context: Ea [TARGET] a continuat [/TARGET] să citească.\nSignal: să\nTo: citească\nTo context: Ea a continuat să [TARGET] citească [/TARGET].",
+    "expected_label": "CONTINUES",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_event_class_ro_structured",
+    "id": "free-ro-event-state",
+    "text": "Context: Mara [TARGET] a aflat [/TARGET] vestea și a zâmbit.\nEvent: a aflat",
+    "expected_label": "OCCURRENCE",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_event_class_ro_structured",
+    "id": "free-ro-event-opinion",
+    "text": "Context: [TARGET] Cred [/TARGET] că drumul va fi lung.\nEvent: Cred",
+    "expected_label": "I_STATE",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_event_tense_ro_structured",
+    "id": "free-ro-future",
+    "text": "Context: Mâine Mara [TARGET] va pleca [/TARGET] spre munte.\nEvent: va pleca",
+    "expected_label": "FUTURE",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_event_tense_ro_structured",
+    "id": "free-ro-past",
+    "text": "Context: Ieri Mara [TARGET] a terminat [/TARGET] cartea.\nEvent: a terminat",
+    "expected_label": "PAST",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_slink_ro_structured",
+    "id": "free-ro-modal-link",
+    "text": "From: crede\nFrom context: Mara [TARGET] crede [/TARGET] că drumul va fi lung.\nSignal: că\nTo: va fi\nTo context: Mara crede că drumul [TARGET] va fi [/TARGET] lung.",
+    "expected_label": "MODAL",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_slink_ro_structured",
+    "id": "free-ro-evidential-link",
+    "text": "From: știa\nFrom context: El [TARGET] știa [/TARGET] că trenul întârziase.\nSignal: că\nTo: întârziase\nTo context: El știa că trenul [TARGET] întârziase [/TARGET].",
+    "expected_label": "MODAL",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_timex_type_ro_structured",
+    "id": "free-ro-date",
+    "text": "Context: În [TARGET] primăvara trecută [/TARGET], Mara a sosit la Iași.\nTime expression: primăvara trecută",
+    "expected_label": "DATE",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_timex_type_ro_structured",
+    "id": "free-ro-duration",
+    "text": "Context: A rămas acolo timp de [TARGET] trei zile [/TARGET].\nTime expression: trei zile",
+    "expected_label": "DURATION",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_tlink_ro_structured",
+    "id": "free-ro-before-link",
+    "text": "From: a plecat\nFrom context: Mara [TARGET] a plecat [/TARGET] din oraș înainte de răsărit.\nSignal: înainte\nTo: a ajuns\nTo context: Călătorul [TARGET] a ajuns [/TARGET] la munte în aceeași zi.",
+    "expected_label": "BEFORE",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  },
+  {
+    "model_id": "timebank_tlink_ro_structured",
+    "id": "free-ro-after-link",
+    "text": "From: a părăsit\nFrom context: Mara [TARGET] a părăsit [/TARGET] satul.\nSignal: după\nTo: s-a întors\nTo context: Ea [TARGET] s-a întors [/TARGET] acasă două zile mai târziu.",
+    "expected_label": "AFTER",
+    "observation": "Recorded regression behavior on original authored free text; not an adjudicated correctness assertion."
+  }
+]

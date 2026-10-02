@@ -1,0 +1,9 @@
+bin/
+obj/
+*.log
+node_modules/
+.npm-cache/
+qa/
+test-results/
+playwright-report/
+tests/

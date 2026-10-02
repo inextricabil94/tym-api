@@ -1,0 +1,97 @@
+{
+  "status": "clustered",
+  "task": "exploratory_unlabeled_text_clustering",
+  "algorithm": "ML.NET K-Means over FeaturizeText n-gram features",
+  "language": "ro",
+  "rows": 5213,
+  "document_count": 14,
+  "cluster_count": 8,
+  "trainer_threads": 1,
+  "metrics": {
+    "average_distance": 0.9019,
+    "davies_bouldin_index": 6.3917
+  },
+  "clusters": [
+    {
+      "cluster_id": 1,
+      "rows": 635,
+      "average_distance": 0.8186,
+      "examples": [
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00076",
+        "book:ro:morometii-vol-1-marin-preda:morometii-vol-1-marin-preda:00001",
+        "book:ro:morometii-vol-1-marin-preda:morometii-vol-1-marin-preda:00003"
+      ]
+    },
+    {
+      "cluster_id": 2,
+      "rows": 763,
+      "average_distance": 0.8799,
+      "examples": [
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00012",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00018",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00028"
+      ]
+    },
+    {
+      "cluster_id": 3,
+      "rows": 776,
+      "average_distance": 0.8754,
+      "examples": [
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00001",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00002",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00003"
+      ]
+    },
+    {
+      "cluster_id": 4,
+      "rows": 1017,
+      "average_distance": 0.9674,
+      "examples": [
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00021",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00066",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00072"
+      ]
+    },
+    {
+      "cluster_id": 5,
+      "rows": 647,
+      "average_distance": 0.9291,
+      "examples": [
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00046",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00071",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00119"
+      ]
+    },
+    {
+      "cluster_id": 6,
+      "rows": 574,
+      "average_distance": 0.9589,
+      "examples": [
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00006",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00009",
+        "book:ro:20000-de-leghe-sub-mari-jules-verne:20000-de-leghe-sub-mari-jules-verne:00017"
+      ]
+    },
+    {
+      "cluster_id": 7,
+      "rows": 548,
+      "average_distance": 0.8262,
+      "examples": [
+        "book:ro:camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi:i2-diagonalele-unui-testament:00016",
+        "book:ro:camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi:i4-asta-i-rochia-albastra:00009",
+        "book:ro:camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi:i5-intre-oglinzi-paralele:00026"
+      ]
+    },
+    {
+      "cluster_id": 8,
+      "rows": 253,
+      "average_distance": 0.9614,
+      "examples": [
+        "book:ro:morometii-vol-2-marin-preda:morometii-vol-2-marin-preda:00439",
+        "book:ro:shogun-2-james-clavell:shogun-2-james-clavell:00181",
+        "book:ro:tinutul-blanurilor-vol2-jules-verne:tinutul-blanurilor-vol2-jules-verne:00067"
+      ]
+    }
+  ],
+  "interpretation": "Clusters are unlabeled lexical groupings for analyst inspection. Cluster IDs are not TYM labels and are not accuracy results."
+}

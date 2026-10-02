@@ -1,0 +1,193 @@
+{
+  "archive": "Ro-TimeBank.zip",
+  "archive_sha256": "6aa0ba361274b2f13a60e9da0c883c380fe0e959297ef86862a91ff3f499d878",
+  "archive_documents": 183,
+  "documents": 157,
+  "output_rows": 20151,
+  "excluded_documents": [
+    {
+      "document_id": "wsj_0159_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0173_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0184_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0329_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0346_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0570_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0575_ro",
+      "reason": "Untranslated English body passages"
+    },
+    {
+      "document_id": "wsj_0583_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0584_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0585_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0612_ro",
+      "reason": "Untranslated English body passages"
+    },
+    {
+      "document_id": "wsj_0662_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0670_ro",
+      "reason": "Untranslated English body passages"
+    },
+    {
+      "document_id": "wsj_0685_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0695_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0810_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0928_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_0938_ro",
+      "reason": "Untranslated English body passages"
+    },
+    {
+      "document_id": "wsj_1003_ro",
+      "reason": "Untranslated English body passages"
+    },
+    {
+      "document_id": "wsj_1008_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_1013_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_1014_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_1033_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "wsj_1073_ro",
+      "reason": "Untranslated English body passage"
+    },
+    {
+      "document_id": "WSJ900813-0157_ro",
+      "reason": "Untranslated English body passages"
+    },
+    {
+      "document_id": "WSJ910225-0066_ro",
+      "reason": "Untranslated English body passage"
+    }
+  ],
+  "links_skipped_missing_endpoint": 0,
+  "links_skipped_ambiguous_signal": 1,
+  "tasks": {
+    "timebank_event_class": {
+      "rows": 5947,
+      "labels": {
+        "OCCURRENCE": 3090,
+        "STATE": 855,
+        "I_STATE": 430,
+        "REPORTING": 786,
+        "ASPECTUAL": 208,
+        "PERCEPTION": 29,
+        "I_ACTION": 549
+      }
+    },
+    "timebank_event_tense": {
+      "rows": 5920,
+      "labels": {
+        "PRESENT": 1024,
+        "NONE": 2075,
+        "PAST": 1680,
+        "FUTURE": 213,
+        "INFINITIVE": 562,
+        "PRESPART": 253,
+        "PASTPART": 113
+      }
+    },
+    "timebank_timex_type": {
+      "rows": 1144,
+      "labels": {
+        "DATE": 937,
+        "DURATION": 139,
+        "TIME": 57,
+        "SET": 11
+      }
+    },
+    "timebank_tlink": {
+      "rows": 4808,
+      "labels": {
+        "BEFORE": 1059,
+        "INCLUDES": 457,
+        "IS_INCLUDED": 1033,
+        "SIMULTANEOUS": 504,
+        "AFTER": 639,
+        "DURING": 221,
+        "ENDS": 60,
+        "BEGINS": 47,
+        "IBEFORE": 23,
+        "IDENTITY": 545,
+        "ENDED_BY": 135,
+        "BEGUN_BY": 53,
+        "DURING_INV": 1,
+        "IAFTER": 31
+      }
+    },
+    "timebank_slink": {
+      "rows": 2133,
+      "labels": {
+        "MODAL": 905,
+        "FACTIVE": 286,
+        "EVIDENTIAL": 877,
+        "CONDITIONAL": 33,
+        "COUNTER_FACTIVE": 27,
+        "NEG_EVIDENTIAL": 5
+      }
+    },
+    "timebank_alink": {
+      "rows": 199,
+      "labels": {
+        "INITIATES": 68,
+        "CONTINUES": 49,
+        "TERMINATES": 42,
+        "CULMINATES": 26,
+        "REINITIATES": 14
+      }
+    }
+  },
+  "provenance": "provided_annotation/adjudication_unknown",
+  "label_families": "ISO-TimeML tasks; separate from TYM",
+  "importer": "C#/.NET offline XML conversion; no external DTD resolution"
+}

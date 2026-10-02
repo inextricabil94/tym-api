@@ -1,0 +1,62 @@
+[
+  {
+    "model_id": "timebank_alink_ro_structured",
+    "id": "free-ro-initiation",
+    "expected_label": "INITIATES"
+  },
+  {
+    "model_id": "timebank_alink_ro_structured",
+    "id": "free-ro-continuation",
+    "expected_label": "CONTINUES"
+  },
+  {
+    "model_id": "timebank_event_class_ro_structured",
+    "id": "free-ro-event-state",
+    "expected_label": "OCCURRENCE"
+  },
+  {
+    "model_id": "timebank_event_class_ro_structured",
+    "id": "free-ro-event-opinion",
+    "expected_label": "I_STATE"
+  },
+  {
+    "model_id": "timebank_event_tense_ro_structured",
+    "id": "free-ro-future",
+    "expected_label": "FUTURE"
+  },
+  {
+    "model_id": "timebank_event_tense_ro_structured",
+    "id": "free-ro-past",
+    "expected_label": "PAST"
+  },
+  {
+    "model_id": "timebank_slink_ro_structured",
+    "id": "free-ro-modal-link",
+    "expected_label": "MODAL"
+  },
+  {
+    "model_id": "timebank_slink_ro_structured",
+    "id": "free-ro-evidential-link",
+    "expected_label": "MODAL"
+  },
+  {
+    "model_id": "timebank_timex_type_ro_structured",
+    "id": "free-ro-date",
+    "expected_label": "DATE"
+  },
+  {
+    "model_id": "timebank_timex_type_ro_structured",
+    "id": "free-ro-duration",
+    "expected_label": "DURATION"
+  },
+  {
+    "model_id": "timebank_tlink_ro_structured",
+    "id": "free-ro-before-link",
+    "expected_label": "BEFORE"
+  },
+  {
+    "model_id": "timebank_tlink_ro_structured",
+    "id": "free-ro-after-link",
+    "expected_label": "AFTER"
+  }
+]

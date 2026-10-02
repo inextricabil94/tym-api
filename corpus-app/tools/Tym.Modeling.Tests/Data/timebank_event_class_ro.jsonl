@@ -1,0 +1,2 @@
+{"id": "free-ro-event-state", "text": "Context: Mara [TARGET] a aflat [/TARGET] vestea și a zâmbit.\nEvent: a aflat", "expected_label": "OCCURRENCE"}
+{"id": "free-ro-event-opinion", "text": "Context: [TARGET] Cred [/TARGET] că drumul va fi lung.\nEvent: Cred", "expected_label": "I_STATE"}

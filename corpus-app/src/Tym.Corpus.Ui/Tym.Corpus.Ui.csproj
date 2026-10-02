@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+  <Target Name="CompileTypeScript" BeforeTargets="BeforeBuild" Condition="'$(SkipTypeScriptBuild)' != 'true'">
+    <Exec Command="npm run build" />
+  </Target>
+</Project>

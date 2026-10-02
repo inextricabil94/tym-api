@@ -1,0 +1,97 @@
+{
+  "status": "clustered",
+  "task": "exploratory_unlabeled_text_clustering",
+  "algorithm": "ML.NET K-Means over FeaturizeText n-gram features",
+  "language": "en",
+  "rows": 446,
+  "document_count": 1,
+  "cluster_count": 8,
+  "trainer_threads": 1,
+  "metrics": {
+    "average_distance": 0.7985,
+    "davies_bouldin_index": 5.1398
+  },
+  "clusters": [
+    {
+      "cluster_id": 1,
+      "rows": 60,
+      "average_distance": 0.8142,
+      "examples": [
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00020",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00022",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00024"
+      ]
+    },
+    {
+      "cluster_id": 2,
+      "rows": 66,
+      "average_distance": 0.7418,
+      "examples": [
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00007",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00025",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00026"
+      ]
+    },
+    {
+      "cluster_id": 3,
+      "rows": 111,
+      "average_distance": 0.8099,
+      "examples": [
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00001",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00002",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00003"
+      ]
+    },
+    {
+      "cluster_id": 4,
+      "rows": 33,
+      "average_distance": 0.6503,
+      "examples": [
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00023",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00027",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00038"
+      ]
+    },
+    {
+      "cluster_id": 5,
+      "rows": 17,
+      "average_distance": 0.7978,
+      "examples": [
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00017",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00074",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00111"
+      ]
+    },
+    {
+      "cluster_id": 6,
+      "rows": 49,
+      "average_distance": 0.9328,
+      "examples": [
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00032",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00037",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00039"
+      ]
+    },
+    {
+      "cluster_id": 7,
+      "rows": 46,
+      "average_distance": 0.904,
+      "examples": [
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00021",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00106",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00114"
+      ]
+    },
+    {
+      "cluster_id": 8,
+      "rows": 64,
+      "average_distance": 0.7209,
+      "examples": [
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00005",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00006",
+        "book:en:map-of-the-invisible-world-tash-aw:map-of-the-invisible-world-tash-aw:00008"
+      ]
+    }
+  ],
+  "interpretation": "Clusters are unlabeled lexical groupings for analyst inspection. Cluster IDs are not TYM labels and are not accuracy results."
+}

@@ -1,0 +1,271 @@
+{
+  "archive_sha256": "cfdc4331d6a7f293f1700a3eebaeefae279cc2323b82c06cfd16e127a0586ef3",
+  "importer": "C#/.NET",
+  "corpora": [
+    {
+      "language": "ro",
+      "passages": 5213,
+      "documents": 14,
+      "source_files": 26,
+      "characters": 8663658,
+      "exact_duplicate_passages_skipped": 0,
+      "sources": [
+        {
+          "source": "Books/20000 de leghe sub mari - Jules Verne.txt",
+          "document_id": "20000-de-leghe-sub-mari-jules-verne",
+          "chapter_id": "20000-de-leghe-sub-mari-jules-verne",
+          "encoding": "utf-8-sig",
+          "bytes": 794435,
+          "sha256": "0a5c08f538fe58aa116d5f33a3ea87e6e42c60c7e45e6ee3c8029eead57f4ee4",
+          "passages": 471
+        },
+        {
+          "source": "Books/Arta tacerii - B. Blanchard.txt",
+          "document_id": "arta-tacerii-b-blanchard",
+          "chapter_id": "arta-tacerii-b-blanchard",
+          "encoding": "utf-8-sig",
+          "bytes": 114544,
+          "sha256": "7c2e5160f7aaff0bc6c881f83e815d2f16d3a11bd67d59ac65a82e5a4e29f376",
+          "passages": 74
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/I1 - La Piatra Craiului, in munte.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "i1-la-piatra-craiului-in-munte",
+          "encoding": "cp1250",
+          "bytes": 23842,
+          "sha256": "a24a952c781a02935905a9ef52ea72d5b8546d46a2e23d23f174b4c069d247a6",
+          "passages": 10
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/I2 - Diagonalele unui testament.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "i2-diagonalele-unui-testament",
+          "encoding": "cp1250",
+          "bytes": 82435,
+          "sha256": "68a5ecf3b17f6c19ff48b2e068c83cffaf34b741691cef817940d406a8920439",
+          "passages": 34
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/I3 - E tot filozofie.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "i3-e-tot-filozofie",
+          "encoding": "cp1250",
+          "bytes": 84621,
+          "sha256": "95dc5962a4f103795a63e883bfdcc1cc7e9c9329775394ce8b2c2f13c168b04b",
+          "passages": 36
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/I4 - Asta-i rochia albastra.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "i4-asta-i-rochia-albastra",
+          "encoding": "cp1250",
+          "bytes": 38949,
+          "sha256": "ca53f1e920888ed16360fd110f466988c5ed28acfe44472821376c06eb8a009e",
+          "passages": 16
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/I5 - Intre oglinzi paralele.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "i5-intre-oglinzi-paralele",
+          "encoding": "cp1250",
+          "bytes": 61862,
+          "sha256": "653e47d374124336f090829e0442baa270c140d0e63a447e3663cb4a777ae384",
+          "passages": 26
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/I6 - Ultima noapte de dragoste.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "i6-ultima-noapte-de-dragoste",
+          "encoding": "cp1250",
+          "bytes": 88444,
+          "sha256": "68df14aaa572fecf2eb71e80c1e67c853953f1378612d65aa5cbc5735b03c86f",
+          "passages": 37
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/II1 - Intaia noapte de razboi.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "ii1-intaia-noapte-de-razboi",
+          "encoding": "cp1250",
+          "bytes": 56883,
+          "sha256": "2e62597fc1b25bd6b7ba3daa976463989b1e73b71ebff6710fe4822f8392db20",
+          "passages": 23
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/II2 - Fata cu obraz verde, la Vulcan.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "ii2-fata-cu-obraz-verde-la-vulcan",
+          "encoding": "cp1250",
+          "bytes": 9305,
+          "sha256": "ba88085b66e94ed7120a1e5e9af5642ea589f50fce4bc7d5e5d3cc1f5f0ae601",
+          "passages": 4
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/II3 - Intamplari pe apa Oltului.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "ii3-intamplari-pe-apa-oltului",
+          "encoding": "cp1250",
+          "bytes": 19916,
+          "sha256": "d7b45007063a79d52587a3c02abcccb24831db4f41e10b19d18f8846073091dc",
+          "passages": 8
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/II4 - Ne-a acoperit pamantul lui Dumnezeu.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "ii4-ne-a-acoperit-pamantul-lui-dumnezeu",
+          "encoding": "cp1250",
+          "bytes": 41047,
+          "sha256": "b0943c0d31104a2d5fd54ce53590559f9ec39438c8ed252d05de6c1213ae588d",
+          "passages": 17
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/II5 - Post inaintat la Cohalm.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "ii5-post-inaintat-la-cohalm",
+          "encoding": "cp1250",
+          "bytes": 46690,
+          "sha256": "db47e5189731e2a0d9e325402a7e96e254e7833558d7b849e0d2ffd4bde08d94",
+          "passages": 19
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/II6 - Wer kann Rumanien retten.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "ii6-wer-kann-rumanien-retten",
+          "encoding": "cp1250",
+          "bytes": 52064,
+          "sha256": "49d5edf3d43a474b1911a4ce57497ccbd99b56257156e525f3d76da1d94a646e",
+          "passages": 21
+        },
+        {
+          "source": "Books/Camil Petrescu - Ultima noapte de dragoste, intaia noapte de razboi/II7 - Comunicat apocrif.txt",
+          "document_id": "camil-petrescu-ultima-noapte-de-dragoste-intaia-noapte-de-razboi",
+          "chapter_id": "ii7-comunicat-apocrif",
+          "encoding": "cp1250",
+          "bytes": 22702,
+          "sha256": "ac014e6313c4cf7bcb9433c13ba8c5f972fe51fea38b2f8daef7ae5aa46d9069",
+          "passages": 10
+        },
+        {
+          "source": "Books/Morometii - vol.1 - Marin Preda.txt",
+          "document_id": "morometii-vol-1-marin-preda",
+          "chapter_id": "morometii-vol-1-marin-preda",
+          "encoding": "utf-8-sig",
+          "bytes": 861687,
+          "sha256": "6269ace1bd7a8c4996b3a3f5431fa964c32755ae0e58a522f7ca1ddda2fbf2e5",
+          "passages": 490
+        },
+        {
+          "source": "Books/Morometii - vol.2 - Marin-Preda.txt",
+          "document_id": "morometii-vol-2-marin-preda",
+          "chapter_id": "morometii-vol-2-marin-preda",
+          "encoding": "utf-8-sig",
+          "bytes": 1185186,
+          "sha256": "3e2bcc34e28f70924aba35326d5052c5e0e11ef4778a10f82305725b088c4ee3",
+          "passages": 686
+        },
+        {
+          "source": "Books/Shogun 1 - James Clavell.txt",
+          "document_id": "shogun-1-james-clavell",
+          "chapter_id": "shogun-1-james-clavell",
+          "encoding": "utf-8-sig",
+          "bytes": 1458225,
+          "sha256": "62761a6cedc23a0555a70f782b5c84bd8109600eb3293d737fbf662e255be299",
+          "passages": 838
+        },
+        {
+          "source": "Books/Shogun 2 - James Clavell.txt",
+          "document_id": "shogun-2-james-clavell",
+          "chapter_id": "shogun-2-james-clavell",
+          "encoding": "utf-8-sig",
+          "bytes": 1409815,
+          "sha256": "b9dd51f339a3a26d243075fe7f6ebff43b7eacb6d2c0e23b57e52e7b4c1f8a5d",
+          "passages": 795
+        },
+        {
+          "source": "Books/Tinutul blanurilor - vol2 - Jules Verne.txt",
+          "document_id": "tinutul-blanurilor-vol2-jules-verne",
+          "chapter_id": "tinutul-blanurilor-vol2-jules-verne",
+          "encoding": "utf-8-sig",
+          "bytes": 404920,
+          "sha256": "28770744d421dd40d9816e8baea42f220ae92f36838e273ee0a6e4cfd7b98d7a",
+          "passages": 244
+        },
+        {
+          "source": "Books/Tinutul blanurilor vol.1 - Jules Verne.txt",
+          "document_id": "tinutul-blanurilor-vol-1-jules-verne",
+          "chapter_id": "tinutul-blanurilor-vol-1-jules-verne",
+          "encoding": "utf-8-sig",
+          "bytes": 400766,
+          "sha256": "26ff93e7944d71199f21c61a2b232c736a7619ae2bca2b1965afdbb679702762",
+          "passages": 250
+        },
+        {
+          "source": "Books/Ultima sansa - Arthur Hailey.txt",
+          "document_id": "ultima-sansa-arthur-hailey",
+          "chapter_id": "ultima-sansa-arthur-hailey",
+          "encoding": "utf-8-sig",
+          "bytes": 619511,
+          "sha256": "b30a341eab8654c9b87fea149f62a4665352ddf1de47f2ee041be0c7d933d857",
+          "passages": 354
+        },
+        {
+          "source": "Books/Un colind de Craciun - Charles Dickens.txt",
+          "document_id": "un-colind-de-craciun-charles-dickens",
+          "chapter_id": "un-colind-de-craciun-charles-dickens",
+          "encoding": "utf-8-sig",
+          "bytes": 176630,
+          "sha256": "092c447a97dfea19f2e75538e82779147cb8e3b05c936b9a261b0e1bdaa392a1",
+          "passages": 105
+        },
+        {
+          "source": "Books/Uniforme de general - Mircea Eliade.txt",
+          "document_id": "uniforme-de-general-mircea-eliade",
+          "chapter_id": "uniforme-de-general-mircea-eliade",
+          "encoding": "utf-8-sig",
+          "bytes": 112932,
+          "sha256": "7f39677a6ca06b64dc4fede6d44f93b5d8368fd8c9aa08c940432a52621c9791",
+          "passages": 63
+        },
+        {
+          "source": "Books/Zeii insisi - Isaac Asimov.txt",
+          "document_id": "zeii-insisi-isaac-asimov",
+          "chapter_id": "zeii-insisi-isaac-asimov",
+          "encoding": "utf-8-sig",
+          "bytes": 492948,
+          "sha256": "fb4bd3459adf4d0dfa4fa01c710b1761187728c05e1403ee9a27e7b2f028b1a8",
+          "passages": 274
+        },
+        {
+          "source": "Harta lumii nevazute - Tash Aw.txt",
+          "document_id": "harta-lumii-nevazute-tash-aw",
+          "chapter_id": "harta-lumii-nevazute-tash-aw",
+          "encoding": "utf-8-sig",
+          "bytes": 722762,
+          "sha256": "05466c3d9c2b790bac2fe863ca586e31e285eb281b7f23fcf35ef80752a7f5b2",
+          "passages": 308
+        }
+      ],
+      "provenance": "unlabeled_user_provided; no supervised or gold-label claim"
+    },
+    {
+      "language": "en",
+      "passages": 446,
+      "documents": 1,
+      "source_files": 1,
+      "characters": 667354,
+      "exact_duplicate_passages_skipped": 0,
+      "sources": [
+        {
+          "source": "Map of the Invisible World - Tash Aw.txt",
+          "document_id": "map-of-the-invisible-world-tash-aw",
+          "chapter_id": "map-of-the-invisible-world-tash-aw",
+          "encoding": "utf-8-sig",
+          "bytes": 687231,
+          "sha256": "598c77cc63927ca546f42a3b67f2ad00ab24fb391eee39b4dbd3275bd4a094f0",
+          "passages": 446
+        }
+      ],
+      "provenance": "unlabeled_user_provided; no supervised or gold-label claim"
+    }
+  ]
+}

@@ -353,3 +353,7 @@ The comparison suite in [pocs/nlp-framework-comparison](pocs/nlp-framework-compa
 - current saved .NET API output
 
 See [poc_report.md](pocs/nlp-framework-comparison/results/poc_report.md) for the generated statistics and [llm_considerations.md](pocs/nlp-framework-comparison/llm_considerations.md) for where an optional LLM layer would fit.
+
+## Separate corpus project checkpoint
+
+The independent .NET 10 / ML.NET + TypeScript solution is saved in [corpus-app](corpus-app/README.md) on `codex/tym-corpus-research`. It contains source, tests and sanitized research reports. See [continuation checkpoint](corpus-app/docs/continuation-checkpoint.md) for completed evidence and remaining artifact/deployment work. Raw books and trained weights remain private.
