@@ -6,6 +6,10 @@ The catalog contains sixteen classifiers: ten whole-text baselines and six struc
 
 Read [the architecture review](docs/architecture-review.md) for source papers, licenses, implementation scope and evaluation decisions, and [the session record](docs/research-session.md) for the run history. [Aggregate results](docs/results/) contain counts, metrics and model metadata without book prose.
 
+## Published release
+
+The final UI is live at [TYM Corpus Lab](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/), with the [corpus API](https://tym-corpus-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/) serving sixteen verified classifiers. Download the [updated research PDF](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf) and [editable PowerPoint](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/TYM_MLNET_Updated_Results_20261002.pptx). Both downloads match the visually reviewed local artifacts by SHA-256. See [final release evidence](docs/results/final-release.json) and [artifact verification](docs/results/published-artifacts.json).
+
 ## Requirements and build
 
 Use the .NET 10 SDK, Node.js/npm for the frontend, and Docker or Azure CLI for deployment. The committed package lock pins TypeScript 5.9.3 and the browser-test dependencies.
@@ -13,12 +17,12 @@ Use the .NET 10 SDK, Node.js/npm for the frontend, and Docker or Azure CLI for d
 From this project's directory:
 
 ```powershell
-dotnet build Tym.Corpus.sln
 Push-Location src/Tym.Corpus.Ui
 npm ci
 npm run typecheck
 npm run build
 Pop-Location
+dotnet build Tym.Corpus.sln -c Release
 ```
 
 TypeScript builds `client/app.ts` and `client/workbench.ts` into `wwwroot/app.js` with strict checking and `noEmitOnError`. Build the frontend before launching the UI or preparing deployment contexts.
@@ -126,6 +130,7 @@ At the current .NET verification checkpoint, 70 API, 31 baseline modeling and 22
 Frontend commands:
 
 ```powershell
+dotnet build Tym.Corpus.sln -c Release
 Push-Location src/Tym.Corpus.Ui
 npm run typecheck
 npm run build
@@ -133,7 +138,7 @@ npm run test:ui
 Pop-Location
 ```
 
-Browser tests are a separate verification step. Private book browser checks require the harness's private sample configuration and must not publish excerpts, screenshots or traces containing book prose.
+The final browser checkpoint passed 18 distinct checks: 16 local checks (including five private Books.zip excerpts) and two public smoke checks using original authored text. See [the recorded summary](docs/results/ui-test-summary.json). Browser tests are a separate verification step. Private book browser checks require the harness's private sample configuration and must not publish excerpts, screenshots or traces containing book prose.
 
 ## Docker and Azure CLI
 
@@ -151,5 +156,5 @@ The deployment script uses Azure CLI's ACR remote Docker builder and separate AP
 ./deploy/Deploy-Azure.ps1 -SubscriptionId 'YOUR-SUBSCRIPTION-ID' -ResourceGroup 'YOUR-RESOURCE-GROUP' -EnvironmentName 'YOUR-CONTAINER-APP-ENVIRONMENT' -RegistryName 'YOUR-ACR-NAME' -ContextPath C:\private\tym\docker-context-new -ImageTag 'research-20261002' -ReportPath C:\private\tym\deployment.json
 ```
 
-API containers use `TYM_CORPUS_MODEL_DIR=/app/models`; UI containers receive the API's HTTPS URL in `TYM_API_BASE_URL`. Deployment reporting distinguishes provisioning from subsequent external readiness/prediction/browser verification. No new public URL is claimed by this README before that verification.
+API containers use `TYM_CORPUS_MODEL_DIR=/app/models`; UI containers receive the API's HTTPS URL in `TYM_API_BASE_URL`. Deployment reporting distinguishes provisioning from subsequent external readiness/prediction/browser verification. The published release above passed those external checks.
 

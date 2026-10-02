@@ -1,0 +1,16 @@
+{
+  "verified_utc": "2026-10-02T19:53:47.4817075+00:00",
+  "total_unique_tests": 18,
+  "passed": 18,
+  "failed": 0,
+  "local_tests": 16,
+  "public_tests": 2,
+  "private_book_samples": 5,
+  "public_input": "original authored prose only",
+  "private_input_destination": "localhost only",
+  "ui_url": "https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io",
+  "initial_public_probe": "First attempt exceeded the combined 60-second startup test budget. Rerun with separate bounded HTTPS/catalog startup allowances passed both smoke cases.",
+  "final_public_revision": "tym-corpus-ui-serban--0000001",
+  "final_public_manual_annotation_validation": "passed",
+  "final_probe_environment": "A restricted-network attempt was denied before navigation; the authorized network rerun passed both tests."
+}

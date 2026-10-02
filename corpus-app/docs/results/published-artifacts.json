@@ -1,0 +1,23 @@
+{
+  "verified_utc": "2026-10-02T19:52:09.2340078+00:00",
+  "assets": [
+    {
+      "name": "Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf",
+      "url": "https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf",
+      "status": 200,
+      "content_type": "application/pdf",
+      "bytes": 139409,
+      "sha256": "ccc632972f9d475af05f7187ddb906365805151eb596a89a504cc8b6bf69e86c",
+      "matches_reviewed_file": true
+    },
+    {
+      "name": "TYM_MLNET_Updated_Results_20261002.pptx",
+      "url": "https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/TYM_MLNET_Updated_Results_20261002.pptx",
+      "status": 200,
+      "content_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "bytes": 71451,
+      "sha256": "b84aec25fd3fdc5a31716c8a58f28a104ecbd4d17fb0427f02d5b422348ec7d1",
+      "matches_reviewed_file": true
+    }
+  ]
+}

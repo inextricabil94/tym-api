@@ -1,0 +1,12 @@
+{
+  "suite": "local TypeScript UI",
+  "passed": 16,
+  "failed": 0,
+  "skipped": 2,
+  "private_books": 5,
+  "private_data_destination": "localhost only",
+  "screenshots_traces_video": "disabled",
+  "manual_source_annotations_with_full_provenance": "passed",
+  "synthetic_flows": 9,
+  "live_local_flows": 7
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "file": "standalone-api-tests.trx",
+    "total": 70,
+    "passed": 70,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "file": "standalone-modeling-tests.trx",
+    "total": 31,
+    "passed": 31,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "file": "private-book-data-tests.trx",
+    "total": 22,
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0
+  }
+]
