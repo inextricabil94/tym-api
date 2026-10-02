@@ -1,0 +1,2 @@
+{"id": "free-ro-modal-link", "text": "From: crede\nFrom context: Mara [TARGET] crede [/TARGET] că drumul va fi lung.\nSignal: că\nTo: va fi\nTo context: Mara crede că drumul [TARGET] va fi [/TARGET] lung.", "expected_label": "MODAL"}
+{"id": "free-ro-evidential-link", "text": "From: știa\nFrom context: El [TARGET] știa [/TARGET] că trenul întârziase.\nSignal: că\nTo: întârziase\nTo context: El știa că trenul [TARGET] întârziase [/TARGET].", "expected_label": "EVIDENTIAL"}

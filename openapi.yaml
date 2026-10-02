@@ -6,6 +6,61 @@ info:
 servers:
   - url: http://127.0.0.1:8765
 paths:
+  /v1/models:
+    get:
+      operationId: getCorpusModels
+      summary: List configured corpus classifiers and training provenance
+      responses:
+        "200":
+          description: Model catalog with availability, task, language, training row counts and label sets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [models]
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CorpusModel"
+  /v1/predictions:
+    post:
+      operationId: predictCorpusLabel
+      summary: Predict one label with a selected corpus-trained ML.NET classifier
+      description: Exploratory inference only. TYM and ISO-TimeML label families remain separate. TimeBank inputs use explicit target markers and endpoint contexts as shown in the UI examples.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model_id, text]
+              properties:
+                model_id:
+                  type: string
+                  description: An available model_id from GET /v1/models
+                  example: segment_type_en
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 50000
+      responses:
+        "200":
+          description: Model output and training provenance, without an accuracy claim
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/CorpusModel"
+                  - type: object
+                    required: [predicted_label]
+                    properties:
+                      predicted_label:
+                        type: string
+        "400":
+          description: Unknown model or invalid input text
+        "503":
+          description: Selected model artifact is not configured
   /:
     get:
       operationId: getServiceInfo
@@ -121,6 +176,30 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
+    CorpusModel:
+      type: object
+      required: [model_id, training_rows, labels, source_types, research_limit]
+      properties:
+        model_id:
+          type: string
+        task:
+          type: string
+        language:
+          type: string
+        available:
+          type: boolean
+        training_rows:
+          type: [integer, "null"]
+        labels:
+          type: array
+          items:
+            type: string
+        source_types:
+          type: array
+          items:
+            type: string
+        research_limit:
+          type: string
     DiagramRequest:
       type: object
       required:

@@ -1,0 +1,2 @@
+{"id": "free-ro-before-link", "text": "From: a plecat\nFrom context: Mara [TARGET] a plecat [/TARGET] din oraș înainte de răsărit.\nSignal: înainte\nTo: a ajuns\nTo context: Călătorul [TARGET] a ajuns [/TARGET] la munte în aceeași zi.", "expected_label": "AFTER"}
+{"id": "free-ro-after-link", "text": "From: a părăsit\nFrom context: Mara [TARGET] a părăsit [/TARGET] satul.\nSignal: după\nTo: s-a întors\nTo context: Ea [TARGET] s-a întors [/TARGET] acasă două zile mai târziu.", "expected_label": "AFTER"}

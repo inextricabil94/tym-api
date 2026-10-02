@@ -78,6 +78,14 @@ The next meaningful comparison should be document-grouped and should keep each s
 
 The current sample is suitable for checking XML ingestion, API schema mapping, and an initial model-training path. Before a conference claim, expand to many independently sourced works with explicit rights, independent annotations, adjudication, and untouched held-out works/authors.
 
+## Unlabeled book expansion (2 October 2026)
+
+The later `hln_ro.xml` and `motiw_en.xml` attachments are semantically identical to the corresponding `varianta` XMLs after safe parsing, so the training set remains 1,515 rows. Counting both copies would duplicate every example. The later filenames are now the authoritative source names for the private import.
+
+`Books.zip` contains 25 raw Romanian text files and no annotation or license file. Together with the standalone Romanian Tash Aw text, deterministic chunking produced 5,213 unlabeled passages from 26 source files grouped as 14 documents. The standalone English Tash Aw text produced 446 passages from one document. ML.NET `FeaturizeText` plus K-Means trained separate eight-cluster exploratory models. Romanian average centroid distance was 0.9019 with a Davies-Bouldin index of 6.3917; English values were 0.7985 and 5.1398. These values describe the fitted lexical partitions only and are not accuracy or TYM quality scores.
+
+The raw Tash Aw files do not reproduce the annotation offsets: none of the supplied TS spans directly selects its XML segment text in the separately supplied raw files. Consequently, the raw books support unlabeled discovery and coverage analysis, while span evaluation requires a reconciled text edition. The private run keeps book text, JSONL passages, assignments, and cluster weights outside Git and Azure until rights for derivative model distribution are confirmed.
+
 ## Related work and technical references
 
 - Forăscu & Tufiș (2012), [Romanian TimeBank: An Annotated Parallel Corpus for Temporal Information](https://aclanthology.org/L12-1451/).

@@ -1,0 +1,32 @@
+{
+  "archive_sha256": "6aa0ba361274b2f13a60e9da0c883c380fe0e959297ef86862a91ff3f499d878",
+  "review_note": "Conservative document quarantine for verified untranslated English body passages in this supplied Ro-TimeBank archive. Sentence ordinals are 1-based root.iter('s') order. This excludes the whole mixed document, including its Romanian passages, to keep link contexts in one language.",
+  "documents": [
+    {"document_id":"WSJ900813-0157_ro","reason":"Untranslated English body passages","sentence_ordinals":[22,36]},
+    {"document_id":"WSJ910225-0066_ro","reason":"Untranslated English body passage","sentence_ordinals":[5]},
+    {"document_id":"wsj_0159_ro","reason":"Untranslated English body passage","sentence_ordinals":[8]},
+    {"document_id":"wsj_0173_ro","reason":"Untranslated English body passage","sentence_ordinals":[3]},
+    {"document_id":"wsj_0184_ro","reason":"Untranslated English body passage","sentence_ordinals":[8]},
+    {"document_id":"wsj_0329_ro","reason":"Untranslated English body passage","sentence_ordinals":[1]},
+    {"document_id":"wsj_0346_ro","reason":"Untranslated English body passage","sentence_ordinals":[1]},
+    {"document_id":"wsj_0570_ro","reason":"Untranslated English body passage","sentence_ordinals":[13]},
+    {"document_id":"wsj_0575_ro","reason":"Untranslated English body passages","sentence_ordinals":[10,36]},
+    {"document_id":"wsj_0583_ro","reason":"Untranslated English body passage","sentence_ordinals":[8]},
+    {"document_id":"wsj_0584_ro","reason":"Untranslated English body passage","sentence_ordinals":[20]},
+    {"document_id":"wsj_0585_ro","reason":"Untranslated English body passage","sentence_ordinals":[41]},
+    {"document_id":"wsj_0612_ro","reason":"Untranslated English body passages","sentence_ordinals":[2,4]},
+    {"document_id":"wsj_0662_ro","reason":"Untranslated English body passage","sentence_ordinals":[1]},
+    {"document_id":"wsj_0670_ro","reason":"Untranslated English body passages","sentence_ordinals":[2,5]},
+    {"document_id":"wsj_0685_ro","reason":"Untranslated English body passage","sentence_ordinals":[1]},
+    {"document_id":"wsj_0695_ro","reason":"Untranslated English body passage","sentence_ordinals":[1]},
+    {"document_id":"wsj_0810_ro","reason":"Untranslated English body passage","sentence_ordinals":[14]},
+    {"document_id":"wsj_0928_ro","reason":"Untranslated English body passage","sentence_ordinals":[13]},
+    {"document_id":"wsj_0938_ro","reason":"Untranslated English body passages","sentence_ordinals":[5,22]},
+    {"document_id":"wsj_1003_ro","reason":"Untranslated English body passages","sentence_ordinals":[13,20]},
+    {"document_id":"wsj_1008_ro","reason":"Untranslated English body passage","sentence_ordinals":[2]},
+    {"document_id":"wsj_1013_ro","reason":"Untranslated English body passage","sentence_ordinals":[6]},
+    {"document_id":"wsj_1014_ro","reason":"Untranslated English body passage","sentence_ordinals":[16]},
+    {"document_id":"wsj_1033_ro","reason":"Untranslated English body passage","sentence_ordinals":[1]},
+    {"document_id":"wsj_1073_ro","reason":"Untranslated English body passage","sentence_ordinals":[1]}
+  ]
+}

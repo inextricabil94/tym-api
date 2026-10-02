@@ -1,0 +1,2 @@
+{"id": "free-ro-retrospective", "text": "Earlier segment: Mara a părăsit satul înainte de răsărit. Relation cue: ani mai târziu. Later segment: Ea și-a amintit călătoria.", "expected_label": "SIMULTANEOUS"}
+{"id": "free-ro-concurrent", "text": "Earlier segment: Ploaia s-a oprit. Relation cue: în același timp. Later segment: Feribotul a ajuns în port.", "expected_label": "SIMULTANEOUS"}

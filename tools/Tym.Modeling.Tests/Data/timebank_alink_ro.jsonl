@@ -1,0 +1,2 @@
+{"id": "free-ro-initiation", "text": "From: a început\nFrom context: Ploaia [TARGET] a început [/TARGET] să cadă.\nSignal: să\nTo: cadă\nTo context: Ploaia a început să [TARGET] cadă [/TARGET].", "expected_label": "INITIATES"}
+{"id": "free-ro-continuation", "text": "From: a continuat\nFrom context: Ea [TARGET] a continuat [/TARGET] să citească.\nSignal: să\nTo: citească\nTo context: Ea a continuat să [TARGET] citească [/TARGET].", "expected_label": "CONTINUES"}

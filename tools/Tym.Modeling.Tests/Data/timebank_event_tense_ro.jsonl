@@ -1,0 +1,2 @@
+{"id": "free-ro-future", "text": "Context: Mâine Mara [TARGET] va pleca [/TARGET] spre munte.\nEvent: va pleca", "expected_label": "FUTURE"}
+{"id": "free-ro-past", "text": "Context: Ieri Mara [TARGET] a terminat [/TARGET] cartea.\nEvent: a terminat", "expected_label": "PAST"}

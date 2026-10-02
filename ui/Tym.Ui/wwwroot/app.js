@@ -560,6 +560,7 @@ function App() {
         e('span', null, 'Narrative time analysis · inspect every source span')
       ),
       e('div', { className: 'topbar-actions' },
+        e('a', { href: '/predictions.html' }, 'Corpus predictions'),
         e('button', {
           className: 'theme-toggle',
           type: 'button',

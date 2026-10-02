@@ -8,6 +8,7 @@ using Microsoft.ML;
 using Microsoft.ML.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<CorpusPredictions>();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
@@ -33,6 +34,8 @@ app.MapGet("/", () => Results.Json(new
     {
         "GET /health",
         "GET /openapi.yaml",
+        "GET /v1/models",
+        "POST /v1/predictions",
         "POST /v1/diagrams",
         "POST /v1/diagrams/svg",
         "POST /v1/diagrams/xml"
@@ -40,6 +43,24 @@ app.MapGet("/", () => Results.Json(new
 }));
 
 app.MapGet("/health", () => Results.Json(new { ok = true, service = "tym-api", version = TymConstants.Version }));
+
+app.MapGet("/v1/models", (CorpusPredictions models) => Results.Json(new { models = models.Catalog() }));
+
+app.MapPost("/v1/predictions", (CorpusPredictionRequest request, CorpusPredictions models) =>
+{
+    if (!models.IsKnown(request.ModelId))
+    {
+        return Results.BadRequest(new ErrorResponse("Choose a model_id from GET /v1/models."));
+    }
+    if (string.IsNullOrWhiteSpace(request.Text) || request.Text.Length > 50000)
+    {
+        return Results.BadRequest(new ErrorResponse("Text must contain 1 to 50,000 characters."));
+    }
+    var prediction = models.Predict(request.ModelId!, request.Text);
+    return prediction is null
+        ? Results.Json(new ErrorResponse("The selected corpus model is not configured on this server."), statusCode: 503)
+        : Results.Json(prediction);
+});
 
 app.MapGet("/openapi.yaml", () =>
 {

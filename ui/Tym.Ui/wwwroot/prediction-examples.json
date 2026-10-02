@@ -1,0 +1,12 @@
+{
+  "segment_type_en": "Years after leaving home, Mara remembered the blue room and the letter her brother had left.",
+  "segment_type_ro": "Mult timp după ce a plecat de acasă, Mara și-a amintit de camera albastră și de scrisoarea pe care o lăsase fratele ei.",
+  "temporal_relation_en": "Earlier segment: Mara left the village before dawn. Relation cue: years later. Later segment: She remembered the journey.",
+  "temporal_relation_ro": "Earlier segment: Mara a părăsit satul înainte de răsărit. Relation cue: ani mai târziu. Later segment: Ea și-a amintit călătoria.",
+  "timebank_alink_ro": "From: a început\nFrom context: Ploaia [TARGET] a început [/TARGET] să cadă.\nSignal: să\nTo: cadă\nTo context: Ploaia a început să [TARGET] cadă [/TARGET].",
+  "timebank_event_class_ro": "Context: Mara [TARGET] a aflat [/TARGET] vestea și a zâmbit.\nEvent: a aflat",
+  "timebank_event_tense_ro": "Context: Mâine Mara [TARGET] va pleca [/TARGET] spre munte.\nEvent: va pleca",
+  "timebank_slink_ro": "From: crede\nFrom context: Mara [TARGET] crede [/TARGET] că drumul va fi lung.\nSignal: că\nTo: va fi\nTo context: Mara crede că drumul [TARGET] va fi [/TARGET] lung.",
+  "timebank_timex_type_ro": "Context: În [TARGET] primăvara trecută [/TARGET], Mara a sosit la Iași.\nTime expression: primăvara trecută",
+  "timebank_tlink_ro": "From: a plecat\nFrom context: Mara [TARGET] a plecat [/TARGET] din oraș înainte de răsărit.\nSignal: înainte\nTo: a ajuns\nTo context: Călătorul [TARGET] a ajuns [/TARGET] la munte în aceeași zi."
+}

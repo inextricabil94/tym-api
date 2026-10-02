@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TYM Corpus Predictions</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .prediction-page { max-width: 960px; margin: 38px auto; padding: 0 24px; }
+    .prediction-page h1 { font-size: 32px; margin-bottom: 12px; }
+    .prediction-page p { line-height: 1.6; }
+    .prediction-page label { display: block; margin: 22px 0 8px; font-weight: 650; }
+    .prediction-page select, .prediction-page textarea { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--panel); }
+    .prediction-page textarea { min-height: 210px; line-height: 1.6; }
+    .prediction-page button { padding: 12px 20px; margin: 16px 12px 8px 0; background: var(--accent); color: var(--accent-ink); border-radius: 6px; }
+    .prediction-page button:disabled { opacity: .6; cursor: default; }
+    .prediction-page a { color: var(--accent); }
+    #prediction-label { display: block; font-size: 32px; font-weight: 700; margin: 18px 0; }
+    #model-details, #status { color: var(--muted); }
+    #result { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <main class="prediction-page">
+    <a href="/">TYM diagram workspace</a>
+    <h1>Corpus predictions</h1>
+    <p>Try the English and Romanian TYM classifiers or the Romanian ISO-TimeML classifiers. Each model predicts one label for the input you provide.</p>
+    <label for="model">Trained model</label>
+    <select id="model" disabled><option>Loading models...</option></select>
+    <p id="model-details"></p>
+    <label for="text">Free text</label>
+    <textarea id="text" maxlength="50000" spellcheck="false"></textarea>
+    <p id="input-help"></p>
+    <button id="load-example" disabled>Load example</button>
+    <button id="predict" disabled>Predict label</button>
+    <p id="status" role="status" aria-live="polite"></p>
+    <section id="result" hidden>
+      <h2>Prediction</h2>
+      <output id="prediction-label"></output>
+      <p id="prediction-details"></p>
+    </section>
+    <p>These are exploratory models trained from supplied annotations. Independent accuracy has not been measured. TYM narrative labels and ISO-TimeML labels describe separate tasks.</p>
+    <h2>Updated research results</h2>
+    <p><a href="/results/Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf">PDF report</a> · <a href="/results/TYM_MLNET_Updated_Results_20261002.pptx">PowerPoint deck</a></p>
+  </main>
+  <script src="/config.js"></script>
+  <script src="/predictions.js"></script>
+</body>
+</html>

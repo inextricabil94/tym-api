@@ -32,6 +32,7 @@ internal static class Program
                 "train" => Train(options),
                 "evaluate" => Evaluate(options),
                 "cluster" => Cluster(options),
+                "predict" => Predict(options),
                 _ => throw new ArgumentException($"Unknown command '{args[0]}'.")
             };
         }
@@ -104,8 +105,11 @@ internal static class Program
             training_rows = selected.Count,
             labels = selected.Select(row => row.Label).Distinct(StringComparer.Ordinal).Order().ToArray(),
             source_types = selected.Select(row => row.SourceType).Distinct(StringComparer.Ordinal).Order().ToArray(),
+            source_groups = selected.Select(row => row.SourceGroup).Distinct(StringComparer.Ordinal).Order().ToArray(),
+            document_count = selected.Where(row => !string.IsNullOrWhiteSpace(row.DocumentId))
+                .Select(row => row.DocumentId).Distinct(StringComparer.Ordinal).Count(),
             research_limit = selected.Any(row => row.SourceType == "provided_annotation")
-                ? "Exploratory training only: provided annotations have unknown adjudication status and cover one parallel story. No generalization claim is supported."
+                ? "Exploratory training only: provided annotations have unknown adjudication status. No held-out generalization claim is supported."
                 : null,
             synthetic_provenance = new
             {
@@ -299,6 +303,10 @@ internal static class Program
             threads = 1,
             input_rows = rows.Count,
             clusters = clusterCount,
+            document_count = rows.Where(row => !string.IsNullOrWhiteSpace(row.DocumentId))
+                .Select(row => row.DocumentId).Distinct(StringComparer.Ordinal).Count(),
+            source_groups = rows.Where(row => !string.IsNullOrWhiteSpace(row.SourceGroup))
+                .Select(row => row.SourceGroup).Distinct(StringComparer.Ordinal).Order().ToArray(),
             model_sha256 = HashFile(modelPath)
         });
         if (options.TryGetValue("assignments-out", out var assignmentsPath))
@@ -308,7 +316,7 @@ internal static class Program
                 id = rows[index].Id,
                 cluster_id = assignment.PredictedClusterId,
                 nearest_centroid_distance = Math.Round(assignment.Score?.Length > 0 ? assignment.Score.Min() : 0f, 4)
-            }, JsonOptions));
+            }));
             WriteTextFile(assignmentsPath, string.Join(Environment.NewLine, outputLines) + Environment.NewLine);
         }
 
@@ -319,6 +327,8 @@ internal static class Program
             algorithm = "ML.NET K-Means over FeaturizeText n-gram features",
             language,
             rows = rows.Count,
+            document_count = rows.Where(row => !string.IsNullOrWhiteSpace(row.DocumentId))
+                .Select(row => row.DocumentId).Distinct(StringComparer.Ordinal).Count(),
             cluster_count = clusterCount,
             trainer_threads = 1,
             metrics = new
@@ -330,6 +340,29 @@ internal static class Program
             model_path = modelPath,
             assignments_path = options.TryGetValue("assignments-out", out var outputPath) ? Path.GetFullPath(outputPath) : null,
             interpretation = "Clusters are unlabeled lexical groupings for analyst inspection. Cluster IDs are not TYM labels and are not accuracy results."
+        }, options);
+        return 0;
+    }
+
+    private static int Predict(IReadOnlyDictionary<string, string> options)
+    {
+        var dataPath = Required(options, "data");
+        var modelPath = Path.GetFullPath(Required(options, "model"));
+        var rows = ReadUnlabeledJsonLines(dataPath);
+        using var predictor = new TextModelPredictor(modelPath);
+        var predictions = rows.Select(row => new
+        {
+            row.Id,
+            row.Text,
+            predicted_label = predictor.Predict(row.Text).PredictedLabel
+        }).ToArray();
+
+        WriteOutput(new
+        {
+            status = "predicted",
+            model_path = modelPath,
+            input_rows = predictions.Length,
+            predictions
         }, options);
         return 0;
     }
@@ -695,7 +728,7 @@ internal static class Program
                 ?? throw new InvalidDataException($"{path}:{lineNumber}: empty JSON object.");
             if (string.IsNullOrWhiteSpace(row.Id) || string.IsNullOrWhiteSpace(row.Text))
             {
-                throw new InvalidDataException($"{path}:{lineNumber}: id and text are required for clustering.");
+                throw new InvalidDataException($"{path}:{lineNumber}: id and text are required for text input.");
             }
 
             if (!ids.Add(row.Id))
@@ -842,6 +875,9 @@ internal static class Program
         Console.WriteLine();
         Console.WriteLine("Explore unlabeled text with ML.NET K-Means (cluster IDs are not TYM labels):");
         Console.WriteLine("  dotnet run --project tools/Tym.Modeling -- cluster --data C:/data/unlabeled.jsonl --clusters 8 --model-out models/unlabeled_clusters.zip --assignments-out C:/data/clusters.jsonl");
+        Console.WriteLine();
+        Console.WriteLine("Predict labels for free text with a trained model:");
+        Console.WriteLine("  dotnet run --project tools/Tym.Modeling -- predict --model C:/private/models/segment_type_en_sdca.zip --data C:/data/free-texts.jsonl");
     }
 }
 
@@ -868,7 +904,13 @@ internal sealed class ModelInput
     public string Label { get; set; } = "";
 }
 
-internal sealed record UnlabeledTextExample(string Id, string Text, string? Language = null);
+internal sealed record UnlabeledTextExample(
+    string Id,
+    string Text,
+    string? Language = null,
+    [property: JsonPropertyName("source_group")] string? SourceGroup = null,
+    [property: JsonPropertyName("document_id")] string? DocumentId = null,
+    [property: JsonPropertyName("chapter_id")] string? ChapterId = null);
 
 internal sealed class ClusterInput
 {

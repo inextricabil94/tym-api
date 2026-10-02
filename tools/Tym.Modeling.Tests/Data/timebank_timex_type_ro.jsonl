@@ -1,0 +1,2 @@
+{"id": "free-ro-date", "text": "Context: În [TARGET] primăvara trecută [/TARGET], Mara a sosit la Iași.\nTime expression: primăvara trecută", "expected_label": "DATE"}
+{"id": "free-ro-duration", "text": "Context: A rămas acolo timp de [TARGET] trei zile [/TARGET].\nTime expression: trei zile", "expected_label": "DURATION"}

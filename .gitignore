@@ -8,3 +8,5 @@ TestResults/
 build_verify/
 build_publish/
 tym-api-deploy.zip
+__pycache__/
+*.pyc

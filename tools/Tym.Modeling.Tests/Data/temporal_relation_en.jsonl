@@ -1,0 +1,2 @@
+{"id": "free-en-retrospective", "text": "Earlier segment: Mara left the village before dawn. Relation cue: years later. Later segment: She remembered the journey.", "expected_label": "AFTER"}
+{"id": "free-en-concurrent", "text": "Earlier segment: The rain stopped. Relation cue: at the same time. Later segment: The ferry reached the harbor.", "expected_label": "AFTER"}

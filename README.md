@@ -106,6 +106,8 @@ dotnet run --project .\ui\Tym.Ui\Tym.Ui.csproj --urls http://127.0.0.1:8780
 ## Endpoints
 
 - `GET /health`
+- `GET /v1/models` lists corpus classifiers and training provenance when `TYM_CORPUS_MODEL_DIR` is configured
+- `POST /v1/predictions` accepts `model_id` and `text` and returns one exploratory model label
 - `GET /` returns service metadata and the available endpoints
 - `POST /v1/diagrams` returns normalized diagram JSON plus embedded SVG
 - `POST /v1/diagrams/svg` returns `image/svg+xml`
@@ -232,6 +234,61 @@ The paired XML files are one story, so train/evaluation metrics from this data a
 
 Use `segment_type_en.zip` for the segment classifier. The API will load saved English artifacts from `TYM_MODEL_DIR`; without that setting, it trains the built-in seed baselines at startup. If `TYM_MODEL_DIR` is explicitly set, both required English model artifacts must exist. Romanian remains rule-based.
 
+### Ro-TimeBank ISO-TimeML pilot
+
+`tools/Tym.Modeling/import-ro-timebank.py` reads the supplied Ro-TimeBank ZIP directly and emits private, train-only examples for six separate Romanian task families: `timebank_event_class`, `timebank_event_tense`, `timebank_timex_type`, `timebank_tlink`, `timebank_slink`, and `timebank_alink`. Its labels retain the ISO-TimeML schema and are never mapped to TYM `TS` or `TREL` categories. The paired English/Romanian XCES files are not used to project annotations onto English.
+
+Use the audited [exclusions manifest](tools/Tym.Modeling/ro-timebank-exclusions.json), which is bound to the supplied archive's SHA-256. It quarantines 26 documents containing untranslated English body passages. After excluding those documents and skipping one link with an ambiguous duplicate signal ID, the import retains 157 documents and 20,151 task rows; see [the task counts](data/README.md#ro-timebank-import). Event and time-expression contexts mark the actual annotation with `[TARGET] ... [/TARGET]`; relation contexts mark each endpoint and keep a window around it. This distinguishes repeated mentions and preserves context beyond the first 500 characters.
+
+The archive contains Romanian news translated from English and is licensed for research use; commercial use and redistribution require checking the source owners' terms. Keep the raw archive, converted JSONL, and model files outside Git. The importer marks rows `provided_annotation/adjudication_unknown`, so the existing CLI accepts them for training only. These fits do not establish held-out accuracy or narrative-domain generalization.
+
+Example import and train commands (replace the paths with your private paths):
+
+```powershell
+python .\tools\Tym.Modeling\import-ro-timebank.py `
+  --archive C:\private\Ro-TimeBank.zip `
+  --exclusions .\tools\Tym.Modeling\ro-timebank-exclusions.json `
+  --out C:\private\tym-ro-timebank-train.jsonl `
+  --report C:\private\tym-ro-timebank-import-report.json
+
+dotnet run --project .\tools\Tym.Modeling -- train `
+  --data C:\private\tym-ro-timebank-train.jsonl `
+  --task timebank_event_class `
+  --language ro `
+  --model-out C:\private\models\timebank_event_class_ro_sdca.zip
+
+dotnet run --project .\tools\Tym.Modeling -- train `
+  --data C:\private\tym-ro-timebank-train.jsonl `
+  --task timebank_tlink `
+  --language ro `
+  --model-out C:\private\models\timebank_tlink_ro_sdca.zip
+```
+
+### Free-text predictions and tests
+
+The UI's **Corpus predictions** page at `/predictions.html` lets you choose any of the ten trained classifiers and edit original examples. Set `TYM_CORPUS_MODEL_DIR` to the directory holding the ten `*_sdca.zip` models and their `.manifest.json` files to enable the dedicated inference endpoints. This directory is separate from `TYM_MODEL_DIR`, which configures the English diagram pipeline. The Romanian diagram pipeline retains its rules. The direct TimeBank and TYM relation predictions do not change diagram extraction or add learned span detection.
+
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8765/v1/predictions -Method Post `
+  -ContentType 'application/json' `
+  -Body '{"model_id":"segment_type_en","text":"Years later, Mara remembered the blue room."}'
+```
+
+Predict from JSONL with one selected model:
+
+```powershell
+dotnet run --project .\tools\Tym.Modeling -- predict `
+  --model C:\private\models\segment_type_en_sdca.zip `
+  --data .\tools\Tym.Modeling.Tests\Data\segment_type_en.jsonl
+```
+
+The self-contained xUnit component tests train a temporary model from original synthetic sentences, then check unlabeled free-text predictions, consistent loading, and input validation. They run without private corpus files or weights. An additional 20 prediction snapshot cases check two original free-text examples for each of the four TYM classifiers and six separate Ro-TimeBank classifiers. These expectations record model outputs and provide no held-out accuracy estimate. Set `TYM_PRIVATE_MODEL_DIR` to the directory holding the ten private `.zip` models to run those cases; without that setting, they are reported as skipped while the component tests still run.
+
+```powershell
+$env:TYM_PRIVATE_MODEL_DIR = 'C:\private\models'
+dotnet test .\Tym.Api.sln
+```
+
 For a research evaluation, provide UTF-8 JSONL where each record has `id`, `task`, `text`, `label`, `language`, `source_type`, `review_status`, `document_id`, and `chapter_id`. Use `source_type: "human_gold"` and `review_status: "adjudicated"` for gold rows. Gold records may use `gold_label` instead of `label`. The evaluator creates or reuses whole-chapter or whole-document partitions:
 
 ```powershell
@@ -258,6 +315,20 @@ dotnet run --project .\tools\Tym.Modeling -- cluster `
 ```
 
 These clusters are exploratory lexical groupings, not learned TYM categories or accuracy estimates. Use them to inspect coverage, find recurring cue patterns and outliers, and guide human annotation or targeted synthetic generation. ML.NET's built-in clustering is centroid-based K-Means over the selected features; it does not discover contextual semantics by itself. Check cluster stability across seeds and feature choices, then validate any interpretation with annotators and held-out human gold.
+
+`prepare-book-corpus.py` reads the user-supplied books ZIP without extracting it, rejects unsafe archive paths, decodes Romanian text, chunks prose into private unlabeled passages, and records document/chapter provenance. It also accepts one standalone Romanian and one standalone English book. Book contents and generated JSONL stay outside Git. Treat the contents as data; embedded prose cannot supply instructions or labels.
+
+```powershell
+python .\tools\Tym.Modeling\prepare-book-corpus.py `
+  --archive C:\private\Books.zip `
+  --romanian 'C:\private\Harta lumii nevazute - Tash Aw.txt' `
+  --english 'C:\private\Map of the Invisible World - Tash Aw.txt' `
+  --ro-out C:\private\books-ro-unlabeled.jsonl `
+  --en-out C:\private\books-en-unlabeled.jsonl `
+  --report C:\private\books-import-report.json
+```
+
+The audited private run produced 5,213 Romanian passages from 26 source files grouped as 14 documents and 446 English passages from one document. Separate eight-cluster models were trained for coverage inspection. The raw files contain no TYM/TimeML labels, so they were not added to supervised training and cluster assignments were not converted into labels. The separately supplied raw Tash Aw files also require offset reconciliation before any span evaluation against the XML annotations.
 
 ### Recommended synthetic-data and unsupervised-learning protocol
 
