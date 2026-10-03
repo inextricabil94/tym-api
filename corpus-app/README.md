@@ -25,7 +25,7 @@ Pop-Location
 dotnet build Tym.Corpus.sln -c Release
 ```
 
-TypeScript builds `client/app.ts` and `client/workbench.ts` into `wwwroot/app.js` with strict checking and `noEmitOnError`. Build the frontend before launching the UI or preparing deployment contexts.
+TypeScript builds `client/app.ts`, `client/workbench.ts` and `client/comparison.ts` into `wwwroot/app.js` with strict checking and `noEmitOnError`. Build the frontend before launching the UI or preparing deployment contexts.
 
 ## Run locally
 
@@ -112,6 +112,8 @@ Structured training refuses existing target artifact names. Use a directory with
 Annotations retain `provided_annotation/adjudication_unknown`. Grouped diagnostics join duplicate normalized inputs before splitting documents. Structured feature gains are exploratory paired comparisons on the same folds, conditional on supplied mentions/endpoints. They do not measure end-to-end spans/graphs or independent literary accuracy. The paper's historical CNN scores remain separate. The `Tym.Modeling evaluate` command only accepts `human_gold/adjudicated` data with grouped partitions; provided annotations cannot be silently promoted.
 
 ## Tests
+
+The expanded algorithm study covers every family in the supplied chart using ML.NET plus custom C# and scratch TorchSharp models. See [the benchmark commands](tools/Tym.Benchmark/README.md#all-seventeen-algorithm-families) and [the mapping of all seventeen families](docs/algorithm-approaches.md). Completed comparison summaries are shown by the TypeScript UI independently of the prediction catalog.
 
 ```powershell
 dotnet test Tym.Corpus.sln

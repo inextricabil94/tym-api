@@ -94,8 +94,11 @@ function Format-Number([object]$Number, [int]$Digits = 3) {
 function Metric-Text([object]$Measurement) {
     switch ($Measurement.config) {
         { $_ -in @('mlnet_kmeans', 'mlnet_pca_kmeans') } {
+            $projection = if ($Measurement.config -eq 'mlnet_pca_kmeans') {
+                '; PCA basis fit s=' + (Format-Number $Measurement.pca_basis_fit_seconds 3)
+            } else { '' }
             return ('heldout distance=' + (Format-Number $Measurement.average_squared_centroid_distance 5) +
-                '; DBI=' + (Format-Number $Measurement.davies_bouldin_index 4))
+                '; DBI=' + (Format-Number $Measurement.davies_bouldin_index 4) + $projection)
         }
         'csharp_torchsharp_autoencoder' {
             return ('heldout MSE=' + (Format-Number $Measurement.reconstruction_mse 6) +
@@ -218,7 +221,7 @@ foreach ($item in $bookInputs) {
             split_kind = $split; training_rows = [int]$train; heldout_rows = [int]$heldout
             feature_dimensions = [int](Number $algorithm 'feature_dimensions' 2)
             train_seconds = $null; predict_seconds = $null; batched_ms_per_row = $null; batched_rows_per_second = $null
-            accuracy_fraction = $null; macro_f1_fraction = $null; sample_rows = $null; timing_scope = ''; notes = ''
+            accuracy_fraction = $null; macro_f1_fraction = $null; sample_rows = $null; pca_basis_fit_seconds = $null; timing_scope = ''; notes = ''
         }
         switch ($config) {
             { $_ -in @('mlnet_kmeans', 'mlnet_pca_kmeans') } {
@@ -230,6 +233,10 @@ foreach ($item in $bookInputs) {
                 $measurement.average_squared_centroid_distance = Optional-Number $assessment 'average_squared_centroid_distance'
                 $measurement.davies_bouldin_index = Optional-Number $assessment 'davies_bouldin_index'
                 $measurement.observed_clusters = @((Value $assessment 'cluster_counts')).Count
+                if ($config -eq 'mlnet_pca_kmeans') {
+                    $autoencoderEvidence = @($bookAlgorithms | Where-Object { (Value $_ 'algorithm') -eq 'csharp_torchsharp_autoencoder' })[0]
+                    $measurement.pca_basis_fit_seconds = Number $autoencoderEvidence 'shared_pca_fit_seconds'
+                }
                 $measurement.timing_scope = 'Fit includes shared text featurizer; assessment transforms/scores BOTH training and heldout rows and computes cluster summaries.'
                 $measurement.notes = 'Heldout lexical geometry; distance/DBI across text and PCA feature spaces are not directly comparable semantic measures.'
             }
@@ -306,7 +313,8 @@ $booksFlat = @($bookRows | ForEach-Object {
     $metrics = switch ($row.config) {
         { $_ -in @('mlnet_kmeans', 'mlnet_pca_kmeans') } {
             [ordered]@{ heldout_average_squared_centroid_distance = $row.average_squared_centroid_distance
-                heldout_davies_bouldin_index = $row.davies_bouldin_index; observed_heldout_clusters = $row.observed_clusters }
+                heldout_davies_bouldin_index = $row.davies_bouldin_index; observed_heldout_clusters = $row.observed_clusters
+                pca_basis_fit_seconds = $row.pca_basis_fit_seconds }
         }
         'csharp_torchsharp_autoencoder' {
             [ordered]@{ heldout_reconstruction_mse = $row.reconstruction_mse; heldout_training_mean_baseline_mse = $row.training_mean_baseline_mse
@@ -355,6 +363,8 @@ $release = [pscustomobject][ordered]@{
     classification_report_sha256 = (Get-FileHash -LiteralPath $ClassificationReportPath -Algorithm SHA256).Hash.ToLowerInvariant()
     classification_input_sha256 = Value $classification 'input_sha256'
     classification_feature_representation = Value $classification 'feature_representation'
+    classification_elapsed_seconds = Number $classification 'seconds'
+    classification_runtime = Value $classification 'runtime'
     classification_feature_contract = [ordered]@{
         native_maximum_ngrams_per_order_per_channel = $ngramLimit
         native_active_word_ngram_lengths = @(1, 2); native_active_character_ngram_lengths = @(3)
@@ -365,7 +375,7 @@ $release = [pscustomobject][ordered]@{
         neural_pretrained_weights = $false
     }
     seed = Value $classification 'seed'; folds = 3
-    units = [ordered]@{ accuracy = 'fraction [0,1], with separate percentage fields'; macro_f1 = 'fraction [0,1], with separate percentage fields'; time = 'seconds'; batched_latency = 'milliseconds per validation row, not interactive latency' }
+    units = [ordered]@{ accuracy = 'fraction [0,1]; Markdown and UI display percentages'; macro_f1 = 'fraction [0,1]; Markdown and UI display percentages'; time = 'seconds'; batched_latency = 'milliseconds per validation row, not interactive latency' }
     books = $bookSummaries.ToArray(); families = $familyRows; majority_baselines = $baselines.ToArray(); limitations = $limits
 }
 
