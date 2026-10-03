@@ -7,7 +7,7 @@ try
 {
     if (args.Length == 0 || args[0] is "--help" or "help")
     {
-        Console.WriteLine("Grouped comparison: --data private.jsonl --out report.json [--folds 3] [--seed 42] [--task timebank_tlink] [--algorithms all|comma-separated-names] [--features text|structured] [--epochs 5]. Training: --mode train-structured --data private.jsonl --out report.json --models private-directory. Books: --mode books --data private-books.jsonl --out report.json --models new-private-directory [--clusters 8] [--rank 32].");
+        Console.WriteLine("Grouped comparison: --data private.jsonl --out report.json [--folds 3] [--seed 42] [--task timebank_tlink] [--algorithms all|comma-separated-names] [--features text|structured] [--ngram-limit 0|1024] [--epochs 5]. Training: --mode train-structured --data private.jsonl --out report.json --models private-directory. Books: --mode books --data private-books.jsonl --out report.json --models new-private-directory [--clusters 8] [--rank 32].");
         Console.WriteLine("Classifiers: " + string.Join(", ", ClassificationTrial.AllNames));
         return 0;
     }
@@ -15,7 +15,7 @@ try
     var options = new Dictionary<string, string>(StringComparer.Ordinal);
     for (var i = 0; i < args.Length; i += 2)
         if (!args[i].StartsWith("--") || !options.TryAdd(args[i][2..], args[i + 1])) throw new ArgumentException("Malformed/repeated option.");
-    var allowed = new[] { "data", "out", "folds", "seed", "task", "mode", "models", "algorithms", "features", "epochs", "clusters", "rank" };
+    var allowed = new[] { "data", "out", "folds", "seed", "task", "mode", "models", "algorithms", "features", "epochs", "clusters", "rank", "ngram-limit" };
     if (options.Keys.Any(key => !allowed.Contains(key, StringComparer.Ordinal))) throw new ArgumentException("Unknown benchmark option.");
     var mode = options.GetValueOrDefault("mode", "compare");
     if (mode is not ("compare" or "train-structured" or "books")) throw new ArgumentException("Supported modes are compare, train-structured and books.");
@@ -24,7 +24,7 @@ try
     var seed = int.Parse(options.GetValueOrDefault("seed", "42"));
     if (mode == "books")
     {
-        Reject(options, "folds", "task", "algorithms", "features", "epochs");
+        Reject(options, "folds", "task", "algorithms", "features", "epochs", "ngram-limit");
         BookExploration.Run(input, output, options.GetValueOrDefault("models") ?? throw new ArgumentException("Missing --models."),
             seed, int.Parse(options.GetValueOrDefault("clusters", "8")), int.Parse(options.GetValueOrDefault("rank", "32")));
         return 0;
@@ -39,13 +39,15 @@ try
         || rows.Select(row => row.Id).Distinct().Count() != rows.Length) throw new InvalidDataException("Expected unique provided-annotation rows with source document provenance.");
     if (mode == "train-structured")
     {
-        Reject(options, "task", "folds", "algorithms", "features", "epochs");
+        Reject(options, "task", "folds", "algorithms", "features", "epochs", "ngram-limit");
         FullDataTraining.Train(rows, input, output, options.GetValueOrDefault("models") ?? throw new ArgumentException("Missing --models."), seed);
         return 0;
     }
     Reject(options, "models");
     var folds = int.Parse(options.GetValueOrDefault("folds", "3"));
     var epochs = int.Parse(options.GetValueOrDefault("epochs", "5"));
+    var ngramLimit = int.Parse(options.GetValueOrDefault("ngram-limit", "0"));
+    if (ngramLimit is < 0 or > 100000) throw new ArgumentException("Ngram limit must be 0 (historical default) or 1-100000.");
     if (epochs is < 1 or > 50) throw new ArgumentException("Use 1-50 fixed neural epochs.");
     var representation = options.GetValueOrDefault("features", "text");
     if (representation is not ("text" or "structured")) throw new ArgumentException("Features must be text or structured.");
@@ -79,7 +81,7 @@ try
             { ["majority"] = new { metrics = Metrics.Calculate(majorityRows, labels), training_seconds = baselineFit, prediction_seconds = baselinePredict } };
             foreach (var name in names)
             {
-                var trial = ClassificationTrial.Run(name, group.Key.Task, train, validation, seed + fold, representation, epochs);
+                var trial = ClassificationTrial.Run(name, group.Key.Task, train, validation, seed + fold, representation, epochs, ngramLimit);
                 var observations = validation.Select((row, index) => (row.Label, trial.Predictions[index])).ToArray();
                 scored[name].AddRange(observations);
                 timings[name].Add(new(trial.TrainingSeconds, trial.PredictionSeconds, validation.Length));
@@ -124,7 +126,7 @@ try
     void WriteReport(string status) => CorpusFiles.WriteJson(output, new
     {
         schema_version = 2, status, completed_utc = DateTimeOffset.UtcNow, input_sha256 = CorpusFiles.FileHash(input), total_rows = rows.Length,
-        seed, folds, algorithms = names, feature_representation = representation, neural_epochs = epochs, seconds = watch.Elapsed.TotalSeconds,
+        seed, folds, algorithms = names, feature_representation = representation, native_maximum_ngrams_per_order_per_channel = ngramLimit, neural_epochs = epochs, seconds = watch.Elapsed.TotalSeconds,
         framework = "ML.NET 5.0.0 / .NET 10; C# TorchSharp 0.107.0 scratch neural baselines", models_exported = false,
         runtime = new { os = System.Runtime.InteropServices.RuntimeInformation.OSDescription, architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(), logical_processors = Environment.ProcessorCount, dotnet = Environment.Version.ToString(), trainer_threads = 1 },
         split = plan, tasks = taskReports,
@@ -135,6 +137,7 @@ try
             "Scores classify labels conditional on supplied mentions and directed endpoints; no end-to-end span or graph accuracy is measured.",
             "Fixed exploratory algorithms/settings, no independent model-selection holdout or significance estimate.",
             "Native trainers share the selected ML.NET text/structured featurizer. Custom CART selects bounded training features. Scratch neural models use a training-only word vocabulary; representations differ.",
+            "An uncapped runtime-only pilot was stopped before accuracy inspection after expensive sparse tree fits. The new run fixes a shared per-channel ngram budget for all native/numeric classifiers; this is a resource decision, not a validation-score choice.",
             "Entirely blank channels are omitted using training inputs only. All label maps, feature transforms and token vocabularies fit training rows.",
             "Fixed full-inventory macro-F1 retains rare labels absent from training folds.",
             "Linear regression uses separate 0/1 class-indicator targets and argmax scores, not ordinal class codes or numerical calendar prediction.",

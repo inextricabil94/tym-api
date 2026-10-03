@@ -24,6 +24,10 @@ Document analysis proposes draft source spans using rules and the narrative mode
 
 Relations have explicit family, From and To IDs. TYM endpoints are segments; TLINK uses event/time mentions; SLINK/ALINK use event mentions. Relations start in draft. Validation uses reviewed temporal relations to display a partial order, simultaneous groups and cycle diagnostics; unlinked annotations retain unknown order. Graph layout positions do not imply dates or a total timeline. Export is enabled only for a validated unchanged draft; edits invalidate that result. Exported JSON includes source and provenance. Spatial candidates are mentions, without geocoding or inferred map coordinates.
 
+## Algorithm comparison
+
+The independent comparison panel loads only the same-origin aggregate `wwwroot/results/algorithm-comparison.json`. It filters conditional classification by task and both classification/book exploration by language, reports grouped accuracy/macro F1 and local batched timing, and keeps book semantic accuracy N/A. It requires a completed seventeen-family report with finite values; missing, malformed, incomplete or timed-out data displays an inline reload state without blocking prediction or document review. JSON/CSV/Markdown downloads use fixed local paths. Small C# neural models are scratch experiments, and the panel does not imply independent gold accuracy or a deployed replacement.
+
 ## UI tests
 
 ```powershell

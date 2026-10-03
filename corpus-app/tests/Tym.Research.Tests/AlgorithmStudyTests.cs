@@ -1,5 +1,6 @@
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using System.Text.Json;
 using Tym.Benchmark;
 using Tym.Corpus.Data;
 using Xunit;
@@ -42,6 +43,31 @@ public sealed class AlgorithmStudyTests
         Assert.True(double.IsFinite(result.TrainingSeconds) && result.TrainingSeconds >= 0);
         Assert.True(double.IsFinite(result.PredictionSeconds) && result.PredictionSeconds >= 0);
         Assert.Equal(algorithm, AlgorithmCatalog.Describe(algorithm).Name);
+    }
+
+    [Theory]
+    [InlineData("sdca", 1)]
+    [InlineData("sdca", 1024)]
+    [InlineData("fasttree_ova", 1024)]
+    [InlineData("lightgbm", 1024)]
+    public void Nonzero_native_ngram_budget_fits_and_records_the_per_channel_dimension_bound(string algorithm, int limit)
+    {
+        var training = Enumerable.Range(0, 20).Select(index => Row("walk" + index,
+            "Mara [TARGET] walked [/TARGET] into the garden.", "walked", "OCCURRENCE"))
+            .Concat(Enumerable.Range(0, 20).Select(index => Row("state" + index,
+                "Ana [TARGET] knew [/TARGET] the road to the river.", "knew", "I_STATE"))).ToArray();
+        var validation = new[] { Row("new", "Mara [TARGET] arrived [/TARGET] by the river.", "arrived", "OCCURRENCE") };
+        var result = ClassificationTrial.Run(algorithm, "timebank_event_class", training, validation,
+            42, "structured", 1, ngramLimit: limit);
+        Assert.Single(result.Predictions);
+        Assert.Contains(result.Predictions[0], new[] { "OCCURRENCE", "I_STATE" });
+        Assert.NotNull(result.FeatureDimensions);
+        Assert.InRange(result.FeatureDimensions.Value, 1, checked(3 * limit * result.Channels.Length));
+        using var metadata = JsonDocument.Parse(JsonSerializer.Serialize(result.Configuration));
+        var features = metadata.RootElement.GetProperty("featurizer");
+        Assert.Equal(limit, features.GetProperty("maximum_ngrams_per_order_per_channel").GetInt32());
+        Assert.Equal(3L * limit * result.Channels.Length, features.GetProperty("maximum_concatenated_features").GetInt64());
+        Assert.Equal(new[] { 3 }, features.GetProperty("character_ngram_lengths").EnumerateArray().Select(value => value.GetInt32()));
     }
 
     [Theory]

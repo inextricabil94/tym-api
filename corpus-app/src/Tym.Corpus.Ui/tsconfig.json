@@ -10,5 +10,5 @@
     "removeComments": false,
     "newLine": "lf"
   },
-  "files": ["client/app.ts", "client/workbench.ts"]
+  "files": ["client/app.ts", "client/workbench.ts", "client/comparison.ts"]
 }

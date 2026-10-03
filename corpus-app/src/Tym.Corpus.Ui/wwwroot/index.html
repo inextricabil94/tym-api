@@ -16,6 +16,7 @@
     <nav aria-label="Main navigation">
       <a href="#workbench">Try a model</a>
       <a href="#document-workbench">Review a document</a>
+      <a href="#algorithm-comparison">Compare algorithms</a>
       <a href="#research">Research notes</a>
       <a id="diagram-link" href="https://tym-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io" target="_blank" rel="noopener noreferrer">Diagram studio <span aria-hidden="true">↗</span></a>
     </nav>
@@ -132,6 +133,45 @@
           <span>Research results</span>
           <a id="pdf-link" href="/results/Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf">PDF report <span aria-hidden="true">↗</span></a>
           <a id="pptx-link" href="/results/TYM_MLNET_Updated_Results_20261002.pptx">Editable presentation <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+    <section class="comparison-section wrap" id="algorithm-comparison" aria-labelledby="comparison-title">
+      <p class="eyebrow">MEASURED RESEARCH COMPARISON</p>
+      <h2 id="comparison-title">Compare algorithms</h2>
+      <p class="comparison-intro">Compare quality and cost across seventeen algorithm families. Classification results use grouped document folds and supplied temporal mentions or relation endpoints. The annotations have unknown adjudication status; these scores do not measure accuracy on independent books or complete document extraction.</p>
+      <p class="comparison-limit">Neural experiments train small models from scratch. Book passages are unlabeled, so their clustering and reconstruction results have no semantic accuracy score. Timing is a local batched measurement, not the response time of this website.</p>
+      <p id="comparison-status" class="request-status" role="status" aria-live="polite">Loading the comparison summary…</p>
+      <button id="comparison-retry" class="text-button" type="button" hidden>Reload comparison</button>
+      <div id="comparison-results" hidden>
+        <div class="comparison-filters">
+          <div><label class="field-label" for="comparison-task">Classification task</label><select id="comparison-task" disabled></select></div>
+          <div><label class="field-label" for="comparison-language">Language</label><select id="comparison-language" disabled><option value="all">All languages</option></select></div>
+        </div>
+        <p id="comparison-coverage" class="comparison-summary"></p>
+        <h3 id="comparison-classification-title">Conditional classification</h3>
+        <p id="comparison-classification-summary" class="comparison-summary" aria-live="polite"></p>
+        <div class="table-scroll comparison-scroll" tabindex="0" role="region" aria-labelledby="comparison-classification-title">
+          <table class="comparison-table">
+            <caption>Accuracy and macro F1 use the same grouped validation rows. Training includes feature fitting; milliseconds per row refer to a batch.</caption>
+            <thead><tr><th scope="col">Family / approach</th><th scope="col">Language</th><th scope="col">Accuracy</th><th scope="col">Macro F1</th><th scope="col">Training (s)</th><th scope="col">Batch scoring (s)</th><th scope="col">Batch (ms/row)</th><th scope="col">Notes</th></tr></thead>
+            <tbody id="comparison-classification-rows"></tbody>
+          </table>
+        </div>
+        <h3 id="comparison-books-title">Unlabeled book exploration</h3>
+        <p id="comparison-books-summary" class="comparison-summary" aria-live="polite"></p>
+        <div class="table-scroll comparison-scroll" tabindex="0" role="region" aria-labelledby="comparison-books-title">
+          <table class="comparison-table">
+            <caption>Geometry and reconstruction diagnostics describe the stated sample or holdout. N/A means semantic accuracy cannot be computed without labels.</caption>
+            <thead><tr><th scope="col">Family / approach</th><th scope="col">Language</th><th scope="col">Training (s)</th><th scope="col">Assessment (s)</th><th scope="col">Semantic accuracy</th><th scope="col">Diagnostics / scope</th></tr></thead>
+            <tbody id="comparison-book-rows"></tbody>
+          </table>
+        </div>
+        <div id="comparison-downloads" class="results-links" aria-label="Algorithm comparison downloads">
+          <span>Download the comparison</span>
+          <a href="/results/algorithm-comparison.json" download>JSON data</a>
+          <a href="/results/algorithm-comparison.csv" download>CSV table</a>
+          <a href="/results/algorithm-comparison.md" download>Markdown report</a>
         </div>
       </div>
     </section>

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using Microsoft.ML.Transforms.Text;
 using Tym.Corpus.Data;
 using Tym.NeuralBenchmark;
 using ModelInput = Tym.Corpus.Core.TextModelInput;
@@ -32,8 +33,9 @@ public static class ClassificationTrial
             || selected.Distinct(StringComparer.Ordinal).Count() != selected.Length) throw new ArgumentException("Unknown, empty or repeated classifier name.");
         return selected;
     }
-    public static TrialResult Run(string algorithm, string task, CorpusRow[] train, CorpusRow[] validation, int seed, string representation, int epochs)
+    public static TrialResult Run(string algorithm, string task, CorpusRow[] train, CorpusRow[] validation, int seed, string representation, int epochs, int ngramLimit = 0)
     {
+        if (ngramLimit < 0) throw new ArgumentOutOfRangeException(nameof(ngramLimit), "N-gram budget must be nonnegative; zero retains legacy defaults.");
         using var process = Process.GetCurrentProcess(); process.Refresh(); var before = process.WorkingSet64;
         var context = new MLContext(seed);
         var trainInputs = train.Select(row => StructuredFeatures.Input(row.Task, row.Text, row.Label)).ToArray();
@@ -63,7 +65,38 @@ public static class ClassificationTrial
         {
             var trainView = context.Data.LoadFromEnumerable(trainInputs); var testView = context.Data.LoadFromEnumerable(testInputs);
             var features = new EstimatorChain<ITransformer>();
-            foreach (var channel in channels) features = features.Append(context.Transforms.Text.FeaturizeText(channel + "Features", channel));
+            foreach (var channel in channels)
+            {
+                // MaximumNgramsCount caps each order separately, not the combined dictionary.
+                // Every classifier using numeric text vectors receives this same train-fit transform.
+                if (ngramLimit == 0) features = features.Append(context.Transforms.Text.FeaturizeText(channel + "Features", channel));
+                else features = features.Append(context.Transforms.Text.FeaturizeText(channel + "Features", new TextFeaturizingEstimator.Options
+                {
+                    WordFeatureExtractor = new WordBagEstimator.Options
+                    {
+                        NgramLength = 2, UseAllLengths = true, SkipLength = 0,
+                        MaximumNgramsCount = [ngramLimit, ngramLimit]
+                    },
+                    CharFeatureExtractor = new WordBagEstimator.Options
+                    {
+                        NgramLength = 3, UseAllLengths = false, SkipLength = 0,
+                        // With UseAllLengths=false the API requires one limit applying only
+                        // to the selected trigram order; a three-entry array is rejected.
+                        MaximumNgramsCount = [ngramLimit]
+                    }
+                }, channel));
+            }
+            object featurizerConfiguration = ngramLimit == 0
+                ? new { name = "ML.NET Text.FeaturizeText", budget = "legacy library defaults", learned_dictionary = "training fold only", channels }
+                : new
+                {
+                    name = "ML.NET Text.FeaturizeText", package_version = "5.0.0", learned_dictionary = "training fold only", channels,
+                    maximum_ngrams_per_order_per_channel = ngramLimit,
+                    word_ngram_lengths = new[] { 1, 2 }, character_ngram_lengths = new[] { 3 }, skip_length = 0,
+                    maximum_features_per_channel = (long)ngramLimit * 3,
+                    maximum_concatenated_features = (long)ngramLimit * 3 * channels.Length,
+                    other_options = "pinned ML.NET 5.0 default normalization and term weighting"
+                };
             var featurePipeline = features.Append(context.Transforms.Concatenate("Features", channels.Select(channel => channel + "Features").ToArray()));
             var fitWatch = Stopwatch.StartNew();
             if (algorithm is "linear_regression_ovr" or "decision_tree" or "knn")
@@ -78,13 +111,13 @@ public static class ClassificationTrial
                 {
                     var result = LinearRegressionClassifier.FitPredict(context, trainVectors, train.Select(row => row.Label).ToArray(), validationVectors);
                     predictions = result.Predictions; fitSeconds = transformTrainingSeconds + result.FitSeconds; predictionSeconds = validationTransformSeconds + result.PredictionSeconds;
-                    configuration = result.Parameters;
+                    configuration = new { trainer = result.Parameters, featurizer = featurizerConfiguration };
                 }
                 else
                 {
                     var result = CustomClassifiers.FitPredict(algorithm, trainVectors, train.Select(row => row.Label).ToArray(), validationVectors, seed);
                     predictions = result.Predictions; fitSeconds = transformTrainingSeconds + result.FitSeconds; predictionSeconds = validationTransformSeconds + result.PredictionSeconds;
-                    configuration = result.Parameters;
+                    configuration = new { trainer = result.Parameters, featurizer = featurizerConfiguration };
                 }
             }
             else
@@ -98,7 +131,8 @@ public static class ClassificationTrial
                 _ = context.Data.CreateEnumerable<TrialOutput>(model.Transform(testView), false).First();
                 var predictionWatch = Stopwatch.StartNew();
                 predictions = context.Data.CreateEnumerable<TrialOutput>(model.Transform(testView), false).Select(row => row.PredictedLabel).ToArray();
-                predictionSeconds = predictionWatch.Elapsed.TotalSeconds; configuration = AlgorithmCatalog.Describe(nativeName, seed);
+                predictionSeconds = predictionWatch.Elapsed.TotalSeconds;
+                configuration = new { trainer = AlgorithmCatalog.Describe(nativeName, seed), featurizer = featurizerConfiguration };
             }
         }
         process.Refresh();

@@ -1,10 +1,14 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+var contentTypes = new FileExtensionContentTypeProvider();
+contentTypes.Mappings[".csv"] = "text/csv; charset=utf-8";
+contentTypes.Mappings[".md"] = "text/markdown; charset=utf-8";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = contentTypes });
 app.MapGet("/health", () => Results.Json(new { ok = true, service = "tym-corpus-ui" }));
 app.MapGet("/config.js", (HttpContext context, IConfiguration configuration) =>
 {
