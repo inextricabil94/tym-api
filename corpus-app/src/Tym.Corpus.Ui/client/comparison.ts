@@ -8,9 +8,14 @@
     'mlp', 'cnn', 'rnn', 'transformer', 'autoencoder', 'dbscan'] as const;
   type Family = typeof familyOrder[number];
   const bookFamilies = new Set<Family>(['kmeans', 'hierarchical_clustering', 'pca', 'autoencoder', 'dbscan']);
+  const spaceNumbers = ['feature_dimensions_min', 'feature_dimensions_max', 'training_vocabulary_size_min',
+    'training_vocabulary_size_max', 'maximum_sequence_length', 'process_working_set_before_min_mb',
+    'process_working_set_after_max_mb', 'process_lifetime_peak_working_set_max_mb', 'neural_parameter_count_min',
+    'neural_parameter_count_max', 'float32_parameter_bytes_max', 'artifact_bytes'] as const;
+  type Space = {[Key in typeof spaceNumbers[number]]: number | null} & {scope: string};
   interface Approach {
     family: Family; family_label: string; algorithm: string; algorithm_label: string;
-    language: 'en' | 'ro'; notes: string[];
+    language: 'en' | 'ro'; notes: string[]; space: Space | null;
   }
   interface ClassificationRow extends Approach {
     task: string; accuracy_fraction: number; macro_f1_fraction: number;
@@ -46,11 +51,24 @@
     if (!Array.isArray(value) || value.length > 50) return invalid();
     return value.map(note => text(note, 6000));
   }
+  function parseSpace(value: unknown): Space | null {
+    // Older summaries omitted the entire object. Optional missing numeric fields stay
+    // unavailable; explicitly supplied values must be finite, nonnegative numbers.
+    if (value === undefined || value === null) return null;
+    const row = object(value), result = {scope: text(row.scope, 6000)} as Space;
+    for (const key of spaceNumbers) result[key] = row[key] === undefined || row[key] === null ? null : nonnegative(row[key]);
+    for (const [minimum, maximum] of [['feature_dimensions_min', 'feature_dimensions_max'],
+      ['training_vocabulary_size_min', 'training_vocabulary_size_max'], ['neural_parameter_count_min', 'neural_parameter_count_max']] as const) {
+      const lower = result[minimum], upper = result[maximum];
+      if (lower !== null && upper !== null && lower > upper) return invalid();
+    }
+    return result;
+  }
   function approach(value: unknown): Approach {
     const row = object(value), family = text(row.family);
     if (!(familyOrder as readonly string[]).includes(family) || row.language !== 'en' && row.language !== 'ro') return invalid();
     return {family: family as Family, family_label: text(row.family_label), algorithm: text(row.algorithm),
-      algorithm_label: text(row.algorithm_label), language: row.language, notes: notes(row.notes)};
+      algorithm_label: text(row.algorithm_label), language: row.language, notes: notes(row.notes), space: parseSpace(row.space)};
   }
   function classification(value: unknown): ClassificationRow {
     const row = object(value), base = approach(row), count = nonnegative(row.rows);
@@ -134,6 +152,42 @@
     for (const note of values) { const paragraph = document.createElement('p'); paragraph.textContent = note; details.append(paragraph); }
     parent.append(details);
   }
+  function renderSpace(parent: HTMLElement, measurement: Space | null) {
+    if (measurement === null) {
+      const unavailable = document.createElement('p'); unavailable.className = 'comparison-space-unavailable';
+      unavailable.textContent = 'Space measurements unavailable.'; parent.append(unavailable); return;
+    }
+    const details = document.createElement('details'), heading = document.createElement('summary');
+    details.className = 'comparison-space'; heading.textContent = 'Space and storage'; details.append(heading);
+    const scope = document.createElement('p'); scope.className = 'comparison-space-scope'; scope.textContent = measurement.scope; details.append(scope);
+    const metrics = document.createElement('dl'); metrics.className = 'comparison-metrics comparison-space-metrics';
+    function entry(name: string, value: string) {
+      const row = document.createElement('div'), title = document.createElement('dt'), result = document.createElement('dd');
+      title.textContent = name; result.textContent = value; row.append(title, result); metrics.append(row);
+    }
+    function range(minimum: number | null, maximum: number | null): string | null {
+      if (minimum === null && maximum === null) return null;
+      if (minimum === null) return 'Maximum ' + decimal(maximum!);
+      if (maximum === null) return 'Minimum ' + decimal(minimum);
+      return minimum === maximum ? decimal(minimum) : decimal(minimum) + '–' + decimal(maximum);
+    }
+    const dimensions = range(measurement.feature_dimensions_min, measurement.feature_dimensions_max);
+    const vocabulary = range(measurement.training_vocabulary_size_min, measurement.training_vocabulary_size_max);
+    const parameters = range(measurement.neural_parameter_count_min, measurement.neural_parameter_count_max);
+    if (dimensions !== null) entry('Feature dimensions', dimensions);
+    if (vocabulary !== null) entry('Training vocabulary', vocabulary);
+    if (measurement.maximum_sequence_length !== null) entry('Sequence limit', decimal(measurement.maximum_sequence_length) + ' tokens');
+    if (parameters !== null) entry('Neural parameters', parameters);
+    if (measurement.float32_parameter_bytes_max !== null) entry('Float32 parameter bytes (maximum estimate)', decimal(measurement.float32_parameter_bytes_max) + ' B');
+    if (measurement.process_working_set_before_min_mb !== null) entry('Sampled process memory before (minimum)', decimal(measurement.process_working_set_before_min_mb) + ' MiB');
+    if (measurement.process_working_set_after_max_mb !== null) entry('Sampled process memory after (maximum)', decimal(measurement.process_working_set_after_max_mb) + ' MiB');
+    if (measurement.process_lifetime_peak_working_set_max_mb !== null) entry('Process lifetime peak memory (maximum)', decimal(measurement.process_lifetime_peak_working_set_max_mb) + ' MiB');
+    entry('Exported artifact bytes', measurement.artifact_bytes === null ? 'Unavailable' : decimal(measurement.artifact_bytes) + ' B');
+    details.append(metrics);
+    const meaning = document.createElement('p');
+    meaning.textContent = 'Process memory includes shared runtime and earlier trials; it is not isolated model memory. Float32 parameter bytes estimate weights only. Storage sizes measure exported artifacts only.';
+    details.append(meaning); parent.append(details);
+  }
   function emptyRow(body: HTMLElement, columns: number, message: string) {
     const row = document.createElement('tr'), messageCell = cell(row, message, 'comparison-empty');
     messageCell.colSpan = columns; body.append(row);
@@ -156,7 +210,7 @@
       cell(row, decimal(result.prediction_ms_per_row), 'comparison-number');
       const noteCell = cell(row, '', 'comparison-note'), count = document.createElement('p');
       count.textContent = result.rows.toLocaleString() + ' validation rows · ' + decimal(result.batched_rows_per_second) + ' rows/s in batch';
-      noteCell.append(count); renderNotes(noteCell, result.notes); classBody.append(row);
+      noteCell.append(count); renderSpace(noteCell, result.space); renderNotes(noteCell, result.notes); classBody.append(row);
     }
     if (!classificationRows.length) emptyRow(classBody, 8, 'No published classification results for this task and language.');
     for (const result of bookRows) {
@@ -169,7 +223,7 @@
         const entry = document.createElement('div'), name = document.createElement('dt'), number = document.createElement('dd');
         name.textContent = metricName(key); number.textContent = metricValue(value); entry.append(name, number); metrics.append(entry);
       }
-      diagnostic.append(metrics); renderNotes(diagnostic, result.notes); bookBody.append(row);
+      diagnostic.append(metrics); renderSpace(diagnostic, result.space); renderNotes(diagnostic, result.notes); bookBody.append(row);
     }
     if (!bookRows.length) emptyRow(bookBody, 6, 'No published book exploration results for this language.');
     element('comparison-classification-summary').textContent = `${classificationRows.length} approaches shown for ${taskNames[task.value] || task.value}. Each score is conditional on the supplied annotations.`;

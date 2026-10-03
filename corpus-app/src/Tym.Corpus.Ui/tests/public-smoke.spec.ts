@@ -10,6 +10,38 @@ test.describe('opt-in public deployment smoke (original authored prose only)', (
     await page.goto(publicUrl, { timeout: 60000 });
     await expect(page.locator('#catalog-status')).toHaveText('16 of 16 models available', { timeout: 65000 });
   });
+  test('completed algorithm comparison exposes quality, space details and exact CSV downloads', async ({page}) => {
+    await page.getByRole('link', {name: 'Compare algorithms', exact: true}).click();
+    await expect(page.locator('#comparison-status')).toHaveText('Published comparison loaded.');
+    await expect(page.locator('#comparison-coverage')).toContainText('17 algorithm families');
+    await expect(page.locator('#comparison-task')).toHaveValue('timebank_tlink');
+    await expect(page.locator('#comparison-classification-rows tr')).toHaveCount(14);
+    await expect(page.locator('#comparison-book-rows tr')).toHaveCount(10);
+    await expect(page.locator('#comparison-results .comparison-space')).toHaveCount(24);
+    const native = page.locator('#comparison-classification-rows tr').first();
+    await native.getByText('Space and storage', {exact: true}).click();
+    await expect(native.locator('.comparison-space')).toContainText('Feature dimensions');
+    await expect(native.locator('.comparison-space')).toContainText('not isolated model memory');
+    await expect(page.locator('#comparison-book-rows td:nth-child(5)')).toHaveText(Array(10).fill('N/A · unlabeled passages'));
+    await page.locator('#comparison-language').selectOption('en');
+    await expect(page.locator('#comparison-classification-rows')).toContainText('No published classification results');
+    await expect(page.locator('#comparison-book-rows tr')).toHaveCount(5);
+    const link = page.locator('#comparison-downloads').getByRole('link', {name: 'CSV table', exact: true});
+    const url = new URL((await link.getAttribute('href'))!, page.url());
+    expect(url.origin).toBe(new URL(page.url()).origin);
+    const response = await page.request.get(url.href);
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toMatch(/^text\/csv(?:\s*;|$)/i);
+    const expectedBytes = await response.body();
+    expect(expectedBytes.toString('utf8').split(/\r?\n/).filter(Boolean)).toHaveLength(95);
+    await response.dispose();
+    const pending = page.waitForEvent('download'); await link.click();
+    const download = await pending, stream = await download.createReadStream();
+    expect(download.suggestedFilename()).toBe('algorithm-comparison.csv');
+    if (!stream) throw new Error('Published CSV download has no readable stream.');
+    const chunks: Buffer[] = []; for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    expect(Buffer.concat(chunks)).toEqual(expectedBytes);
+  });
   test('English baseline returns the deployed memory snapshot', async ({page}) => {
     await page.locator('#model-select').selectOption('segment_type_en');
     await page.locator('#input-text').fill('Years after leaving home, Mara remembered the blue room and the letter her brother had left.');

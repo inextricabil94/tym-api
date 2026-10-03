@@ -1,0 +1,3 @@
+# Preserve published comparison bytes and SHA256s across Windows/Linux checkouts.
+docs/results/algorithm-comparison.* -text
+src/Tym.Corpus.Ui/wwwroot/results/algorithm-comparison.* -text

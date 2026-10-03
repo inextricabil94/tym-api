@@ -28,6 +28,8 @@ Relations have explicit family, From and To IDs. TYM endpoints are segments; TLI
 
 The independent comparison panel loads only the same-origin aggregate `wwwroot/results/algorithm-comparison.json`. It filters conditional classification by task and both classification/book exploration by language, reports grouped accuracy/macro F1 and local batched timing, and keeps book semantic accuracy N/A. It requires a completed seventeen-family report with finite values; missing, malformed, incomplete or timed-out data displays an inline reload state without blocking prediction or document review. JSON/CSV/Markdown downloads use fixed local paths. Small C# neural models are scratch experiments, and the panel does not imply independent gold accuracy or a deployed replacement.
 
+Each row can include optional `space` measurements. Accessible “Space and storage” details show feature/vocabulary ranges, sequence limits, neural parameter counts, estimated float32 weight bytes, shared-process working-set samples/lifetime peaks in MiB, and actual exported artifact bytes. The report retains `_mb` property names for those MiB memory values. Process memory includes shared runtime and earlier trials; it does not measure isolated model allocation. Estimated parameter bytes are not exported file sizes. Missing measurements display as unavailable, preserving older summaries without `space`. Supplied numeric space values must be finite and nonnegative; inconsistent minimum/maximum ranges are rejected. Scopes render as inert text.
+
 ## UI tests
 
 ```powershell

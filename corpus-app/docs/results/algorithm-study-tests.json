@@ -1,0 +1,25 @@
+{
+  "verified_utc": "2026-10-03T10:36:14.1567014+00:00",
+  "dotnet_tests_passed": 144,
+  "dotnet_suites": {
+    "baseline_modeling": 31,
+    "api": 70,
+    "research": 43
+  },
+  "dotnet_failed": 0,
+  "dotnet_skipped": 0,
+  "ui_distinct_tests_passed": 24,
+  "local_ui_tests": 21,
+  "public_ui_tests": 3,
+  "ui_failed": 0,
+  "ui_skipped": 0,
+  "private_book_samples": 5,
+  "private_input_destination": "localhost only",
+  "public_inputs": "Original authored prose and corpus-free aggregate result assets only",
+  "software_checks_are_not_semantic_accuracy": true,
+  "typescript_typecheck": "passed",
+  "typescript_build": "passed",
+  "ui_host_build": "passed, 0 warnings, 0 errors",
+  "ui_revision": "tym-corpus-ui-serban--0000002",
+  "initial_comparison_csv_probe": "Synthetic page routing did not intercept native browser download. The test was corrected to verify actual local CSV MIME/header and exact browser-download bytes; final complete suite passed."
+}

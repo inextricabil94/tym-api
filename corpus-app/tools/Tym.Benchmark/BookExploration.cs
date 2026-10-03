@@ -45,6 +45,20 @@ public static class BookExploration
                 throw new ArgumentException("A book exploration artifact already exists; choose a new output directory.");
         }
         var watch = Stopwatch.StartNew();
+        using var process = Process.GetCurrentProcess();
+        object SpaceSnapshot(string? artifact = null, long? parameterCount = null)
+        {
+            process.Refresh();
+            return new
+            {
+                process_working_set_mb = process.WorkingSet64 / 1048576.0,
+                process_lifetime_peak_working_set_mb = process.PeakWorkingSet64 / 1048576.0,
+                artifact_bytes = artifact is null ? (long?)null : new FileInfo(artifact).Length,
+                neural_parameter_count = parameterCount,
+                float32_parameter_bytes = parameterCount is null ? (long?)null : checked(parameterCount.Value * 4),
+                scope = "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+            };
+        }
         var split = CreateSplit(rows, seed);
         var training = rows.Where((_, index) => !split.Heldout[index]).ToArray();
         var heldout = rows.Where((_, index) => split.Heldout[index]).ToArray();
@@ -116,7 +130,7 @@ public static class BookExploration
                 fit_seconds_after_shared_featurizer = fitSeconds, assessment_seconds = inferenceSeconds,
                 assessment_rows = training.Length + heldout.Length,
                 training_metrics = trainingMetrics, heldout_metrics = holdoutMetrics,
-                semantic_accuracy = (double?)null,
+                semantic_accuracy = (double?)null, space = SpaceSnapshot(modelPath),
                 accuracy_status = "unavailable_unlabeled_passages"
             });
             Console.WriteLine($"Book {language} {algorithm}: {training.Length} fit, {heldout.Length} heldout; {fitSeconds:F2}s after shared features.");
@@ -147,6 +161,7 @@ public static class BookExploration
             algorithm = "csharp_torchsharp_autoencoder", implementation = "TorchSharp CPU neural model in C#",
             representation = "Training-fitted ML.NET text features -> L2 -> centered PCA -> L2; no prose decoder",
             feature_dimensions = autoencoder.InputDimensions, bottleneck_dimensions = autoencoder.BottleneckDimensions,
+            space = SpaceSnapshot(parameterCount: autoencoder.ModelParameters),
             epochs = 5, training_rows = training.Length, heldout_rows = heldout.Length,
             model_parameters = autoencoder.ModelParameters, model_exported = false,
             shared_text_featurizer_fit_seconds = commonSeconds, shared_pca_fit_seconds = pcaSeconds,
@@ -213,7 +228,7 @@ public static class BookExploration
                 epsilon = densityBased ? DbscanEpsilon : (double?)null,
                 minimum_points_including_self = densityBased ? DbscanMinimumPoints : (int?)null,
                 requested_clusters = densityBased ? (int?)null : clusters,
-                heldout_metrics = (object?)null, semantic_accuracy = (double?)null,
+                heldout_metrics = (object?)null, semantic_accuracy = (double?)null, space = SpaceSnapshot(artifactPath),
                 accuracy_status = "unavailable_unlabeled_transductive_training_sample",
                 sampling = "At most 256 training passages ranked by SHA256(seed|sample|id); no heldout input used."
             });

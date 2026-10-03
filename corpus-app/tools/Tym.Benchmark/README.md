@@ -50,7 +50,7 @@ dotnet run --project tools/Tym.Benchmark -- --data C:\private\tym\timebank.jsonl
 
 Use 2-10 folds and enough document components to populate them. Each task needs nonempty train/validation rows and at least two training labels in each fold. The single parallel TYM work cannot support this source-disjoint literary protocol; do not concatenate it into a purported multi-work evaluation.
 
-The default comparison uses a training-fold majority label, whole-text SDCA maximum entropy, whole-text L-BFGS maximum entropy and structured-channel SDCA. These linear trainers use one thread and 100 maximum iterations; fold seed is the selected seed plus fold index. Feature transforms and label mapping fit only on the training fold. Entirely blank structured channels are omitted using training inputs, without inspecting validation labels.
+The default comparison uses a training-fold majority label, whole-text SDCA maximum entropy, whole-text L-BFGS maximum entropy and structured-channel SDCA. These linear trainers request one thread and 100 maximum iterations; fold seed is the selected seed plus fold index. Trainer thread options do not enforce process affinity or cap auxiliary/native workers; OVA scoring can parallelize classes. Feature transforms and label mapping fit only on the training fold. Entirely blank structured channels are omitted using training inputs, without inspecting validation labels.
 
 Documents are keyed by source group/document ID. Identical Unicode/whitespace-normalized task/language/input strings join their documents into one component before deterministic, row-balanced fold assignment. The current run has 157 documents, 50 components and 107 cross-document duplicate rows, with 6,744 / 6,721 / 6,686 rows in three folds.
 
@@ -90,6 +90,8 @@ Generate the complete measured summary only after all three report files finish:
 ```
 
 The generator rejects partial runs, incomplete coverage, invalid feature budgets and nonfinite measurements. It produces Markdown, CSV and JSON for all seventeen families/nineteen variants: 84 classifier task measurements and ten book measurements. Classifier fit times sum three independent fold fits, and prediction throughput describes batched validation, not interactive latency. Book assessment timings have different workloads; shared prerequisite costs are repeated in the per-pipeline figures. One local CPU trial per fold supplies no timing confidence interval or universal performance ranking. See [the algorithm mapping](../../docs/algorithm-approaches.md) for all configurations and [the measured summary](../../docs/results/algorithm-comparison.md) for executed results.
+
+Space fields record actual feature/vocabulary dimensions, neural parameter counts and float32 bytes, shared-process working-set snapshots/lifetime peaks, and private exported book artifact bytes. Process memory includes prior trials, native state and retained data; it cannot rank isolated model RAM. Unexported classifier and autoencoder disk sizes remain null. Book ZIP and transductive sample JSON sizes describe different artifact types. See [time/space complexity notes](../../docs/algorithm-complexity.md) for explanatory scaling under explicit assumptions, separate from measured costs.
 
 ## Full-data structured training
 

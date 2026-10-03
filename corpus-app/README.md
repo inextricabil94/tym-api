@@ -10,6 +10,8 @@ Read [the architecture review](docs/architecture-review.md) for source papers, l
 
 The final UI is live at [TYM Corpus Lab](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/), with the [corpus API](https://tym-corpus-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/) serving sixteen verified classifiers. Download the [updated research PDF](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf) and [editable PowerPoint](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/TYM_MLNET_Updated_Results_20261002.pptx). Both downloads match the visually reviewed local artifacts by SHA-256. See [final release evidence](docs/results/final-release.json) and [artifact verification](docs/results/published-artifacts.json).
 
+The 3 October update adds [the live algorithm comparison](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/#algorithm-comparison): **17 families / 19 variants**, 84 classifier task measurements and ten unlabeled book measurements. Download the [complete time/space/performance/accuracy report](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/algorithm-comparison.md), [CSV](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/algorithm-comparison.csv) or [JSON](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/algorithm-comparison.json). See [this release's verification](docs/results/algorithm-study-release.json) and [explanatory complexity notes](docs/algorithm-complexity.md). The PDF/PowerPoint remain the dated 2 October research artifacts; the new comparison is recorded in these separate result downloads.
+
 ## Requirements and build
 
 Use the .NET 10 SDK, Node.js/npm for the frontend, and Docker or Azure CLI for deployment. The committed package lock pins TypeScript 5.9.3 and the browser-test dependencies.
@@ -113,7 +115,7 @@ Annotations retain `provided_annotation/adjudication_unknown`. Grouped diagnosti
 
 ## Tests
 
-The expanded algorithm study covers every family in the supplied chart using ML.NET plus custom C# and scratch TorchSharp models. See [the benchmark commands](tools/Tym.Benchmark/README.md#all-seventeen-algorithm-families) and [the mapping of all seventeen families](docs/algorithm-approaches.md). Completed comparison summaries are shown by the TypeScript UI independently of the prediction catalog.
+The completed algorithm study covers every family in the supplied chart using ML.NET plus custom C# and scratch TorchSharp models. See [the benchmark commands](tools/Tym.Benchmark/README.md#all-seventeen-algorithm-families), [the mapping of all seventeen families](docs/algorithm-approaches.md) and [measured results](docs/results/algorithm-comparison.md). Results include accuracy/macro F1, fit/scoring time and throughput, feature dimensions, neural parameter storage, shared-process memory and actual private exported artifact bytes. Books have no gold semantic labels, so their accuracy is unavailable. These comparisons remain diagnostic; the API uses the existing sixteen verified weights.
 
 ```powershell
 dotnet test Tym.Corpus.sln
@@ -127,7 +129,7 @@ $env:TYM_PRIVATE_BOOKS_ZIP = 'C:\private\tym\Books.zip'
 dotnet test Tym.Corpus.sln
 ```
 
-At the current .NET verification checkpoint, 70 API, 31 baseline modeling and 22 research checks passed (123 total, including enabled private integration). Counts are software checks, not accuracy scores. Missing private variables skip their gated tests. Raw archive excerpts stay in private temporary test inputs.
+The 3 October .NET verification passed 70 API, 31 baseline modeling and 43 research checks (144 total, zero skipped, including enabled private integration). Counts are software checks, not accuracy scores. Missing private variables skip their gated tests. Raw archive excerpts stay in private temporary test inputs. See [the recorded verification](docs/results/algorithm-study-tests.json).
 
 Frontend commands:
 
@@ -140,7 +142,7 @@ npm run test:ui
 Pop-Location
 ```
 
-The final browser checkpoint passed 18 distinct checks: 16 local checks (including five private Books.zip excerpts) and two public smoke checks using original authored text. See [the recorded summary](docs/results/ui-test-summary.json). Browser tests are a separate verification step. Private book browser checks require the harness's private sample configuration and must not publish excerpts, screenshots or traces containing book prose.
+The 3 October browser verification passed 24 distinct checks: 21 local checks (including five private Books.zip excerpts) and three public smoke checks using original authored text and aggregate result assets. See [the recorded summary](docs/results/algorithm-study-tests.json); [the earlier 2 October summary](docs/results/ui-test-summary.json) remains historical. Browser tests are a separate verification step. Private book browser checks require the harness's private sample configuration and must not publish excerpts, screenshots or traces containing book prose.
 
 ## Docker and Azure CLI
 

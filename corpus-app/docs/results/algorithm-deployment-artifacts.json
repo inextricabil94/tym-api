@@ -1,0 +1,51 @@
+{
+  "verified_utc": "2026-10-03T10:34:03.9066605+00:00",
+  "ui_revision": "tym-corpus-ui-serban--0000002",
+  "artifacts": [
+    {
+      "file": "algorithm-comparison.json",
+      "url": "https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/algorithm-comparison.json",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 222076,
+      "sha256": "9c3b9f3aa8932f96756e0fae1a4ad337276e149b035fa2a36060f2e224265639",
+      "matches_reviewed_local_file": true
+    },
+    {
+      "file": "algorithm-comparison.csv",
+      "url": "https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/algorithm-comparison.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8",
+      "bytes": 82585,
+      "sha256": "2233a434f6356feff9ce8ea2e1e8044dc0bfd053565fbfab08751fc6263316d5",
+      "matches_reviewed_local_file": true
+    },
+    {
+      "file": "algorithm-comparison.md",
+      "url": "https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/algorithm-comparison.md",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "bytes": 29576,
+      "sha256": "03357fc106e90f442be8bb1985483f1a634cab00ea1ae29f7fe0d472fff29942",
+      "matches_reviewed_local_file": true
+    },
+    {
+      "file": "Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf",
+      "url": "https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf",
+      "status": 200,
+      "content_type": "application/pdf",
+      "bytes": 139409,
+      "sha256": "ccc632972f9d475af05f7187ddb906365805151eb596a89a504cc8b6bf69e86c",
+      "matches_reviewed_local_file": true
+    },
+    {
+      "file": "TYM_MLNET_Updated_Results_20261002.pptx",
+      "url": "https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/TYM_MLNET_Updated_Results_20261002.pptx",
+      "status": 200,
+      "content_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "bytes": 71451,
+      "sha256": "b84aec25fd3fdc5a31716c8a58f28a104ecbd4d17fb0427f02d5b422348ec7d1",
+      "matches_reviewed_local_file": true
+    }
+  ]
+}

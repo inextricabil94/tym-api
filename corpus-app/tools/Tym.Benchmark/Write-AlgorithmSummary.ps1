@@ -91,6 +91,60 @@ function Format-Number([object]$Number, [int]$Digits = 3) {
     if ($null -eq $Number) { return 'N/A' }
     return ([double]$Number).ToString("F$Digits", $culture)
 }
+function Classifier-Space([object[]]$Folds, [string]$Config) {
+    $trials = @($Folds | ForEach-Object { Value (Value $_ 'algorithms') $Config })
+    $neural = $Config -in @('mlp', 'cnn', 'rnn', 'transformer')
+    $dimensions = if ($neural) { @() } else { @($trials | ForEach-Object { Number $_ 'feature_dimensions' 1 }) }
+    $parameters = if ($neural) { @($trials | ForEach-Object { Number (Value $_ 'configuration') 'model_parameters' 1 }) } else { @() }
+    $vocabulary = if ($neural) { @($trials | ForEach-Object { Number (Value $_ 'configuration') 'training_vocabulary_size' 2 2048 }) } else { @() }
+    return [pscustomobject][ordered]@{
+        feature_dimensions_min = if ($neural) { $null } else { ($dimensions | Measure-Object -Minimum).Minimum }
+        feature_dimensions_max = if ($neural) { $null } else { ($dimensions | Measure-Object -Maximum).Maximum }
+        training_vocabulary_size_min = if ($neural) { ($vocabulary | Measure-Object -Minimum).Minimum } else { $null }
+        training_vocabulary_size_max = if ($neural) { ($vocabulary | Measure-Object -Maximum).Maximum } else { $null }
+        maximum_sequence_length = if ($neural) { 64 } else { $null }
+        process_working_set_before_min_mb = ($trials | ForEach-Object { Number $_ 'process_working_set_before_mb' } | Measure-Object -Minimum).Minimum
+        process_working_set_after_max_mb = ($trials | ForEach-Object { Number $_ 'process_working_set_after_mb' } | Measure-Object -Maximum).Maximum
+        process_lifetime_peak_working_set_max_mb = ($trials | ForEach-Object { Number $_ 'process_peak_working_set_mb' } | Measure-Object -Maximum).Maximum
+        neural_parameter_count_min = if ($neural) { ($parameters | Measure-Object -Minimum).Minimum } else { $null }
+        neural_parameter_count_max = if ($neural) { ($parameters | Measure-Object -Maximum).Maximum } else { $null }
+        float32_parameter_bytes_max = if ($neural) { 4 * ($parameters | Measure-Object -Maximum).Maximum } else { $null }
+        artifact_bytes = $null
+        scope = 'Min/max over three folds. Working set is the shared process snapshot before/after each trial; lifetime peak includes earlier algorithms, native state and retained data. Not isolated model RAM. Feature dimensions are the fitted concatenated input, before CART selection. Float32 parameter bytes exclude gradients, optimizer, activations and vocabulary. Classifier weights were not exported; disk size is unavailable.'
+    }
+}
+function Book-Space([object]$Algorithm) {
+    $space = Value $Algorithm 'space'
+    $dimensions = Number $Algorithm 'feature_dimensions' 2
+    $parameters = Optional-Number $space 'neural_parameter_count' 1
+    $bytes = Optional-Number $space 'float32_parameter_bytes' 4
+    if ($null -ne $parameters -and $bytes -ne 4 * $parameters) { throw 'Parameter storage must match float32 parameter count.' }
+    return [pscustomobject][ordered]@{
+        feature_dimensions_min = $dimensions; feature_dimensions_max = $dimensions
+        training_vocabulary_size_min = $null; training_vocabulary_size_max = $null; maximum_sequence_length = $null
+        process_working_set_before_min_mb = $null
+        process_working_set_after_max_mb = Number $space 'process_working_set_mb'
+        process_lifetime_peak_working_set_max_mb = Number $space 'process_lifetime_peak_working_set_mb'
+        neural_parameter_count_min = $parameters; neural_parameter_count_max = $parameters
+        float32_parameter_bytes_max = $bytes
+        artifact_bytes = Optional-Number $space 'artifact_bytes' 1
+        scope = [string](Value $space 'scope')
+    }
+}
+function Add-SpaceTable([Text.StringBuilder]$Builder, [object[]]$Measurements) {
+    [void]$Builder.AppendLine('| Task/language | Variant | Feature dimension range | Vocabulary range | Parameters max | Float32 parameter MiB | Shared WS after max MiB | Process lifetime peak max MiB | Private artifact bytes |')
+    [void]$Builder.AppendLine('| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |')
+    foreach ($row in $Measurements) {
+        $s = $row.space
+        $parameterMiB = if ($null -eq $s.float32_parameter_bytes_max) { $null } else { $s.float32_parameter_bytes_max / 1048576.0 }
+        [void]$Builder.AppendLine('| ' + $row.task + '/' + $row.language + ' | ' + $variantLabels[$row.config] +
+            ' | ' + (Format-Number $s.feature_dimensions_min 0) + '..' + (Format-Number $s.feature_dimensions_max 0) +
+            ' | ' + (Format-Number $s.training_vocabulary_size_min 0) + '..' + (Format-Number $s.training_vocabulary_size_max 0) +
+            ' | ' + (Format-Number $s.neural_parameter_count_max 0) + ' | ' + (Format-Number $parameterMiB 4) +
+            ' | ' + (Format-Number $s.process_working_set_after_max_mb 2) + ' | ' + (Format-Number $s.process_lifetime_peak_working_set_max_mb 2) +
+            ' | ' + (Format-Number $s.artifact_bytes 0) + ' |')
+    }
+}
 function Metric-Text([object]$Measurement) {
     switch ($Measurement.config) {
         { $_ -in @('mlnet_kmeans', 'mlnet_pca_kmeans') } {
@@ -124,6 +178,7 @@ function Add-ClassifierTable([Text.StringBuilder]$Builder, [object[]]$Measuremen
 }
 
 $classification = Read-Report $ClassificationReportPath
+$runtime = Value $classification 'runtime'
 if ((Value $classification 'schema_version') -ne 2 -or
     (Value $classification 'status') -ne 'diagnostic_provided_annotation_cross_validation' -or
     (Number $classification 'folds' 3 3) -ne 3) {
@@ -186,6 +241,7 @@ foreach ($taskName in $taskNames) {
             batched_rows_per_second = Number $cost 'batched_rows_per_second'
             accuracy_fraction = $accuracy; macro_f1_fraction = $macro
             accuracy_percent = $accuracy * 100; macro_f1_percent = $macro * 100
+            space = if ($config -eq 'majority') { $null } else { Classifier-Space $foldReports $config }
             notes = 'Provided annotation, adjudication unknown; pooled out-of-fold conditional classification; fit is SUM of 3 independently fitted folds; batched timing is not interactive latency.'
         }
         if ($config -eq 'majority') { $baselines.Add($measurement) } else { $classificationRows.Add($measurement) }
@@ -222,6 +278,7 @@ foreach ($item in $bookInputs) {
             feature_dimensions = [int](Number $algorithm 'feature_dimensions' 2)
             train_seconds = $null; predict_seconds = $null; batched_ms_per_row = $null; batched_rows_per_second = $null
             accuracy_fraction = $null; macro_f1_fraction = $null; sample_rows = $null; pca_basis_fit_seconds = $null; timing_scope = ''; notes = ''
+            space = Book-Space $algorithm
         }
         switch ($config) {
             { $_ -in @('mlnet_kmeans', 'mlnet_pca_kmeans') } {
@@ -305,6 +362,7 @@ $classificationFlat = @($classificationRows | ForEach-Object {
         accuracy_fraction = $row.accuracy_fraction; macro_f1_fraction = $row.macro_f1_fraction
         total_training_seconds = $row.train_seconds; total_prediction_seconds = $row.predict_seconds
         prediction_ms_per_row = $row.batched_ms_per_row; batched_rows_per_second = $row.batched_rows_per_second
+        space = $row.space
         notes = @($row.notes, $featureNote, $majorityNote)
     }
 })
@@ -332,6 +390,7 @@ $booksFlat = @($bookRows | ForEach-Object {
         family = $family.id; family_label = $family.label; algorithm = $row.config; algorithm_label = $variantLabels[$row.config]
         language = $row.language; status = $row.status; training_seconds = $row.train_seconds; assessment_seconds = $row.predict_seconds
         semantic_accuracy = $null; metrics = [pscustomobject]$metrics; scope = $scope
+        space = $row.space
         notes = @($row.notes, $row.timing_scope)
     }
 })
@@ -341,6 +400,9 @@ $limits = @(
     'Macro F1 uses the fixed full task label inventory, retaining rare labels absent from some training folds with zero F1 when unrecovered. Training-fold majority baselines are retained for each task.',
     'Each classification fit time is the SUM of three separately fitted folds, not one final production-model fit. Feature fitting/training vectorization is included; CSV accuracy_fraction and macro_f1_fraction use [0,1], Markdown displays percentages.',
     'Prediction costs are batched validation measurements and include vectorization. They are not interactive latency. One local CPU run supplies no timing confidence interval or hardware-normalized speed ranking.',
+    'Space measurements use MiB (1024 squared bytes). Working sets and lifetime peaks belong to the shared process; earlier algorithms, retained data, garbage collection and native state affect them. They are not isolated per-model RAM and must not be used to rank model memory. Before/after differences are not allocation measurements.',
+    'Neural parameter bytes are actual parameter counts times four for float32, excluding gradients, optimizer state, activations, vocabulary and upstream representation. Classification weights and autoencoder weights were not exported: disk size is N/A. Book artifact sizes describe compressed ML.NET pipelines or private transductive sample JSON, not comparable deployment models; no corpus prose is published.',
+    'One thread is requested in trainer options where exposed, not enforced by process affinity. Framework/native auxiliary workers and operating-system load are not isolated; one-versus-all scoring can parallelize class mappers. Hardware and requested thread settings accompany this report.',
     'All supervised variants use the same document-component splits, but native, bounded custom and scratch-neural feature representations differ. No independent algorithm-selection holdout or significance test is available.',
     'Classification native/numeric text features use training-only dictionaries capped at 1024 word unigrams, 1024 word bigrams and 1024 character trigrams per active channel: at most 3 x 1024 x active channels. Blank channels are removed using training input only. Actual dimensions may be smaller; CART further selects bounded training features, while exact KNN uses the complete capped vectors.',
     'Scratch neural classifiers use a separate training-only vocabulary capped at 2048 tokens including padding/unknown, the first 64 tokens per input and five fixed epochs. These bounded representations differ from the native n-gram channels.',
@@ -364,7 +426,13 @@ $release = [pscustomobject][ordered]@{
     classification_input_sha256 = Value $classification 'input_sha256'
     classification_feature_representation = Value $classification 'feature_representation'
     classification_elapsed_seconds = Number $classification 'seconds'
-    classification_runtime = Value $classification 'runtime'
+    classification_runtime = [ordered]@{
+        os = Value $runtime 'os'; architecture = Value $runtime 'architecture'
+        logical_processors = Number $runtime 'logical_processors' 1; dotnet = Value $runtime 'dotnet'
+        configured_trainer_threads_where_exposed = Number $runtime 'trainer_threads' 1 1
+        process_affinity_or_auxiliary_worker_limit_enforced = $false
+        scope = 'Per-trainer requested options; OVA scoring may parallelize classes; native/framework workers and OS load are not isolated.'
+    }
     classification_feature_contract = [ordered]@{
         native_maximum_ngrams_per_order_per_channel = $ngramLimit
         native_active_word_ngram_lengths = @(1, 2); native_active_character_ngram_lengths = @(3)
@@ -375,7 +443,7 @@ $release = [pscustomobject][ordered]@{
         neural_pretrained_weights = $false
     }
     seed = Value $classification 'seed'; folds = 3
-    units = [ordered]@{ accuracy = 'fraction [0,1]; Markdown and UI display percentages'; macro_f1 = 'fraction [0,1]; Markdown and UI display percentages'; time = 'seconds'; batched_latency = 'milliseconds per validation row, not interactive latency' }
+    units = [ordered]@{ accuracy = 'fraction [0,1]; Markdown and UI display percentages'; macro_f1 = 'fraction [0,1]; Markdown and UI display percentages'; time = 'seconds'; batched_latency = 'milliseconds per validation row, not interactive latency'; process_memory_mb_fields = 'MiB, bytes / 1048576, shared process snapshots'; artifact_and_parameter_size = 'bytes' }
     books = $bookSummaries.ToArray(); families = $familyRows; majority_baselines = $baselines.ToArray(); limitations = $limits
 }
 
@@ -437,6 +505,12 @@ foreach ($family in $familyRows) {
     [void]$markdown.AppendLine('| ' + $family.label + ' | ' + (($family.variants | ForEach-Object { $variantLabels[$_] }) -join ', ') + ' | ' + $evidence + ' |')
 }
 [void]$markdown.AppendLine()
+[void]$markdown.AppendLine('## Space: dimensions, parameters, process memory and storage')
+[void]$markdown.AppendLine()
+[void]$markdown.AppendLine('Working sets are **shared-process snapshots**, not isolated model RAM. Lifetime peaks include earlier trials and retained/native state, so memory rows cannot rank algorithms. Classifier values are maxima across three folds; feature/vocabulary ranges show actual training-fitted sizes. MiB = 1,048,576 bytes. Neural parameter bytes exclude training state and activations. Unexported classifier/autoencoder disk size is N/A. Book bytes are private pipeline ZIPs or training-sample JSON and are not comparable model types.')
+[void]$markdown.AppendLine()
+Add-SpaceTable $markdown @($classificationRows.ToArray() + $bookRows.ToArray())
+[void]$markdown.AppendLine()
 [void]$markdown.AppendLine('## Interpretation and timing limits')
 [void]$markdown.AppendLine()
 foreach ($limit in $limits) { [void]$markdown.AppendLine('- ' + $limit) }
@@ -455,6 +529,15 @@ $csv = @($classificationRows.ToArray() + $bookRows.ToArray() | ForEach-Object {
         accuracy_fraction = if ($null -eq $row.accuracy_fraction) { '' } else { ([double]$row.accuracy_fraction).ToString('G17', $culture) }
         macro_f1_fraction = if ($null -eq $row.macro_f1_fraction) { '' } else { ([double]$row.macro_f1_fraction).ToString('G17', $culture) }
         unsupervised_metric = if ($row.task -eq 'unlabeled_book_exploration') { Metric-Text $row } else { '' }
+        feature_dimensions_min = $row.space.feature_dimensions_min; feature_dimensions_max = $row.space.feature_dimensions_max
+        training_vocabulary_size_min = $row.space.training_vocabulary_size_min; training_vocabulary_size_max = $row.space.training_vocabulary_size_max
+        maximum_sequence_length = $row.space.maximum_sequence_length
+        process_working_set_before_min_mb = $row.space.process_working_set_before_min_mb
+        process_working_set_after_max_mb = $row.space.process_working_set_after_max_mb
+        process_lifetime_peak_working_set_max_mb = $row.space.process_lifetime_peak_working_set_max_mb
+        neural_parameter_count_min = $row.space.neural_parameter_count_min; neural_parameter_count_max = $row.space.neural_parameter_count_max
+        float32_parameter_bytes_max = $row.space.float32_parameter_bytes_max; artifact_bytes = $row.space.artifact_bytes
+        space_scope = $row.space.scope
         notes = $notes
     }
 })
