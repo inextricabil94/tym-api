@@ -6,6 +6,8 @@ The catalog contains sixteen classifiers: ten whole-text baselines and six struc
 
 Read [the architecture review](docs/architecture-review.md) for source papers, licenses, implementation scope and evaluation decisions, and [the session record](docs/research-session.md) for the run history. [Aggregate results](docs/results/) contain counts, metrics and model metadata without book prose.
 
+The [5 October integration summary](docs/integration-workflow-summary.md) records **20 passing cases**: ten real UI/API prediction workflows covering all sixteen classifiers, plus ten fresh book experiments. The [illustrated report](docs/integration-workflows-report/index.html) contains real prediction screenshots, book pipeline diagrams, observed outputs and explanatory text. Reproduction commands and private input requirements are documented with the tests; passing integration checks do not establish semantic accuracy.
+
 ## Published release
 
 The final UI is live at [TYM Corpus Lab](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/), with the [corpus API](https://tym-corpus-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/) serving sixteen verified classifiers. Download the [updated research PDF](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/Deep_Learning_Spatial_Temporal_Semantics_Updated_Results_20261002.pdf) and [editable PowerPoint](https://tym-corpus-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io/results/TYM_MLNET_Updated_Results_20261002.pptx). Both downloads match the visually reviewed local artifacts by SHA-256. See [final release evidence](docs/results/final-release.json) and [artifact verification](docs/results/published-artifacts.json).

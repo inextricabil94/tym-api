@@ -1,0 +1,2012 @@
+{
+  "schema_version": 1,
+  "status": "completed_integration_evidence",
+  "date": "2026-10-05",
+  "prediction_workflows": 10,
+  "book_workflows": 10,
+  "passed": 20,
+  "records": [
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-alink",
+      "title": "Romanian TimeBank aspectual link",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "From: a început\nFrom context: Ploaia [TARGET] a început [/TARGET] să cadă.\nSignal: să\nTo: cadă\nTo context: Ploaia a început să [TARGET] cadă [/TARGET].",
+      "language": "ro",
+      "task": "timebank_alink",
+      "explanation": "The lexical and structured ALINK models classify the source event’s phase relationship to a supplied target event.",
+      "scope": "Aspectual labels refer to supplied ordered event mentions, not automatically extracted causal or temporal edges.",
+      "observed_at_utc": "2026-10-05T04:38:33.009Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "timebank_alink_ro",
+          "input_format": null,
+          "predicted_label": "INITIATES",
+          "ui_label": "INITIATES",
+          "labels": [
+            "CONTINUES",
+            "CULMINATES",
+            "INITIATES",
+            "REINITIATES",
+            "TERMINATES"
+          ],
+          "training_rows": 199,
+          "document_count": 87,
+          "model_sha256": "339fc8e0bb4b7df7bfdb81401e996d476ef2c456efdfd1d5b8f56e637a97edc2",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 4.617400000000998,
+          "ui_round_trip_elapsed_ms": 283.09449999999924
+        },
+        {
+          "model_id": "timebank_alink_ro_structured",
+          "input_format": "structured_target_v1",
+          "predicted_label": "INITIATES",
+          "ui_label": "INITIATES",
+          "labels": [
+            "CONTINUES",
+            "CULMINATES",
+            "INITIATES",
+            "REINITIATES",
+            "TERMINATES"
+          ],
+          "training_rows": 199,
+          "document_count": 87,
+          "model_sha256": "05d7aa156812469644c6a72bd3166c36fd03e6c53ed51f7444c3378697b70b5b",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 6.375400000000809,
+          "ui_round_trip_elapsed_ms": 388.60069999999905
+        }
+      ],
+      "screenshot": "predictions/prediction-alink.png",
+      "screenshot_model_id": "timebank_alink_ro_structured",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-event-class",
+      "title": "Romanian TimeBank event class",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "Context: Mara [TARGET] a aflat [/TARGET] vestea și a zâmbit.\nEvent: a aflat",
+      "language": "ro",
+      "task": "timebank_event_class",
+      "explanation": "The lexical and structured event-class models classify the same marked event mention.",
+      "scope": "Conditional event classification: the event span is supplied, not detected by the test.",
+      "observed_at_utc": "2026-10-05T04:38:25.736Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "timebank_event_class_ro",
+          "input_format": null,
+          "predicted_label": "OCCURRENCE",
+          "ui_label": "OCCURRENCE",
+          "labels": [
+            "ASPECTUAL",
+            "I_ACTION",
+            "I_STATE",
+            "OCCURRENCE",
+            "PERCEPTION",
+            "REPORTING",
+            "STATE"
+          ],
+          "training_rows": 5947,
+          "document_count": 157,
+          "model_sha256": "91ed077679e30aaa5831b28c15cfec2043dfd24307bb4ede4832d7ee1f3adac6",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 5.240299999999479,
+          "ui_round_trip_elapsed_ms": 284.15250000000015
+        },
+        {
+          "model_id": "timebank_event_class_ro_structured",
+          "input_format": "structured_target_v1",
+          "predicted_label": "OCCURRENCE",
+          "ui_label": "OCCURRENCE",
+          "labels": [
+            "ASPECTUAL",
+            "I_ACTION",
+            "I_STATE",
+            "OCCURRENCE",
+            "PERCEPTION",
+            "REPORTING",
+            "STATE"
+          ],
+          "training_rows": 5947,
+          "document_count": 157,
+          "model_sha256": "108c21e3adb5d11447388ec38489ebff83529aab1ca2631701f36576f906a763",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 5.827400000000125,
+          "ui_round_trip_elapsed_ms": 392.5036
+        }
+      ],
+      "screenshot": "predictions/prediction-event-class.png",
+      "screenshot_model_id": "timebank_event_class_ro_structured",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-event-tense",
+      "title": "Romanian TimeBank event tense",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "Context: Mâine Mara [TARGET] va pleca [/TARGET] spre munte.\nEvent: va pleca",
+      "language": "ro",
+      "task": "timebank_event_tense",
+      "explanation": "The lexical and structured tense models classify the tense label of the same supplied event.",
+      "scope": "Conditional tense classification of a marked event, not calendar date prediction or end-to-end event extraction.",
+      "observed_at_utc": "2026-10-05T04:38:27.398Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "timebank_event_tense_ro",
+          "input_format": null,
+          "predicted_label": "FUTURE",
+          "ui_label": "FUTURE",
+          "labels": [
+            "FUTURE",
+            "INFINITIVE",
+            "NONE",
+            "PAST",
+            "PASTPART",
+            "PRESENT",
+            "PRESPART"
+          ],
+          "training_rows": 5920,
+          "document_count": 157,
+          "model_sha256": "0a2d932d0bda2f682c73d2900f23da631046f372f5036377547b26147139a599",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 7.076399999999921,
+          "ui_round_trip_elapsed_ms": 297.8702000000012
+        },
+        {
+          "model_id": "timebank_event_tense_ro_structured",
+          "input_format": "structured_target_v1",
+          "predicted_label": "FUTURE",
+          "ui_label": "FUTURE",
+          "labels": [
+            "FUTURE",
+            "INFINITIVE",
+            "NONE",
+            "PAST",
+            "PASTPART",
+            "PRESENT",
+            "PRESPART"
+          ],
+          "training_rows": 5920,
+          "document_count": 157,
+          "model_sha256": "93199a4ebc0e56f69651832a986fbd825027116219de86d48cce749b2693e99a",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 8.956299999999828,
+          "ui_round_trip_elapsed_ms": 288.52130000000034
+        }
+      ],
+      "screenshot": "predictions/prediction-event-tense.png",
+      "screenshot_model_id": "timebank_event_tense_ro_structured",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-relation-en",
+      "title": "English directed segment relation",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "Earlier segment: Mara left the village before dawn.\nRelation cue: years later.\nLater segment: She remembered the journey.",
+      "language": "en",
+      "task": "temporal_relation",
+      "explanation": "The English TYM relation classifier receives two ordered segments and a relation cue.",
+      "scope": "Ordered endpoints and cue are supplied; the predicted relationship is not an automatically extracted or adjudicated timeline.",
+      "observed_at_utc": "2026-10-05T04:38:22.877Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "temporal_relation_en",
+          "input_format": null,
+          "predicted_label": "AFTER",
+          "ui_label": "AFTER",
+          "labels": [
+            "AFTER",
+            "BEFORE",
+            "IMMEDIATELY_AFTER",
+            "IMMEDIATELY_BEFORE",
+            "SIMULTANEOUS"
+          ],
+          "training_rows": 382,
+          "document_count": 1,
+          "model_sha256": "e02cddf70efb157e8604fa10e4b40e2e077d119c768316c75db0b66ad1405b51",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 6.632499999999709,
+          "ui_round_trip_elapsed_ms": 302.02130000000034
+        }
+      ],
+      "screenshot": "predictions/prediction-relation-en.png",
+      "screenshot_model_id": "temporal_relation_en",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-relation-ro",
+      "title": "Romanian directed segment relation",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "Earlier segment: Mara a părăsit satul înainte de răsărit.\nRelation cue: ani mai târziu.\nLater segment: Ea și-a amintit călătoria.",
+      "language": "ro",
+      "task": "temporal_relation",
+      "explanation": "The Romanian TYM relation classifier receives two ordered segments and a relation cue.",
+      "scope": "Ordered endpoints and cue are supplied; endpoint detection, chronology reconstruction and independent semantic accuracy are outside this check.",
+      "observed_at_utc": "2026-10-05T04:38:24.250Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "temporal_relation_ro",
+          "input_format": null,
+          "predicted_label": "SIMULTANEOUS",
+          "ui_label": "SIMULTANEOUS",
+          "labels": [
+            "AFTER",
+            "BEFORE",
+            "IMMEDIATELY_AFTER",
+            "IMMEDIATELY_BEFORE",
+            "SIMULTANEOUS"
+          ],
+          "training_rows": 382,
+          "document_count": 1,
+          "model_sha256": "75900e3d86afb454a42d4b2c4bb54d48042e38eb8074b69cadb287e2d01ff071",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 17.563000000000102,
+          "ui_round_trip_elapsed_ms": 273.7340000000004
+        }
+      ],
+      "screenshot": "predictions/prediction-relation-ro.png",
+      "screenshot_model_id": "temporal_relation_ro",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-segment-en",
+      "title": "English narrative segment",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "Years after leaving home, Mara remembered the blue room and the letter her brother had left.",
+      "language": "en",
+      "task": "segment_type",
+      "explanation": "The English TYM classifier scores the narrative mode of one supplied segment.",
+      "scope": "Candidate segment supplied by the user; this does not evaluate document segmentation or independent narrative accuracy.",
+      "observed_at_utc": "2026-10-05T04:38:19.909Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "segment_type_en",
+          "input_format": null,
+          "predicted_label": "REM",
+          "ui_label": "REM",
+          "labels": [
+            "FIC",
+            "GEN",
+            "NAR",
+            "REM"
+          ],
+          "training_rows": 376,
+          "document_count": 1,
+          "model_sha256": "49b63848660c78a248d1f5e7bcdf11870cad41b189024c8f6decf40daeaf87de",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 8.257500000000164,
+          "ui_round_trip_elapsed_ms": 205.50340000000006
+        }
+      ],
+      "screenshot": "predictions/prediction-segment-en.png",
+      "screenshot_model_id": "segment_type_en",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-segment-ro",
+      "title": "Romanian narrative segment",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "Mult timp după ce a plecat de acasă, Mara și-a amintit de camera albastră și de scrisoarea pe care o lăsase fratele ei.",
+      "language": "ro",
+      "task": "segment_type",
+      "explanation": "The Romanian TYM classifier scores the narrative mode of one supplied segment, preserving Romanian diacritics.",
+      "scope": "Candidate segment supplied by the user; the parallel English and Romanian training story is one source work.",
+      "observed_at_utc": "2026-10-05T04:38:21.357Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "segment_type_ro",
+          "input_format": null,
+          "predicted_label": "NAR",
+          "ui_label": "NAR",
+          "labels": [
+            "FIC",
+            "GEN",
+            "NAR",
+            "REM"
+          ],
+          "training_rows": 375,
+          "document_count": 1,
+          "model_sha256": "71813f28dca1ac50b45d8c6a90e1cf48847397de37afe7443c642f17e9f98101",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 7.221199999999953,
+          "ui_round_trip_elapsed_ms": 313.7332999999999
+        }
+      ],
+      "screenshot": "predictions/prediction-segment-ro.png",
+      "screenshot_model_id": "segment_type_ro",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-slink",
+      "title": "Romanian TimeBank subordination link",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "From: crede\nFrom context: Mara [TARGET] crede [/TARGET] că drumul va fi lung.\nSignal: că\nTo: va fi\nTo context: Mara crede că drumul [TARGET] va fi [/TARGET] lung.",
+      "language": "ro",
+      "task": "timebank_slink",
+      "explanation": "The lexical and structured SLINK models classify a directed subordination relationship between supplied events.",
+      "scope": "Subordination labels describe the supplied events; they do not by themselves establish temporal precedence.",
+      "observed_at_utc": "2026-10-05T04:38:31.500Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "timebank_slink_ro",
+          "input_format": null,
+          "predicted_label": "MODAL",
+          "ui_label": "MODAL",
+          "labels": [
+            "CONDITIONAL",
+            "COUNTER_FACTIVE",
+            "EVIDENTIAL",
+            "FACTIVE",
+            "MODAL",
+            "NEG_EVIDENTIAL"
+          ],
+          "training_rows": 2133,
+          "document_count": 157,
+          "model_sha256": "119dfe0de9624693112d952adc99fb00dd839a25f8e2912f3b1dca163e814723",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 5.4716000000007625,
+          "ui_round_trip_elapsed_ms": 273.5783999999985
+        },
+        {
+          "model_id": "timebank_slink_ro_structured",
+          "input_format": "structured_target_v1",
+          "predicted_label": "MODAL",
+          "ui_label": "MODAL",
+          "labels": [
+            "CONDITIONAL",
+            "COUNTER_FACTIVE",
+            "EVIDENTIAL",
+            "FACTIVE",
+            "MODAL",
+            "NEG_EVIDENTIAL"
+          ],
+          "training_rows": 2133,
+          "document_count": 157,
+          "model_sha256": "6e9fcddd11181271669275d50a3ca1fc77c5d33e79fe632bde6bd4efb498cf3c",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 5.538399999999456,
+          "ui_round_trip_elapsed_ms": 364.5054
+        }
+      ],
+      "screenshot": "predictions/prediction-slink.png",
+      "screenshot_model_id": "timebank_slink_ro_structured",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-timex-type",
+      "title": "Romanian TimeBank time-expression type",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "Context: În [TARGET] primăvara trecută [/TARGET], Mara a sosit la Iași.\nTime expression: primăvara trecută",
+      "language": "ro",
+      "task": "timebank_timex_type",
+      "explanation": "The lexical and structured TIMEX models classify a supplied temporal expression by type.",
+      "scope": "The time-expression span is provided; type classification does not establish a normalized date or measure span detection.",
+      "observed_at_utc": "2026-10-05T04:38:28.610Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "timebank_timex_type_ro",
+          "input_format": null,
+          "predicted_label": "DATE",
+          "ui_label": "DATE",
+          "labels": [
+            "DATE",
+            "DURATION",
+            "SET",
+            "TIME"
+          ],
+          "training_rows": 1144,
+          "document_count": 157,
+          "model_sha256": "cc31b8dc22c1cb53bffa3126fe011fc92495c21dd8770ddb803bd6a1cab5b82f",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 9.014299999998912,
+          "ui_round_trip_elapsed_ms": 183.0033000000003
+        },
+        {
+          "model_id": "timebank_timex_type_ro_structured",
+          "input_format": "structured_target_v1",
+          "predicted_label": "DATE",
+          "ui_label": "DATE",
+          "labels": [
+            "DATE",
+            "DURATION",
+            "SET",
+            "TIME"
+          ],
+          "training_rows": 1144,
+          "document_count": 157,
+          "model_sha256": "d506881dba7f7f7230447dcf00a0d888892c4a049e9912d8f7f7466f25fb46d9",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 6.480800000001182,
+          "ui_round_trip_elapsed_ms": 86.30500000000029
+        }
+      ],
+      "screenshot": "predictions/prediction-timex-type.png",
+      "screenshot_model_id": "timebank_timex_type_ro_structured",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "predictions",
+      "workflow_id": "prediction-tlink",
+      "title": "Romanian TimeBank temporal link",
+      "status": "passed",
+      "fixture_origin": "original_authored_non_corpus",
+      "input_text": "From: a plecat\nFrom context: Mara [TARGET] a plecat [/TARGET] din oraș înainte de răsărit.\nSignal: înainte\nTo: a ajuns\nTo context: Călătorul [TARGET] a ajuns [/TARGET] la munte în aceeași zi.",
+      "language": "ro",
+      "task": "timebank_tlink",
+      "explanation": "The lexical and structured TLINK models predict a temporal label from the supplied source to target mention.",
+      "scope": "Conditional relation classification with supplied ordered endpoints and signal; this does not assess graph completion or document timeline accuracy.",
+      "observed_at_utc": "2026-10-05T04:38:30.155Z",
+      "ui_api_agreement": true,
+      "variants": [
+        {
+          "model_id": "timebank_tlink_ro",
+          "input_format": null,
+          "predicted_label": "AFTER",
+          "ui_label": "AFTER",
+          "labels": [
+            "AFTER",
+            "BEFORE",
+            "BEGINS",
+            "BEGUN_BY",
+            "DURING",
+            "DURING_INV",
+            "ENDED_BY",
+            "ENDS",
+            "IAFTER",
+            "IBEFORE",
+            "IDENTITY",
+            "INCLUDES",
+            "IS_INCLUDED",
+            "SIMULTANEOUS"
+          ],
+          "training_rows": 4808,
+          "document_count": 157,
+          "model_sha256": "7f4d888efa19cb0ad2fa883e0cc34c99c33cfbca35e1a3a9661ba6466bc99174",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 4.788000000000466,
+          "ui_round_trip_elapsed_ms": 278.5689000000002
+        },
+        {
+          "model_id": "timebank_tlink_ro_structured",
+          "input_format": "structured_target_v1",
+          "predicted_label": "BEFORE",
+          "ui_label": "BEFORE",
+          "labels": [
+            "AFTER",
+            "BEFORE",
+            "BEGINS",
+            "BEGUN_BY",
+            "DURING",
+            "DURING_INV",
+            "ENDED_BY",
+            "ENDS",
+            "IAFTER",
+            "IBEFORE",
+            "IDENTITY",
+            "INCLUDES",
+            "IS_INCLUDED",
+            "SIMULTANEOUS"
+          ],
+          "training_rows": 4808,
+          "document_count": 157,
+          "model_sha256": "ad64cf756f0fb2db70b006e6988cff19abfcb2105c3d6c581a9d694bc8fb8be3",
+          "identity_status": "verified",
+          "integrity_status": "verified",
+          "readiness_status": "ready_verified",
+          "http_status": 200,
+          "ui_http_status": 200,
+          "ui_api_agreement": true,
+          "direct_api_elapsed_ms": 5.477200000001176,
+          "ui_round_trip_elapsed_ms": 375.3816000000006
+        }
+      ],
+      "screenshot": "predictions/prediction-tlink.png",
+      "screenshot_model_id": "timebank_tlink_ro_structured",
+      "assertions": [
+        "Localhost UI and API only; live HTTP requests, no mocked response.",
+        "All sixteen installed ML.NET bundles are ready with verified integrity.",
+        "Each exercised task/language identity and SHA-256 manifest is verified.",
+        "Returned label belongs to that model’s nonempty manifest inventory.",
+        "The UI sends the exact authored input and selected model identity.",
+        "Direct API, browser HTTP response and displayed label/JSON agree.",
+        "The UI preserves the independent-accuracy limitation."
+      ],
+      "scores_exposed": false,
+      "score_count": null,
+      "score_limit": "The prediction HTTP contract exposes a label and metadata, not class scores or probabilities; finite score assertions are unavailable.",
+      "accuracy": null,
+      "accuracy_limit": "Integration checks record program behavior on authored examples, not adjudicated semantic correctness.",
+      "timing_limit": "Single local HTTP and browser round trips include service/browser overhead; these are not benchmark averages or isolated inference latency."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_en_csharp_average_linkage_hierarchical",
+      "language": "en",
+      "algorithm": "csharp_average_linkage_hierarchical",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:33:57.8387287+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "4e2538420a491d9f5913cace9efa29eede899d5a5c150580192664cef8d50c51",
+      "report_sha256": "441d5ce75f9465065638e37eb2642900e97517ff8e783e4f54099b83e1299871",
+      "total_rows": 446,
+      "documents": 1,
+      "training_rows": 356,
+      "heldout_rows": 90,
+      "training_documents": 1,
+      "heldout_documents": 1,
+      "split_kind": "within_source_work_normalized_passage_holdout",
+      "split_assignment_sha256": "36c28600c56413290d905cf9d8dc8fa4d62b0d61e06fad997616a242858c55ea",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": "375a9f1ebe0ebc7fafb17f695ca2d964bf1524c130e790b17c5560f4af1492f2",
+      "artifact_bytes": 195143,
+      "probe": {
+        "input_kind": "deterministic_training_only_PCA_sample",
+        "sample_rows": 256,
+        "features": 32,
+        "clusters": 8,
+        "noise_rows": 0,
+        "sample_selection_sha256_match": true
+      },
+      "measurement": {
+        "algorithm": "csharp_average_linkage_hierarchical",
+        "implementation": "Documented bounded C# algorithm over ML.NET PCA vectors",
+        "model_file": "books_en_hierarchical_sample.json",
+        "model_sha256": "375a9f1ebe0ebc7fafb17f695ca2d964bf1524c130e790b17c5560f4af1492f2",
+        "feature_dimensions": 32,
+        "sample_rows": 256,
+        "sample_limit": 256,
+        "fit_seconds_algorithm_only": 0.0374166,
+        "shared_text_featurizer_fit_seconds": 0.7005693,
+        "shared_pca_fit_seconds": 2.2742701,
+        "sample_feature_transform_seconds": 0.088558,
+        "assessment_seconds": 0.042935,
+        "sample_metrics": {
+          "rows": 256,
+          "clusters": 8,
+          "noise_rows": 0,
+          "noise_fraction": 0,
+          "silhouette_excluding_noise": 0.061456555134667606,
+          "silhouette_status": "computed_training_sample_only",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 79
+            },
+            {
+              "cluster": 2,
+              "rows": 49
+            },
+            {
+              "cluster": 3,
+              "rows": 4
+            },
+            {
+              "cluster": 4,
+              "rows": 43
+            },
+            {
+              "cluster": 5,
+              "rows": 65
+            },
+            {
+              "cluster": 6,
+              "rows": 8
+            },
+            {
+              "cluster": 7,
+              "rows": 6
+            },
+            {
+              "cluster": 8,
+              "rows": 2
+            }
+          ]
+        },
+        "epsilon": null,
+        "minimum_points_including_self": null,
+        "requested_clusters": 8,
+        "heldout_metrics": null,
+        "semantic_accuracy": null,
+        "space": {
+          "process_working_set_mb": 245.66796875,
+          "process_lifetime_peak_working_set_mb": 245.66796875,
+          "artifact_bytes": 195143,
+          "neural_parameter_count": null,
+          "float32_parameter_bytes": null,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "accuracy_status": "unavailable_unlabeled_transductive_training_sample",
+        "sampling": "At most 256 training passages ranked by SHA256(seed|sample|id); no heldout input used."
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "All at-most-256 private sample vectors have 32 finite PCA coordinates; sample selection SHA256 independently matches training rows.",
+        "Artifact assignments agree with aggregate cluster/noise counts and fixed algorithm settings.",
+        "Sample silhouette/noise describe transductive training geometry; no heldout accuracy is asserted."
+      ],
+      "integration_suite_language_seconds": 15.9722827,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_en_csharp_dbscan",
+      "language": "en",
+      "algorithm": "csharp_dbscan",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:36:04.5912899+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "4e2538420a491d9f5913cace9efa29eede899d5a5c150580192664cef8d50c51",
+      "report_sha256": "441d5ce75f9465065638e37eb2642900e97517ff8e783e4f54099b83e1299871",
+      "total_rows": 446,
+      "documents": 1,
+      "training_rows": 356,
+      "heldout_rows": 90,
+      "training_documents": 1,
+      "heldout_documents": 1,
+      "split_kind": "within_source_work_normalized_passage_holdout",
+      "split_assignment_sha256": "36c28600c56413290d905cf9d8dc8fa4d62b0d61e06fad997616a242858c55ea",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": "d501111be9b9246fd978d415973bce533f7f81f96b2c55f16840c3baee05ff67",
+      "artifact_bytes": 195377,
+      "probe": {
+        "input_kind": "deterministic_training_only_PCA_sample",
+        "sample_rows": 256,
+        "features": 32,
+        "clusters": 0,
+        "noise_rows": 256,
+        "sample_selection_sha256_match": true
+      },
+      "measurement": {
+        "algorithm": "csharp_dbscan",
+        "implementation": "Documented bounded C# algorithm over ML.NET PCA vectors",
+        "model_file": "books_en_dbscan_sample.json",
+        "model_sha256": "d501111be9b9246fd978d415973bce533f7f81f96b2c55f16840c3baee05ff67",
+        "feature_dimensions": 32,
+        "sample_rows": 256,
+        "sample_limit": 256,
+        "fit_seconds_algorithm_only": 0.0233797,
+        "shared_text_featurizer_fit_seconds": 0.7005693,
+        "shared_pca_fit_seconds": 2.2742701,
+        "sample_feature_transform_seconds": 0.088558,
+        "assessment_seconds": 0.0002325,
+        "sample_metrics": {
+          "rows": 256,
+          "clusters": 0,
+          "noise_rows": 256,
+          "noise_fraction": 1,
+          "silhouette_excluding_noise": null,
+          "silhouette_status": "undefined_fewer_than_two_nontrivial_clusters",
+          "cluster_counts": []
+        },
+        "epsilon": 0.45,
+        "minimum_points_including_self": 5,
+        "requested_clusters": null,
+        "heldout_metrics": null,
+        "semantic_accuracy": null,
+        "space": {
+          "process_working_set_mb": 245.6953125,
+          "process_lifetime_peak_working_set_mb": 245.6953125,
+          "artifact_bytes": 195377,
+          "neural_parameter_count": null,
+          "float32_parameter_bytes": null,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "accuracy_status": "unavailable_unlabeled_transductive_training_sample",
+        "sampling": "At most 256 training passages ranked by SHA256(seed|sample|id); no heldout input used."
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "All at-most-256 private sample vectors have 32 finite PCA coordinates; sample selection SHA256 independently matches training rows.",
+        "Artifact assignments agree with aggregate cluster/noise counts and fixed algorithm settings.",
+        "Sample silhouette/noise describe transductive training geometry; no heldout accuracy is asserted."
+      ],
+      "integration_suite_language_seconds": 15.9722827,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_en_csharp_torchsharp_autoencoder",
+      "language": "en",
+      "algorithm": "csharp_torchsharp_autoencoder",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:36:04.5671649+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "4e2538420a491d9f5913cace9efa29eede899d5a5c150580192664cef8d50c51",
+      "report_sha256": "441d5ce75f9465065638e37eb2642900e97517ff8e783e4f54099b83e1299871",
+      "total_rows": 446,
+      "documents": 1,
+      "training_rows": 356,
+      "heldout_rows": 90,
+      "training_documents": 1,
+      "heldout_documents": 1,
+      "split_kind": "within_source_work_normalized_passage_holdout",
+      "split_assignment_sha256": "36c28600c56413290d905cf9d8dc8fa4d62b0d61e06fad997616a242858c55ea",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": null,
+      "artifact_bytes": null,
+      "probe": {
+        "input_kind": "heldout_numeric_PCA_vectors",
+        "input_dimensions": 32,
+        "bottleneck_dimensions": 16,
+        "parameters": 6320,
+        "model_exported": false,
+        "heldout_rows": 90
+      },
+      "measurement": {
+        "algorithm": "csharp_torchsharp_autoencoder",
+        "implementation": "TorchSharp CPU neural model in C#",
+        "representation": "Training-fitted ML.NET text features -> L2 -> centered PCA -> L2; no prose decoder",
+        "feature_dimensions": 32,
+        "bottleneck_dimensions": 16,
+        "space": {
+          "process_working_set_mb": 244.73828125,
+          "process_lifetime_peak_working_set_mb": 244.73828125,
+          "artifact_bytes": null,
+          "neural_parameter_count": 6320,
+          "float32_parameter_bytes": 25280,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "epochs": 5,
+        "training_rows": 356,
+        "heldout_rows": 90,
+        "model_parameters": 6320,
+        "model_exported": false,
+        "shared_text_featurizer_fit_seconds": 0.7005693,
+        "shared_pca_fit_seconds": 2.2742701,
+        "training_feature_transform_seconds": 0.0515612,
+        "heldout_feature_transform_seconds": 0.060726,
+        "fit_seconds_algorithm_only": 0.9101981,
+        "fit_seconds_including_shared_representation": 3.9365987,
+        "prediction_seconds_algorithm_only": 0.0355359,
+        "prediction_seconds_including_heldout_transform": 0.09626190000000001,
+        "sampled_peak_process_working_set_bytes": 256466944,
+        "last_epoch_training_mean_squared_error": 0.026912176374639017,
+        "heldout_reconstruction_mean_squared_error": 0.02523241506682502,
+        "heldout_training_mean_reconstruction_mean_squared_error": 0.03125943276487764,
+        "heldout_zero_reconstruction_mean_squared_error": 0.03125000009396428,
+        "semantic_accuracy": null,
+        "accuracy_status": "unavailable_unlabeled_numeric_reconstruction",
+        "metadata": {
+          "algorithm": "autoencoder",
+          "framework": "TorchSharp-cpu 0.107.0 / LibTorch CPU 2.10.0 / C# .NET 10",
+          "architecture": "Linear(32,64)->ReLU->Linear(64,16)->Linear(16,64)->ReLU->Linear(64,32)",
+          "pretrained_weights": false,
+          "mlnet_native_trainer": false,
+          "seed": 42,
+          "epochs": 5,
+          "batch_size": 32,
+          "cpu_threads": 1,
+          "optimizer": "Adam",
+          "learning_rate": 0.001,
+          "loss": "mean_squared_error",
+          "upstream_transform_contract": "caller fits vectorizer/PCA/scaling on training rows only",
+          "scaling": "none inside autoencoder",
+          "training_rows": 356,
+          "validation_rows": 90,
+          "epoch_training_losses": [
+            0.03636496317353141,
+            0.03129837800110324,
+            0.02966577111837569,
+            0.028354834932624626,
+            0.026912176374639017
+          ],
+          "early_stopping": false,
+          "validation_used_for_fit": false,
+          "classification_accuracy": "not applicable; unlabeled reconstruction",
+          "timing": "fit includes model creation/optimization; prediction includes reconstruction, MSE, and latent encoding; native init and one training-input warmup excluded",
+          "memory_measure": "maximum process working-set sample at batch boundaries; not isolated model memory",
+          "model_exported": false
+        }
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "Scratch TorchSharp model fits five epochs using training-only PCA vectors with 32 input and 16 bottleneck dimensions.",
+        "Heldout reconstruction and constant-zero/training-mean baseline MSE are finite; no learned quality threshold or prose decoding is claimed.",
+        "The 6,320 parameters are measured; model weights and heldout encodings are not exported."
+      ],
+      "integration_suite_language_seconds": 15.9722827,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_en_mlnet_kmeans",
+      "language": "en",
+      "algorithm": "mlnet_kmeans",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:33:58.5856784+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "4e2538420a491d9f5913cace9efa29eede899d5a5c150580192664cef8d50c51",
+      "report_sha256": "441d5ce75f9465065638e37eb2642900e97517ff8e783e4f54099b83e1299871",
+      "total_rows": 446,
+      "documents": 1,
+      "training_rows": 356,
+      "heldout_rows": 90,
+      "training_documents": 1,
+      "heldout_documents": 1,
+      "split_kind": "within_source_work_normalized_passage_holdout",
+      "split_assignment_sha256": "36c28600c56413290d905cf9d8dc8fa4d62b0d61e06fad997616a242858c55ea",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": "f3221636ae627bd66a1f4aaa6097ac6f6ee0b0b08151ca57aa177d24d44f970d",
+      "artifact_bytes": 2444504,
+      "probe": {
+        "input_kind": "original_authored_query",
+        "predicted_cluster": 3,
+        "cluster_inventory": 8,
+        "score_count": 8,
+        "score": [
+          0.9371225,
+          1.1284249,
+          0.6555429,
+          0.8480203,
+          0.927298,
+          0.8651802,
+          0.9012082,
+          0.7951963
+        ],
+        "features": 80599,
+        "training_text_features_match": true,
+        "reload_reproducible": true
+      },
+      "measurement": {
+        "algorithm": "mlnet_kmeans",
+        "implementation": "ML.NET 5.0.0",
+        "model_file": "books_en_kmeans_holdout.zip",
+        "model_sha256": "f3221636ae627bd66a1f4aaa6097ac6f6ee0b0b08151ca57aa177d24d44f970d",
+        "feature_dimensions": 80599,
+        "clusters": 8,
+        "threads": 1,
+        "maximum_iterations": 100,
+        "fit_seconds_including_shared_featurizer": 3.8159989999999997,
+        "fit_seconds_after_shared_featurizer": 3.1154297,
+        "assessment_seconds": 0.7651767,
+        "assessment_rows": 446,
+        "training_metrics": {
+          "rows": 356,
+          "average_squared_centroid_distance": 0.39611012547203667,
+          "davies_bouldin_index": 4.115746991622451,
+          "davies_bouldin_status": "computed",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 21
+            },
+            {
+              "cluster": 2,
+              "rows": 3
+            },
+            {
+              "cluster": 3,
+              "rows": 114
+            },
+            {
+              "cluster": 4,
+              "rows": 80
+            },
+            {
+              "cluster": 5,
+              "rows": 2
+            },
+            {
+              "cluster": 6,
+              "rows": 30
+            },
+            {
+              "cluster": 7,
+              "rows": 66
+            },
+            {
+              "cluster": 8,
+              "rows": 40
+            }
+          ]
+        },
+        "heldout_metrics": {
+          "rows": 90,
+          "average_squared_centroid_distance": 0.3919537153508928,
+          "davies_bouldin_index": 2.54658709065477,
+          "davies_bouldin_status": "computed",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 8
+            },
+            {
+              "cluster": 3,
+              "rows": 24
+            },
+            {
+              "cluster": 4,
+              "rows": 19
+            },
+            {
+              "cluster": 6,
+              "rows": 12
+            },
+            {
+              "cluster": 7,
+              "rows": 17
+            },
+            {
+              "cluster": 8,
+              "rows": 10
+            }
+          ]
+        },
+        "semantic_accuracy": null,
+        "space": {
+          "process_working_set_mb": 161.6640625,
+          "process_lifetime_peak_working_set_mb": 161.6640625,
+          "artifact_bytes": 2444504,
+          "neural_parameter_count": null,
+          "float32_parameter_bytes": null,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "accuracy_status": "unavailable_unlabeled_passages"
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "Private saved model and manifest SHA256 match, including exact training/heldout provenance.",
+        "Reloaded model scores an original authored query into one of eight arbitrary lexical clusters with finite distances.",
+        "Query text features match an independently fitted training-only vocabulary; reloading preserves scores."
+      ],
+      "integration_suite_language_seconds": 15.9722827,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_en_mlnet_pca_kmeans",
+      "language": "en",
+      "algorithm": "mlnet_pca_kmeans",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:36:02.3978098+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "4e2538420a491d9f5913cace9efa29eede899d5a5c150580192664cef8d50c51",
+      "report_sha256": "441d5ce75f9465065638e37eb2642900e97517ff8e783e4f54099b83e1299871",
+      "total_rows": 446,
+      "documents": 1,
+      "training_rows": 356,
+      "heldout_rows": 90,
+      "training_documents": 1,
+      "heldout_documents": 1,
+      "split_kind": "within_source_work_normalized_passage_holdout",
+      "split_assignment_sha256": "36c28600c56413290d905cf9d8dc8fa4d62b0d61e06fad997616a242858c55ea",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": "191828f1530b3ae926880a76009659c3aa7420152e414583637eb1b3287c4dae",
+      "artifact_bytes": 4780823,
+      "probe": {
+        "input_kind": "original_authored_query",
+        "predicted_cluster": 7,
+        "cluster_inventory": 8,
+        "score_count": 8,
+        "score": [
+          1.8841491,
+          1.409647,
+          0.6775566,
+          1.0616411,
+          1.6257713,
+          1.0310525,
+          0.59829116,
+          1.3689151
+        ],
+        "features": 32,
+        "training_text_features_match": true,
+        "reload_reproducible": true
+      },
+      "measurement": {
+        "algorithm": "mlnet_pca_kmeans",
+        "implementation": "ML.NET 5.0.0",
+        "model_file": "books_en_pca_kmeans_holdout.zip",
+        "model_sha256": "191828f1530b3ae926880a76009659c3aa7420152e414583637eb1b3287c4dae",
+        "feature_dimensions": 32,
+        "clusters": 8,
+        "threads": 1,
+        "maximum_iterations": 100,
+        "fit_seconds_including_shared_featurizer": 6.7107774,
+        "fit_seconds_after_shared_featurizer": 6.0102081,
+        "assessment_seconds": 0.6444225,
+        "assessment_rows": 446,
+        "training_metrics": {
+          "rows": 356,
+          "average_squared_centroid_distance": 0.6959144409452931,
+          "davies_bouldin_index": 2.820188383378907,
+          "davies_bouldin_status": "computed",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 44
+            },
+            {
+              "cluster": 2,
+              "rows": 58
+            },
+            {
+              "cluster": 3,
+              "rows": 32
+            },
+            {
+              "cluster": 4,
+              "rows": 35
+            },
+            {
+              "cluster": 5,
+              "rows": 79
+            },
+            {
+              "cluster": 6,
+              "rows": 28
+            },
+            {
+              "cluster": 7,
+              "rows": 48
+            },
+            {
+              "cluster": 8,
+              "rows": 32
+            }
+          ]
+        },
+        "heldout_metrics": {
+          "rows": 90,
+          "average_squared_centroid_distance": 0.681985690858629,
+          "davies_bouldin_index": 2.3481609142736195,
+          "davies_bouldin_status": "computed",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 11
+            },
+            {
+              "cluster": 2,
+              "rows": 16
+            },
+            {
+              "cluster": 3,
+              "rows": 6
+            },
+            {
+              "cluster": 4,
+              "rows": 10
+            },
+            {
+              "cluster": 5,
+              "rows": 20
+            },
+            {
+              "cluster": 6,
+              "rows": 8
+            },
+            {
+              "cluster": 7,
+              "rows": 10
+            },
+            {
+              "cluster": 8,
+              "rows": 9
+            }
+          ]
+        },
+        "semantic_accuracy": null,
+        "space": {
+          "process_working_set_mb": 167.43359375,
+          "process_lifetime_peak_working_set_mb": 169.875,
+          "artifact_bytes": 4780823,
+          "neural_parameter_count": null,
+          "float32_parameter_bytes": null,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "accuracy_status": "unavailable_unlabeled_passages"
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "Private saved model and manifest SHA256 match, including exact training/heldout provenance.",
+        "Reloaded model scores an original authored query into one of eight arbitrary lexical clusters with finite distances.",
+        "Query text features match an independently fitted training-only vocabulary; reloading preserves scores."
+      ],
+      "integration_suite_language_seconds": 15.9722827,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_ro_csharp_average_linkage_hierarchical",
+      "language": "ro",
+      "algorithm": "csharp_average_linkage_hierarchical",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:36:04.561299+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "9722782f589deca0fda5985f95fd91891aa11e65df0c4cfd46816e7505332d1b",
+      "report_sha256": "228b3339ac82b675f6c7895d4c1a39182d52799c136e22c732b0e048acaedee6",
+      "total_rows": 5213,
+      "documents": 14,
+      "training_rows": 4037,
+      "heldout_rows": 1176,
+      "training_documents": 12,
+      "heldout_documents": 2,
+      "split_kind": "complete_document_component_holdout",
+      "split_assignment_sha256": "74517282ae96a5c21fc7de7261798ada2a183b6abb182c33cd6b82ff76a3c321",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": "52978c8f3ce83603aee633112fff454f901e4ac39f012b5386740b5536d0039a",
+      "artifact_bytes": 194965,
+      "probe": {
+        "input_kind": "deterministic_training_only_PCA_sample",
+        "sample_rows": 256,
+        "features": 32,
+        "clusters": 8,
+        "noise_rows": 0,
+        "sample_selection_sha256_match": true
+      },
+      "measurement": {
+        "algorithm": "csharp_average_linkage_hierarchical",
+        "implementation": "Documented bounded C# algorithm over ML.NET PCA vectors",
+        "model_file": "books_ro_hierarchical_sample.json",
+        "model_sha256": "52978c8f3ce83603aee633112fff454f901e4ac39f012b5386740b5536d0039a",
+        "feature_dimensions": 32,
+        "sample_rows": 256,
+        "sample_limit": 256,
+        "fit_seconds_algorithm_only": 0.0123618,
+        "shared_text_featurizer_fit_seconds": 1.5711376,
+        "shared_pca_fit_seconds": 8.6159615,
+        "sample_feature_transform_seconds": 0.0767956,
+        "assessment_seconds": 0.011959,
+        "sample_metrics": {
+          "rows": 256,
+          "clusters": 8,
+          "noise_rows": 0,
+          "noise_fraction": 0,
+          "silhouette_excluding_noise": 0.06636863499066306,
+          "silhouette_status": "computed_training_sample_only",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 35
+            },
+            {
+              "cluster": 2,
+              "rows": 78
+            },
+            {
+              "cluster": 3,
+              "rows": 16
+            },
+            {
+              "cluster": 4,
+              "rows": 22
+            },
+            {
+              "cluster": 5,
+              "rows": 47
+            },
+            {
+              "cluster": 6,
+              "rows": 43
+            },
+            {
+              "cluster": 7,
+              "rows": 13
+            },
+            {
+              "cluster": 8,
+              "rows": 2
+            }
+          ]
+        },
+        "epsilon": null,
+        "minimum_points_including_self": null,
+        "requested_clusters": 8,
+        "heldout_metrics": null,
+        "semantic_accuracy": null,
+        "space": {
+          "process_working_set_mb": 774.0078125,
+          "process_lifetime_peak_working_set_mb": 778.36328125,
+          "artifact_bytes": 194965,
+          "neural_parameter_count": null,
+          "float32_parameter_bytes": null,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "accuracy_status": "unavailable_unlabeled_transductive_training_sample",
+        "sampling": "At most 256 training passages ranked by SHA256(seed|sample|id); no heldout input used."
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "All at-most-256 private sample vectors have 32 finite PCA coordinates; sample selection SHA256 independently matches training rows.",
+        "Artifact assignments agree with aggregate cluster/noise counts and fixed algorithm settings.",
+        "Sample silhouette/noise describe transductive training geometry; no heldout accuracy is asserted."
+      ],
+      "integration_suite_language_seconds": 121.6435871,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_ro_csharp_dbscan",
+      "language": "ro",
+      "algorithm": "csharp_dbscan",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:36:04.5813901+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "9722782f589deca0fda5985f95fd91891aa11e65df0c4cfd46816e7505332d1b",
+      "report_sha256": "228b3339ac82b675f6c7895d4c1a39182d52799c136e22c732b0e048acaedee6",
+      "total_rows": 5213,
+      "documents": 14,
+      "training_rows": 4037,
+      "heldout_rows": 1176,
+      "training_documents": 12,
+      "heldout_documents": 2,
+      "split_kind": "complete_document_component_holdout",
+      "split_assignment_sha256": "74517282ae96a5c21fc7de7261798ada2a183b6abb182c33cd6b82ff76a3c321",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": "3cd3687c3c23a0570d4fb72cf400d4e71a1552412b8b5aeac19948ff37fb5abe",
+      "artifact_bytes": 195199,
+      "probe": {
+        "input_kind": "deterministic_training_only_PCA_sample",
+        "sample_rows": 256,
+        "features": 32,
+        "clusters": 0,
+        "noise_rows": 256,
+        "sample_selection_sha256_match": true
+      },
+      "measurement": {
+        "algorithm": "csharp_dbscan",
+        "implementation": "Documented bounded C# algorithm over ML.NET PCA vectors",
+        "model_file": "books_ro_dbscan_sample.json",
+        "model_sha256": "3cd3687c3c23a0570d4fb72cf400d4e71a1552412b8b5aeac19948ff37fb5abe",
+        "feature_dimensions": 32,
+        "sample_rows": 256,
+        "sample_limit": 256,
+        "fit_seconds_algorithm_only": 0.0065996,
+        "shared_text_featurizer_fit_seconds": 1.5711376,
+        "shared_pca_fit_seconds": 8.6159615,
+        "sample_feature_transform_seconds": 0.0767956,
+        "assessment_seconds": 0.0000553,
+        "sample_metrics": {
+          "rows": 256,
+          "clusters": 0,
+          "noise_rows": 256,
+          "noise_fraction": 1,
+          "silhouette_excluding_noise": null,
+          "silhouette_status": "undefined_fewer_than_two_nontrivial_clusters",
+          "cluster_counts": []
+        },
+        "epsilon": 0.45,
+        "minimum_points_including_self": 5,
+        "requested_clusters": null,
+        "heldout_metrics": null,
+        "semantic_accuracy": null,
+        "space": {
+          "process_working_set_mb": 774.01171875,
+          "process_lifetime_peak_working_set_mb": 778.36328125,
+          "artifact_bytes": 195199,
+          "neural_parameter_count": null,
+          "float32_parameter_bytes": null,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "accuracy_status": "unavailable_unlabeled_transductive_training_sample",
+        "sampling": "At most 256 training passages ranked by SHA256(seed|sample|id); no heldout input used."
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "All at-most-256 private sample vectors have 32 finite PCA coordinates; sample selection SHA256 independently matches training rows.",
+        "Artifact assignments agree with aggregate cluster/noise counts and fixed algorithm settings.",
+        "Sample silhouette/noise describe transductive training geometry; no heldout accuracy is asserted."
+      ],
+      "integration_suite_language_seconds": 121.6435871,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_ro_csharp_torchsharp_autoencoder",
+      "language": "ro",
+      "algorithm": "csharp_torchsharp_autoencoder",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:36:04.5694909+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "9722782f589deca0fda5985f95fd91891aa11e65df0c4cfd46816e7505332d1b",
+      "report_sha256": "228b3339ac82b675f6c7895d4c1a39182d52799c136e22c732b0e048acaedee6",
+      "total_rows": 5213,
+      "documents": 14,
+      "training_rows": 4037,
+      "heldout_rows": 1176,
+      "training_documents": 12,
+      "heldout_documents": 2,
+      "split_kind": "complete_document_component_holdout",
+      "split_assignment_sha256": "74517282ae96a5c21fc7de7261798ada2a183b6abb182c33cd6b82ff76a3c321",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": null,
+      "artifact_bytes": null,
+      "probe": {
+        "input_kind": "heldout_numeric_PCA_vectors",
+        "input_dimensions": 32,
+        "bottleneck_dimensions": 16,
+        "parameters": 6320,
+        "model_exported": false,
+        "heldout_rows": 1176
+      },
+      "measurement": {
+        "algorithm": "csharp_torchsharp_autoencoder",
+        "implementation": "TorchSharp CPU neural model in C#",
+        "representation": "Training-fitted ML.NET text features -> L2 -> centered PCA -> L2; no prose decoder",
+        "feature_dimensions": 32,
+        "bottleneck_dimensions": 16,
+        "space": {
+          "process_working_set_mb": 773.26953125,
+          "process_lifetime_peak_working_set_mb": 778.36328125,
+          "artifact_bytes": null,
+          "neural_parameter_count": 6320,
+          "float32_parameter_bytes": 25280,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "epochs": 5,
+        "training_rows": 4037,
+        "heldout_rows": 1176,
+        "model_parameters": 6320,
+        "model_exported": false,
+        "shared_text_featurizer_fit_seconds": 1.5711376,
+        "shared_pca_fit_seconds": 8.6159615,
+        "training_feature_transform_seconds": 0.5323094,
+        "heldout_feature_transform_seconds": 0.1264422,
+        "fit_seconds_algorithm_only": 6.1386022,
+        "fit_seconds_including_shared_representation": 16.8580107,
+        "prediction_seconds_algorithm_only": 0.3002453,
+        "prediction_seconds_including_heldout_transform": 0.4266875,
+        "sampled_peak_process_working_set_bytes": 816173056,
+        "last_epoch_training_mean_squared_error": 0.008506106251030827,
+        "heldout_reconstruction_mean_squared_error": 0.008020093816579605,
+        "heldout_training_mean_reconstruction_mean_squared_error": 0.031065120017641154,
+        "heldout_zero_reconstruction_mean_squared_error": 0.03125000008742625,
+        "semantic_accuracy": null,
+        "accuracy_status": "unavailable_unlabeled_numeric_reconstruction",
+        "metadata": {
+          "algorithm": "autoencoder",
+          "framework": "TorchSharp-cpu 0.107.0 / LibTorch CPU 2.10.0 / C# .NET 10",
+          "architecture": "Linear(32,64)->ReLU->Linear(64,16)->Linear(16,64)->ReLU->Linear(64,32)",
+          "pretrained_weights": false,
+          "mlnet_native_trainer": false,
+          "seed": 42,
+          "epochs": 5,
+          "batch_size": 32,
+          "cpu_threads": 1,
+          "optimizer": "Adam",
+          "learning_rate": 0.001,
+          "loss": "mean_squared_error",
+          "upstream_transform_contract": "caller fits vectorizer/PCA/scaling on training rows only",
+          "scaling": "none inside autoencoder",
+          "training_rows": 4037,
+          "validation_rows": 1176,
+          "epoch_training_losses": [
+            0.026066360506557845,
+            0.014400013686259962,
+            0.010553964594338003,
+            0.00904145414562901,
+            0.008506106251030827
+          ],
+          "early_stopping": false,
+          "validation_used_for_fit": false,
+          "classification_accuracy": "not applicable; unlabeled reconstruction",
+          "timing": "fit includes model creation/optimization; prediction includes reconstruction, MSE, and latent encoding; native init and one training-input warmup excluded",
+          "memory_measure": "maximum process working-set sample at batch boundaries; not isolated model memory",
+          "model_exported": false
+        }
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "Scratch TorchSharp model fits five epochs using training-only PCA vectors with 32 input and 16 bottleneck dimensions.",
+        "Heldout reconstruction and constant-zero/training-mean baseline MSE are finite; no learned quality threshold or prose decoding is claimed.",
+        "The 6,320 parameters are measured; model weights and heldout encodings are not exported."
+      ],
+      "integration_suite_language_seconds": 121.6435871,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_ro_mlnet_kmeans",
+      "language": "ro",
+      "algorithm": "mlnet_kmeans",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:36:01.9754714+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "9722782f589deca0fda5985f95fd91891aa11e65df0c4cfd46816e7505332d1b",
+      "report_sha256": "228b3339ac82b675f6c7895d4c1a39182d52799c136e22c732b0e048acaedee6",
+      "total_rows": 5213,
+      "documents": 14,
+      "training_rows": 4037,
+      "heldout_rows": 1176,
+      "training_documents": 12,
+      "heldout_documents": 2,
+      "split_kind": "complete_document_component_holdout",
+      "split_assignment_sha256": "74517282ae96a5c21fc7de7261798ada2a183b6abb182c33cd6b82ff76a3c321",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": "f87fce8284a72fa9f7a7730ef4d6a6bd3e4a208d823cabed9506a65a1c75d464",
+      "artifact_bytes": 23035716,
+      "probe": {
+        "input_kind": "original_authored_query",
+        "predicted_cluster": 2,
+        "cluster_inventory": 8,
+        "score_count": 8,
+        "score": [
+          1.275831,
+          1.2404248,
+          1.3156658,
+          1.2585242,
+          1.2897766,
+          1.2761381,
+          1.2641044,
+          1.2427721
+        ],
+        "features": 706013,
+        "training_text_features_match": true,
+        "reload_reproducible": true
+      },
+      "measurement": {
+        "algorithm": "mlnet_kmeans",
+        "implementation": "ML.NET 5.0.0",
+        "model_file": "books_ro_kmeans_holdout.zip",
+        "model_sha256": "f87fce8284a72fa9f7a7730ef4d6a6bd3e4a208d823cabed9506a65a1c75d464",
+        "feature_dimensions": 706013,
+        "clusters": 8,
+        "threads": 1,
+        "maximum_iterations": 100,
+        "fit_seconds_including_shared_featurizer": 44.8444296,
+        "fit_seconds_after_shared_featurizer": 43.273292,
+        "assessment_seconds": 4.1630266,
+        "assessment_rows": 5213,
+        "training_metrics": {
+          "rows": 4037,
+          "average_squared_centroid_distance": 0.4602151902146584,
+          "davies_bouldin_index": 6.116709519688168,
+          "davies_bouldin_status": "computed",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 253
+            },
+            {
+              "cluster": 2,
+              "rows": 536
+            },
+            {
+              "cluster": 3,
+              "rows": 6
+            },
+            {
+              "cluster": 4,
+              "rows": 555
+            },
+            {
+              "cluster": 5,
+              "rows": 660
+            },
+            {
+              "cluster": 6,
+              "rows": 683
+            },
+            {
+              "cluster": 7,
+              "rows": 876
+            },
+            {
+              "cluster": 8,
+              "rows": 468
+            }
+          ]
+        },
+        "heldout_metrics": {
+          "rows": 1176,
+          "average_squared_centroid_distance": 0.4179282877720943,
+          "davies_bouldin_index": 4.925637496485813,
+          "davies_bouldin_status": "computed",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 6
+            },
+            {
+              "cluster": 2,
+              "rows": 38
+            },
+            {
+              "cluster": 4,
+              "rows": 370
+            },
+            {
+              "cluster": 5,
+              "rows": 51
+            },
+            {
+              "cluster": 6,
+              "rows": 585
+            },
+            {
+              "cluster": 7,
+              "rows": 56
+            },
+            {
+              "cluster": 8,
+              "rows": 70
+            }
+          ]
+        },
+        "semantic_accuracy": null,
+        "space": {
+          "process_working_set_mb": 563.80078125,
+          "process_lifetime_peak_working_set_mb": 628.734375,
+          "artifact_bytes": 23035716,
+          "neural_parameter_count": null,
+          "float32_parameter_bytes": null,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "accuracy_status": "unavailable_unlabeled_passages"
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "Private saved model and manifest SHA256 match, including exact training/heldout provenance.",
+        "Reloaded model scores an original authored query into one of eight arbitrary lexical clusters with finite distances.",
+        "Query text features match an independently fitted training-only vocabulary; reloading preserves scores."
+      ],
+      "integration_suite_language_seconds": 121.6435871,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    },
+    {
+      "schema_version": 1,
+      "suite": "book_experiments",
+      "workflow_id": "book_ro_mlnet_pca_kmeans",
+      "language": "ro",
+      "algorithm": "mlnet_pca_kmeans",
+      "status": "passed",
+      "generated_utc": "2026-10-05T04:36:04.5436656+00:00",
+      "fresh_training_run": true,
+      "seed": 42,
+      "source_type": "unlabeled_user_provided",
+      "input_sha256": "9722782f589deca0fda5985f95fd91891aa11e65df0c4cfd46816e7505332d1b",
+      "report_sha256": "228b3339ac82b675f6c7895d4c1a39182d52799c136e22c732b0e048acaedee6",
+      "total_rows": 5213,
+      "documents": 14,
+      "training_rows": 4037,
+      "heldout_rows": 1176,
+      "training_documents": 12,
+      "heldout_documents": 2,
+      "split_kind": "complete_document_component_holdout",
+      "split_assignment_sha256": "74517282ae96a5c21fc7de7261798ada2a183b6abb182c33cd6b82ff76a3c321",
+      "training_only_representation_verified": true,
+      "semantic_accuracy": null,
+      "artifact_sha256": "e73a85653c072ccd6a5e583f24fb9936be8cfd75defd499844e3bedaf8352237",
+      "artifact_bytes": 40632685,
+      "probe": {
+        "input_kind": "original_authored_query",
+        "predicted_cluster": 6,
+        "cluster_inventory": 8,
+        "score_count": 8,
+        "score": [
+          1.3412535,
+          1.2427392,
+          1.1651689,
+          1.2494419,
+          1.2929635,
+          1.1624749,
+          1.4421614,
+          1.2655239
+        ],
+        "features": 32,
+        "training_text_features_match": true,
+        "reload_reproducible": true
+      },
+      "measurement": {
+        "algorithm": "mlnet_pca_kmeans",
+        "implementation": "ML.NET 5.0.0",
+        "model_file": "books_ro_pca_kmeans_holdout.zip",
+        "model_sha256": "e73a85653c072ccd6a5e583f24fb9936be8cfd75defd499844e3bedaf8352237",
+        "feature_dimensions": 32,
+        "clusters": 8,
+        "threads": 1,
+        "maximum_iterations": 100,
+        "fit_seconds_including_shared_featurizer": 49.7019369,
+        "fit_seconds_after_shared_featurizer": 48.1307993,
+        "assessment_seconds": 2.2354925,
+        "assessment_rows": 5213,
+        "training_metrics": {
+          "rows": 4037,
+          "average_squared_centroid_distance": 0.7458995600310121,
+          "davies_bouldin_index": 2.8658503189733473,
+          "davies_bouldin_status": "computed",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 515
+            },
+            {
+              "cluster": 2,
+              "rows": 402
+            },
+            {
+              "cluster": 3,
+              "rows": 523
+            },
+            {
+              "cluster": 4,
+              "rows": 804
+            },
+            {
+              "cluster": 5,
+              "rows": 327
+            },
+            {
+              "cluster": 6,
+              "rows": 472
+            },
+            {
+              "cluster": 7,
+              "rows": 523
+            },
+            {
+              "cluster": 8,
+              "rows": 471
+            }
+          ]
+        },
+        "heldout_metrics": {
+          "rows": 1176,
+          "average_squared_centroid_distance": 0.8542880581147005,
+          "davies_bouldin_index": 3.0448197150706156,
+          "davies_bouldin_status": "computed",
+          "cluster_counts": [
+            {
+              "cluster": 1,
+              "rows": 454
+            },
+            {
+              "cluster": 2,
+              "rows": 190
+            },
+            {
+              "cluster": 3,
+              "rows": 151
+            },
+            {
+              "cluster": 4,
+              "rows": 31
+            },
+            {
+              "cluster": 6,
+              "rows": 31
+            },
+            {
+              "cluster": 7,
+              "rows": 63
+            },
+            {
+              "cluster": 8,
+              "rows": 256
+            }
+          ]
+        },
+        "semantic_accuracy": null,
+        "space": {
+          "process_working_set_mb": 776.9140625,
+          "process_lifetime_peak_working_set_mb": 776.9140625,
+          "artifact_bytes": 40632685,
+          "neural_parameter_count": null,
+          "float32_parameter_bytes": null,
+          "scope": "Shared process snapshot after assessment; lifetime peak includes previous pipelines/native state. Artifact bytes are compressed ML.NET pipelines or transductive sample JSON; parameter bytes exclude gradients, optimizer and activations."
+        },
+        "accuracy_status": "unavailable_unlabeled_passages"
+      },
+      "assertions": [
+        "The full supplied prepared corpus was read without labels and its SHA256 remained unchanged.",
+        "Seed-42 duplicate-aware split was independently reproduced; normalized duplicate passages do not cross the holdout.",
+        "The report records semantic accuracy as unavailable for unlabeled book passages.",
+        "Memory values are finite shared-process snapshots, not isolated model-memory measurements.",
+        "Private saved model and manifest SHA256 match, including exact training/heldout provenance.",
+        "Reloaded model scores an original authored query into one of eight arbitrary lexical clusters with finite distances.",
+        "Query text features match an independently fitted training-only vocabulary; reloading preserves scores."
+      ],
+      "integration_suite_language_seconds": 121.6435871,
+      "timing_scope": "Fresh integration run: one shared five-algorithm fit per language plus independent split/vocabulary verification; not a controlled performance benchmark.",
+      "accuracy_scope": "Books are unlabeled. These assertions test integration, traceability and finite geometry/reconstruction, not semantic prediction correctness."
+    }
+  ]
+}

@@ -7,7 +7,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json",
     "test:ui": "playwright test",
     "test:books": "playwright test tests/private-books.spec.ts",
-    "test:public": "playwright test tests/public-smoke.spec.ts"
+    "test:public": "playwright test tests/public-smoke.spec.ts",
+    "test:integration:predictions": "playwright test tests/workflow-integration.spec.ts"
   },
   "devDependencies": {
     "@types/node": "22.18.12",
