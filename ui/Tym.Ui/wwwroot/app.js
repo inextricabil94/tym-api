@@ -36,6 +36,25 @@ const bookExamples = examples.filter(example => example.is_private);
 const { splitChapters } = window.TymChapters;
 const { partitionTracks } = window.TymTrackGroups;
 
+function examplePicture(id) {
+  if (id === 'en' || id === 'ro' || id.startsWith('tash-aw')) return {
+    file: 'jakarta.jpg', alt: 'Jakarta skyline photographed in 2017', caption: 'Jakarta, 2017',
+    credit: 'Georgi Kovachev', license: 'CC BY-SA 4.0',
+    source: 'https://commons.wikimedia.org/wiki/File:JakartaSkyline.jpg',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/'
+  };
+  if (id === 'leghe') return { file: 'leagues-frontispiece.jpg', alt: 'Frontispiece of the 1871 Hetzel edition of Twenty Thousand Leagues Under the Seas',
+    caption: 'Twenty Thousand Leagues, 1871', credit: 'Houghton Library, Harvard University', license: 'Public domain',
+    source: 'https://commons.wikimedia.org/wiki/File:Houghton_FC8_V5946_869ve_-_Verne,_frontispiece.jpg' };
+  if (id.startsWith('tinutul')) return { file: 'jules-verne.jpg', alt: 'Portrait of Jules Verne in 1892',
+    caption: 'Jules Verne, 1892', credit: 'Ch. Herbert, Amiens', license: 'Public domain',
+    source: 'https://commons.wikimedia.org/wiki/File:Jules_Verne_in_1892.jpg' };
+  if (id === 'colind') return { file: 'christmas-carol.jpg', alt: 'Cover of the 1843 edition of A Christmas Carol',
+    caption: 'A Christmas Carol, 1843', credit: 'John Leech / Wikimedia Commons', license: 'Public domain',
+    source: 'https://commons.wikimedia.org/wiki/File:Christmascarol1843_--_Cover.jpg' };
+  return null;
+}
+
 function themeIcon(dark) {
   return e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }, dark
@@ -172,10 +191,13 @@ function App() {
   const [loadingEntities, setLoadingEntities] = React.useState(false);
   const [entityError, setEntityError] = React.useState('');
   const [entityRefresh, setEntityRefresh] = React.useState(0);
-  const [diagramWidth, setDiagramWidth] = React.useState(1200);
+  const [resolution, setResolution] = React.useState(() => window.TymViewport.measure(window.innerWidth, window.innerHeight));
+  const diagramWidth = resolution.diagramWidth;
+  const resolutionKey = React.useRef(resolution.key);
   const [trackDensity, setTrackDensity] = React.useState(50);
   const [apiBaseUrl, setApiBaseUrl] = React.useState(apiDefault);
   const [baseResult, setBaseResult] = React.useState(null);
+  const [cacheResolution, setCacheResolution] = React.useState('');
   const [viewerDensity, setViewerDensity] = React.useState(50);
   const generationVersion = React.useRef(0);
   const [activeTab, setActiveTab] = React.useState('diagram');
@@ -195,12 +217,57 @@ function App() {
   const fullTextCache = React.useRef(null);
   const [chapterIndex, setChapterIndex] = React.useState(0);
   const [chapterDetection, setChapterDetection] = React.useState('auto');
+  const [library, setLibrary] = React.useState([]);
+  const [libraryError, setLibraryError] = React.useState('');
+  const [loadingLibrary, setLoadingLibrary] = React.useState(false);
+  const [libraryRefresh, setLibraryRefresh] = React.useState(0);
+  const [bookLimit, setBookLimit] = React.useState(100000);
+  const [selectedBookId, setSelectedBookId] = React.useState('');
+  const [bookEntityRequest, setBookEntityRequest] = React.useState('');
+  const selectedBook = library.find(book => book.id === selectedBookId);
   const getSections = React.useCallback(value => splitChapters(value, { standalone: chapterDetection }), [chapterDetection]);
-  const sections = React.useMemo(() => getSections(sourceText), [sourceText, getSections]);
+  const sections = React.useMemo(() => selectedBook ? selectedBook.sections : getSections(sourceText), [selectedBook, sourceText, getSections]);
   const currentChapterIndex = Math.min(chapterIndex, Math.max(0, sections.length - 1));
   const selectedSection = textScope === 'chapters' ? sections[currentChapterIndex] : null;
   const text = selectedSection ? sourceText.slice(selectedSection.start, selectedSection.end) : sourceText;
   const chapterCount = sections.filter(section => section.kind === 'chapter').length;
+  const selectedCharacters = selectedBook ? selectedSection?.character_count ?? selectedBook.character_count : text.length;
+  const bookSelectionKey = selectedBook ? `${selectedBook.id}:${selectedSection?.id || 'full'}` : '';
+  const selectedExampleItem = examples.find(example => example.id === selectedExample);
+  const protectedSource = Boolean(selectedBook || selectedExampleItem?.is_private);
+  const picture = examplePicture(selectedBookId || selectedExample);
+
+  React.useEffect(() => {
+    const update = () => {
+      const next = window.TymViewport.measure(window.innerWidth, window.innerHeight);
+      if (next.key === resolutionKey.current) return;
+      resolutionKey.current = next.key;
+      generationVersion.current++;
+      setResolution(next); setBaseResult(null); setCacheResolution('');
+      setTrackPage(0); setMessage('');
+    };
+    window.addEventListener('resize', update);
+    update();
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  React.useEffect(() => {
+    const request = new AbortController();
+    setLibrary([]); setSelectedBookId(''); setLibraryError(''); setLoadingLibrary(true);
+    fetch(`${apiBaseUrl.trim().replace(/\/+$/, '')}/v1/books`, { signal: request.signal, cache: 'no-store' })
+      .then(async response => {
+        if (!response.ok) throw new Error(`Book catalog unavailable (HTTP ${response.status}).`);
+        const data = await response.json();
+        if (!Array.isArray(data.books) || data.books.some(book => typeof book.id !== 'string'
+          || typeof book.label !== 'string' || !['en', 'ro'].includes(book.language) || !Array.isArray(book.sections)))
+          throw new Error('Invalid book catalog.');
+        if (!request.signal.aborted) {
+          setLibrary(data.books); setBookLimit(data.analysis_character_limit || 100000);
+        }
+      }).catch(error => { if (!request.signal.aborted) setLibraryError(error.message); })
+      .finally(() => { if (!request.signal.aborted) setLoadingLibrary(false); });
+    return () => request.abort();
+  }, [apiBaseUrl, libraryRefresh]);
 
   React.useEffect(() => () => textRequest.current?.abort(), []);
   React.useEffect(() => { window.TymTheme.set(theme); }, [theme]);
@@ -209,16 +276,18 @@ function App() {
     let active = true;
     setEntityOptions([]);
     setEntityError('');
-    if (loadingText || !text.trim() || !apiBaseUrl.trim()) {
+    if (loadingText || (!selectedBook && !text.trim()) || !apiBaseUrl.trim()
+      || (selectedBook && (bookEntityRequest !== bookSelectionKey || selectedCharacters > bookLimit))) {
       setLoadingEntities(false);
       return () => request.abort();
     }
     setLoadingEntities(true);
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`${apiBaseUrl.trim().replace(/\/+$/, '')}/v1/entities`, {
+        const endpoint = selectedBook ? `/v1/books/${encodeURIComponent(selectedBook.id)}/entities` : '/v1/entities';
+        const response = await fetch(`${apiBaseUrl.trim().replace(/\/+$/, '')}${endpoint}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, language }), signal: request.signal, cache: 'no-store'
+          body: JSON.stringify(selectedBook ? { section_id: selectedSection?.id || null } : { text, language }), signal: request.signal, cache: 'no-store'
         });
         if (!response.ok) {
           let details = null;
@@ -247,22 +316,22 @@ function App() {
       }
     }, 600);
     return () => { active = false; clearTimeout(timer); request.abort(); };
-  }, [text, language, apiBaseUrl, loadingText, entityRefresh]);
+  }, [text, language, apiBaseUrl, loadingText, entityRefresh, selectedBook, bookEntityRequest, bookSelectionKey, selectedCharacters, bookLimit]);
   const selectedHighlight = entityOptions.some(entity => entity.name === highlightEntity) ? highlightEntity : '';
 
-  React.useEffect(() => { generationVersion.current++; setBaseResult(null); }, [text, language, diagramWidth, apiBaseUrl, selectedHighlight]);
-  const densityChoices = React.useMemo(() => window.TymDensityCache.choices(baseResult), [baseResult]);
-  const result = React.useMemo(() => window.TymDensityCache.select(baseResult, viewerDensity), [baseResult, viewerDensity]);
+  React.useEffect(() => { generationVersion.current++; setBaseResult(null); }, [text, language, diagramWidth, apiBaseUrl, selectedHighlight, bookSelectionKey]);
+  const currentResult = cacheResolution === resolution.key ? baseResult : null;
+  const densityChoices = React.useMemo(() => window.TymDensityCache.choices(currentResult), [currentResult]);
+  const result = React.useMemo(() => window.TymDensityCache.select(currentResult, viewerDensity), [currentResult, viewerDensity]);
   const svg = result?.render?.svg || result?.renderings?.svg || '';
   const diagram = result && result.diagram ? result.diagram : {};
   const analysis = result && result.analysis ? result.analysis : null;
   const warnings = result && Array.isArray(result.warnings) ? result.warnings : [];
-  const selectedExampleItem = examples.find(example => example.id === selectedExample);
-  const selectedSource = selectedSection && selectedExampleItem
+  const selectedSource = selectedBook ? selectedBook.source : selectedSection && selectedExampleItem
     ? `${selectedExampleItem.label}; ${selectedSection.label}; unlabeled local chapter`
     : sourceScope === 'excerpt' ? selectedExampleItem?.source : selectedExampleItem?.full_source;
   const selectedPreview = textScope === 'excerpt' ? selectedExampleItem?.preview_svg : null;
-  const hasChapters = chapterCount > 0;
+  const hasChapters = selectedBook ? sections.length > 0 : chapterCount > 0;
   const timeMl = diagram.time_ml || {};
   const parsedTrackSvg = React.useMemo(() => parseTrackSvg(svg), [svg]);
   const trackActors = React.useMemo(() => {
@@ -331,6 +400,7 @@ function App() {
 
   function selectChapter(index) {
     setChapterIndex(index);
+    setBookEntityRequest('');
     clearResult();
   }
 
@@ -341,6 +411,7 @@ function App() {
       return;
     }
     setTextScope(scope);
+    setBookEntityRequest('');
     clearResult();
   }
 
@@ -362,6 +433,7 @@ function App() {
   }
 
   async function loadExample(example, scope = example.full_text_url ? 'auto' : 'excerpt') {
+    setSelectedBookId(''); setBookEntityRequest(''); setActiveTab('diagram');
     textRequest.current?.abort();
     const request = new AbortController();
     textRequest.current = request;
@@ -406,13 +478,28 @@ function App() {
     }
   }
 
+  function loadBook(book) {
+    textRequest.current?.abort();
+    textRequest.current = null;
+    setLoadingText(false); setSelectedExample(''); setSourceText('');
+    setSelectedBookId(book.id); setLanguage(book.language); setHighlightEntity('');
+    setBookEntityRequest(''); setTextScope(book.sections.length ? 'chapters' : 'full');
+    setSourceScope('full'); setChapterIndex(Math.max(0, book.sections.findIndex(section => section.kind === 'chapter')));
+    setActiveTab('diagram'); clearResult();
+  }
+
   async function generate() {
     const version = generationVersion.current;
+    const requestedResolution = resolution.key;
     const trimmedApi = apiBaseUrl.trim().replace(/\/+$/, '');
     const trimmedText = text.trim();
 
-    if (!trimmedApi || !trimmedText) {
+    if (!trimmedApi || (!selectedBook && !trimmedText)) {
       setMessage('Provide an API URL and input text.');
+      return;
+    }
+    if (selectedBook && selectedCharacters > bookLimit) {
+      setMessage(`Select a chapter or reading section of at most ${bookLimit.toLocaleString()} characters. No text is truncated.`);
       return;
     }
 
@@ -428,12 +515,17 @@ function App() {
         language
       }
     };
+    if (selectedBook) {
+      delete payload.text;
+      payload.section_id = selectedSection?.id || null;
+    }
 
     setBusy(true);
     setMessage('');
 
     try {
-      const response = await fetch(`${trimmedApi}/v1/diagrams`, {
+      const endpoint = selectedBook ? `/v1/books/${encodeURIComponent(selectedBook.id)}/diagrams` : '/v1/diagrams';
+      const response = await fetch(`${trimmedApi}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -463,10 +555,12 @@ function App() {
       }
 
       const data = await response.json();
-      if (generationVersion.current !== version) return;
+      if (generationVersion.current !== version
+        || window.TymViewport.measure(window.innerWidth, window.innerHeight).key !== requestedResolution) return;
       const returnedSvg = (data.render && data.render.svg) || (data.renderings && data.renderings.svg) || '';
 
       setBaseResult(data);
+      setCacheResolution(requestedResolution);
       setViewerDensity(data.track_generation?.density ?? trackDensity);
       setActiveTab('diagram');
       setTrackQuery('');
@@ -767,7 +861,23 @@ function App() {
           )
         ),
         e('div', { className: 'fields' },
-          bookExamples.length ? e('div', { className: 'field' },
+          e('div', { className: 'field' },
+            e('label', { htmlFor: 'hosted-book' }, 'Book library'),
+            e('div', { className: 'entity-controls' },
+              e('select', { id: 'hosted-book', className: 'language-select', value: selectedBookId,
+                disabled: busy || loadingLibrary || !library.length,
+                onChange: event => { const book = library.find(item => item.id === event.target.value); if (book) loadBook(book); } },
+                e('option', { value: '', disabled: true }, loadingLibrary ? 'Loading library...' : 'Select a book'),
+                library.map(book => e('option', { key: book.id, value: book.id }, book.label))),
+              e('button', { className: 'tool entity-refresh', type: 'button', title: 'Refresh book library', 'aria-label': 'Refresh book library',
+                disabled: busy || loadingLibrary, onClick: () => setLibraryRefresh(value => value + 1) },
+                e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2,
+                  strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+                  e('path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.02 6.74 2.74L21 8M21 3v5h-5' })))),
+            e('small', { className: `entity-status${libraryError ? ' error' : ''}`, role: 'status' },
+              libraryError || (loadingLibrary ? 'Loading...' : `${library.length} complete books`))
+          ),
+          bookExamples.length && !library.length ? e('div', { className: 'field' },
             e('label', { htmlFor: 'book-example' }, 'Book example'),
             e('select', {
               id: 'book-example',
@@ -783,7 +893,13 @@ function App() {
               bookExamples.map(example => e('option', { key: example.id, value: example.id }, example.label))
             )
           ) : null,
-          selectedExampleItem?.full_text_url || chapterCount > 0 ? e('div', { className: 'source-controls' },
+          picture ? e('figure', { className: 'example-visual' },
+            e('img', { src: `/assets/examples/${picture.file}`, alt: picture.alt, width: 112, height: 112, decoding: 'async' }),
+            e('figcaption', null, e('strong', null, picture.caption),
+              e('a', { href: picture.source, target: '_blank', rel: 'noopener noreferrer' }, picture.credit),
+              picture.licenseUrl ? e('a', { href: picture.licenseUrl, target: '_blank', rel: 'noopener noreferrer' }, picture.license)
+                : e('span', null, picture.license))) : null,
+          selectedBook || selectedExampleItem?.full_text_url || chapterCount > 0 ? e('div', { className: 'source-controls' },
             e('div', { className: 'tabs', role: 'radiogroup', 'aria-label': 'Text scope' },
               [['full', 'Full text'], ...(hasChapters ? [['chapters', 'Chapters']] : []),
                 ...(selectedExampleItem?.full_text_url ? [['excerpt', 'Excerpt']] : [])].map(([scope, label]) => e('button', {
@@ -792,18 +908,20 @@ function App() {
                 role: 'radio',
                 'aria-checked': textScope === scope,
                 className: `tab ${textScope === scope ? 'active' : ''}`,
-                disabled: busy,
+                disabled: busy || (selectedBook && scope === 'full' && selectedBook.character_count > bookLimit),
+                title: selectedBook && scope === 'full' && selectedBook.character_count > bookLimit
+                  ? `Full book retained; analyze chapters or sections up to ${bookLimit.toLocaleString()} characters.` : label,
                 onClick: () => selectScope(scope)
               }, label))
             ),
             e('span', { className: 'text-count', 'aria-live': 'polite' }, loadingText
               ? 'Loading...'
               : selectedSection
-                ? `${text.length.toLocaleString()} / ${sourceText.length.toLocaleString()} characters`
-                : `${text.length.toLocaleString()} characters`)
+                ? `${selectedCharacters.toLocaleString()} / ${(selectedBook?.character_count ?? sourceText.length).toLocaleString()} characters`
+                : `${selectedCharacters.toLocaleString()} characters`)
           ) : null,
           selectedSection ? e('div', { className: 'field chapter-field' },
-            e('label', { htmlFor: 'chapter' }, `Chapter (${chapterCount} detected)`),
+            e('label', { htmlFor: 'chapter' }, selectedBook ? `Chapter / Section (${sections.length})` : `Chapter (${chapterCount} detected)`),
             e('div', { className: 'chapter-controls' },
               e('select', { id: 'chapter', className: 'language-select', value: currentChapterIndex, disabled: busy || loadingText,
                 onChange: event => selectChapter(Number(event.target.value)) },
@@ -816,7 +934,7 @@ function App() {
             e('small', { className: 'chapter-range', 'aria-live': 'polite' },
               `Section ${currentChapterIndex + 1} of ${sections.length} | UTF-16 [${selectedSection.start}, ${selectedSection.end})`)
           ) : null,
-          e('div', { className: 'field' },
+          !selectedBook ? e('div', { className: 'field' },
             e('label', { htmlFor: 'chapter-detection' }, 'Chapter detection'),
             e('select', { id: 'chapter-detection', className: 'language-select', value: chapterDetection,
               disabled: busy || loadingText, onChange: event => {
@@ -825,7 +943,7 @@ function App() {
               e('option', { value: 'auto' }, 'Auto'),
               e('option', { value: 'off' }, 'Prefixed headings only'),
               e('option', { value: 'always' }, 'Include short numbered sections'))
-          ),
+          ) : null,
           e('div', { className: 'field' },
             e('label', { htmlFor: 'api-url' }, 'API URL'),
             e('input', {
@@ -842,6 +960,7 @@ function App() {
               id: 'language',
               className: 'language-select',
               value: language,
+              disabled: Boolean(selectedBook),
               onChange: event => setLanguage(event.target.value)
             },
               e('option', { value: 'en' }, 'English'),
@@ -869,27 +988,21 @@ function App() {
                 })
               ),
               e('button', { className: 'tool entity-refresh', type: 'button', title: 'Refresh entities', 'aria-label': 'Refresh entities',
-                disabled: busy || loadingText || loadingEntities || !text.trim(), onClick: () => setEntityRefresh(value => value + 1) },
+                disabled: busy || loadingText || loadingEntities || (!selectedBook && !text.trim()) || (selectedBook && selectedCharacters > bookLimit),
+                onClick: () => { setBookEntityRequest(bookSelectionKey); setEntityRefresh(value => value + 1); } },
                 e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2,
                   strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
                   e('path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.02 6.74 2.74L21 8' }),
                   e('path', { d: 'M21 3v5h-5' })))
               ),
               e('small', { id: 'entity-status', className: `entity-status${entityError ? ' error' : ''}`, role: 'status' },
-                loadingEntities ? 'Recognizing entities...' : entityError || `${entityOptions.length} entities detected`)
+                loadingEntities ? 'Recognizing entities...' : entityError
+                  || (selectedBook && bookEntityRequest !== bookSelectionKey ? 'Not requested for this section' : `${entityOptions.length} entities detected`))
             ),
             e('div', { className: 'field' },
-              e('label', { htmlFor: 'width' }, `Diagram width ${diagramWidth}px`),
-              e('input', {
-                id: 'width',
-                className: 'range-input',
-                type: 'range',
-                min: '900',
-                max: '1800',
-                step: '100',
-                value: diagramWidth,
-                onChange: event => setDiagramWidth(Number(event.target.value))
-              })
+              e('label', { htmlFor: 'width' }, 'Diagram width'),
+              e('output', { id: 'width', className: 'resolution-output' }, `${diagramWidth}px`),
+              e('small', { className: 'entity-status', 'data-testid': 'window-resolution' }, `Window ${resolution.width} x ${resolution.height}`)
             )
           ),
           e('div', { className: 'field' },
@@ -905,8 +1018,13 @@ function App() {
               e('span', null, '0 - Overview'), e('span', null, '100 - Detailed'))
           ),
           e('div', { className: 'field' },
-            e('label', { htmlFor: 'text' }, 'Text'),
-            e('textarea', {
+            e('label', { htmlFor: protectedSource ? undefined : 'text' }, protectedSource ? 'Source' : 'Text'),
+            protectedSource ? e('div', { className: 'book-source', 'data-testid': 'book-source' },
+              e('strong', null, selectedBook?.label || selectedExampleItem.label),
+              e('span', null, selectedSection?.label || 'Full text'),
+              e('small', null, 'Complete source retained on the server. No source-text export.'),
+              selectedBook ? e('small', null, `Analysis limit: ${bookLimit.toLocaleString()} characters per section; nothing is truncated.`) : null
+            ) : e('textarea', {
               id: 'text',
               className: 'text-input',
               disabled: loadingText || busy,
@@ -914,7 +1032,7 @@ function App() {
               onChange: event => editText(event.target.value)
             }),
             selectedSource ? e('small', { className: 'example-source' }, selectedSource) : null,
-            selectedPreview ? e('details', { className: 'example-preview' },
+            selectedPreview && !protectedSource ? e('details', { className: 'example-preview' },
               e('summary', null, 'Excerpt diagram preview'),
               e('img', {
                 src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(selectedPreview)}`,
@@ -927,8 +1045,8 @@ function App() {
             e('button', { className: 'primary', type: 'button', onClick: generate, disabled: busy || loadingText || loadingEntities }, busy ? 'Generating...' : 'Generate diagram'),
             e('div', { className: 'download-actions' },
               e('button', { className: 'secondary', type: 'button', onClick: downloadSvg, disabled: !svg }, 'SVG'),
-              e('button', { className: 'secondary', type: 'button', onClick: () => downloadText('tym-diagram.json', jsonText, 'application/json'), disabled: !result }, 'JSON'),
-              e('button', { className: 'secondary', type: 'button', onClick: () => downloadText('tym-diagram.xml', xmlText, 'application/xml'), disabled: !xmlText }, 'XML')
+              !protectedSource ? e('button', { className: 'secondary', type: 'button', onClick: () => downloadText('tym-diagram.json', jsonText, 'application/json'), disabled: !result }, 'JSON') : null,
+              !protectedSource ? e('button', { className: 'secondary', type: 'button', onClick: () => downloadText('tym-diagram.xml', xmlText, 'application/xml'), disabled: !xmlText }, 'XML') : null
             )
           ),
           e('div', { className: 'message', role: 'status' }, message)
@@ -952,8 +1070,8 @@ function App() {
             resultTab('diagram', 'SVG'),
             resultTab('analysis', 'Analysis'),
             resultTab('timeml', 'TimeML'),
-            resultTab('json', 'JSON'),
-            resultTab('xml', 'XML')
+            !protectedSource ? resultTab('json', 'JSON') : null,
+            !protectedSource ? resultTab('xml', 'XML') : null
           ),
           e('div', { className: 'zoom-tools' },
             e('button', { className: `tool ${fitToWidth ? 'active' : ''}`, type: 'button', title: 'Fit diagram to viewport width', 'aria-pressed': fitToWidth, onClick: () => setFitToWidth(!fitToWidth), disabled: !svg }, 'Fit'),

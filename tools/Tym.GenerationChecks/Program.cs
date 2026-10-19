@@ -1,6 +1,45 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Xml.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Extensions.Configuration;
+
+var libraryFolder = Path.Combine(Path.GetTempPath(), "tym-library-check-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(libraryFolder);
+try
+{
+    var text = "\U0001f642 Ana a plecat.\n\u0218tefan a venit.\n";
+    var boundary = text.IndexOf('\n') + 1;
+    var book = new LibraryBook("fixture", "Authored fixture", "ro", "Test", text.Length, text.Length,
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text))),
+        [new BookSection("s1", "ONE", "chapter", 0, boundary, boundary),
+         new BookSection("s2", "TWO", "chapter", boundary, text.Length, text.Length - boundary)]);
+    var settings = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["TYM_LIBRARY_PATH"] = libraryFolder }).Build();
+    void Save(LibraryBook value) => File.WriteAllText(Path.Combine(libraryFolder, "catalog.json"),
+        JsonSerializer.Serialize(new[] { value }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower }));
+    File.WriteAllText(Path.Combine(libraryFolder, "fixture.txt"), text, new UTF8Encoding(false));
+    Save(book);
+    var library = new BookLibrary(settings);
+    Check(library.Catalog.Count() == 1, "Library catalog missing book");
+    Check(library.Read("fixture", new BookAnalysisRequest())!.Text == text, "Full book truncated");
+    var part = library.Read("fixture", new BookAnalysisRequest("s2", new DiagramOptions(Language: "en")))!;
+    Check(part.Text == text[boundary..] && part.Options!.Language == "ro", "Chapter UTF-16 slice or book language incorrect");
+    Check(library.Read("../fixture", new BookAnalysisRequest()) is null, "Book path traversal accepted");
+    Check(library.Read("fixture", new BookAnalysisRequest("unknown")) is null, "Unknown chapter accepted");
+    foreach (var invalid in new[] { book with { Sha256Utf8 = "invalid" }, book with { Id = "../fixture" },
+        book with { Sections = [new BookSection("s1", "ONE", "chapter", 1, text.Length, text.Length - 1)] } })
+    {
+        Save(invalid);
+        var rejected = false;
+        try { _ = new BookLibrary(settings); } catch (InvalidDataException) { rejected = true; }
+        Check(rejected, "Invalid library passed integrity checks");
+    }
+    Check(!new BookLibrary(new ConfigurationBuilder().Build()).Catalog.Any(), "Unconfigured library should be empty");
+}
+finally { Directory.Delete(libraryFolder, true); }
+Console.WriteLine("Book library integrity, complete text, UTF-16, language, path and boundary checks passed.");
+if (args.Contains("--library-only")) return;
 
 var analyze = typeof(DiagramOptions).Assembly.GetType("TymAnalyzer", true)!.GetMethod("Analyze", BindingFlags.Public | BindingFlags.Static)!;
 var json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, WriteIndented = true };

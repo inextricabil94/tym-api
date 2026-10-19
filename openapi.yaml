@@ -50,6 +50,87 @@ paths:
                     type: string
                   version:
                     type: string
+  /v1/books:
+    get:
+      operationId: listBooks
+      summary: List available complete books and chapter metadata, without source text
+      description: Optional server-only library. Empty when TYM_LIBRARY_PATH is not configured. No sign-in or source download endpoint. See docs/book-library-api.md.
+      responses:
+        "200":
+          description: Book metadata and analysis limit in UTF-16 code units
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [books, analysis_character_limit]
+                properties:
+                  analysis_character_limit:
+                    type: integer
+                    const: 100000
+                  books:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/LibraryBook"
+  /v1/books/{id}/diagrams:
+    post:
+      operationId: generateBookDiagram
+      summary: Analyze an entire hosted book or its selected chapter/reading section
+      description: Shares the normal five-per-IP daily generation quota. Selection must not exceed 100000 UTF-16 units; never truncated. Language is fixed by the book. Results may contain excerpts; this is not DRM.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookAnalysisRequest"
+      responses:
+        "200":
+          description: Generated book diagram and optional cached density views
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiagramResponse"
+        "400":
+          description: Invalid options or selection above the analysis limit
+        "404":
+          description: Unknown book or section
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "503":
+          $ref: "#/components/responses/PosTaggingUnavailable"
+  /v1/books/{id}/entities:
+    post:
+      operationId: recognizeBookEntities
+      summary: Recognize entities and references in the selected hosted book section
+      description: Shares thirty entity lookups per minute per IP. Selection, language and size rules match book generation; no source text is required in the request.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookAnalysisRequest"
+      responses:
+        "200":
+          description: Existing entity/POS/reference response
+        "400":
+          description: Selection above the analysis limit
+        "404":
+          description: Unknown book or section
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "503":
+          $ref: "#/components/responses/PosTaggingUnavailable"
   /v1/entities:
     post:
       operationId: recognizeEntities
@@ -298,6 +379,51 @@ components:
           schema:
             $ref: "#/components/schemas/RateLimitErrorResponse"
   schemas:
+    LibraryBook:
+      type: object
+      required: [id, label, language, source, character_count, original_character_count, sha256_utf8, sections]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        language:
+          type: string
+          enum: [en, ro]
+        source:
+          type: string
+        character_count:
+          type: integer
+        original_character_count:
+          type: integer
+        sha256_utf8:
+          type: string
+        sections:
+          type: array
+          items:
+            type: object
+            required: [id, label, kind, start, end, character_count]
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              kind:
+                type: string
+              start:
+                type: integer
+              end:
+                type: integer
+              character_count:
+                type: integer
+    BookAnalysisRequest:
+      type: object
+      properties:
+        section_id:
+          type: [string, "null"]
+          description: Catalog section ID, or null for the complete book if within the size limit.
+        options:
+          $ref: "#/components/schemas/DiagramRequest/properties/options"
     DiagramRequest:
       type: object
       required:

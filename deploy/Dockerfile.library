@@ -1,0 +1,4 @@
+ARG API_IMAGE
+FROM ${API_IMAGE}
+COPY library/ /app/library/
+ENV TYM_LIBRARY_PATH=/app/library

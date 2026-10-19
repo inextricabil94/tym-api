@@ -299,6 +299,16 @@ textarea:focus-visible {
 .entity-refresh { display: grid; place-items: center; width: 40px; height: 44px; padding: 0; }
 .entity-status { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .entity-status.error { color: var(--warning); }
+#hosted-book { min-width: 0; text-overflow: ellipsis; }
+.book-source { display: grid; gap: 8px; padding: 12px 0; overflow-wrap: anywhere; }
+.book-source strong { font-size: 14px; font-weight: 500; }
+.book-source span, .book-source small { color: var(--muted); font-size: 12px; }
+.example-visual { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 12px; margin: 0; padding: 12px 0; border-block: 1px solid var(--line); }
+.example-visual img { width: 112px; height: 112px; object-fit: contain; }
+.example-visual figcaption { display: grid; gap: 6px; min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.example-visual strong { font-size: 13px; font-weight: 500; }
+.example-visual a, .example-visual span { color: var(--muted); }
+.resolution-output { display: flex; align-items: center; min-height: 44px; padding: 0 11px; border: 1px solid var(--field-border); border-radius: 3px; background: var(--bg-deep); font-size: 14px; }
 
 .example-preview {
   min-width: 0;
@@ -826,6 +836,8 @@ textarea:focus-visible {
     align-items: stretch;
     flex-direction: column;
   }
+
+  .density-cache-control { flex: 0 0 auto; max-width: none; }
 
   .metrics {
     grid-template-columns: repeat(3, minmax(74px, 1fr));

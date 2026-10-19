@@ -24,6 +24,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 The UI reuses the self-hosted Space Grotesk, Inter, and IBM Plex Mono font files supplied in the user's DataSpace project. Fonts are distributed under the SIL Open Font License 1.1. Unmodified copyright and license notices accompany the binaries in `ui/Tym.Ui/wwwroot/assets/fonts/OFL-spacegrotesk.txt`, `OFL-inter.txt`, and `OFL-ibmplexmono.txt`. Both Latin and Latin Extended subsets are included for Romanian text.
 
+# Workbench Example Images
+
+Downloaded from Wikimedia Commons on 19 October 2026. Images are unmodified Commons originals/thumbnails, self-hosted under `ui/Tym.Ui/wwwroot/assets/examples/`, and displayed without cropping. These pictures illustrate a place, author, or historic edition; they do not represent the exact Romanian edition supplied by the user.
+
+- `jakarta.jpg`: Georgi Kovachev, [JakartaSkyline.jpg](https://commons.wikimedia.org/wiki/File:JakartaSkyline.jpg), 2 January 2017. [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). This image remains under that license; no endorsement is implied.
+- `jules-verne.jpg`: Ch. Herbert, Amiens, [Jules Verne in 1892](https://commons.wikimedia.org/wiki/File:Jules_Verne_in_1892.jpg). Public domain, as identified by Commons.
+- `christmas-carol.jpg`: John Leech, [A Christmas Carol, 1843 cover](https://commons.wikimedia.org/wiki/File:Christmascarol1843_--_Cover.jpg). Public domain, as identified by Commons.
+- `leagues-frontispiece.jpg`: Edouard Riou / Alphonse de Neuville, [1871 Hetzel frontispiece](https://commons.wikimedia.org/wiki/File:Houghton_FC8_V5946_869ve_-_Verne,_frontispiece.jpg). Public domain. Source credit: FC8 V5946 869ve, Houghton Library, Harvard University.
+
 # Optional Local POS Runtime and Models
 
 The entity highlight filter uses [spaCy](https://github.com/explosion/spaCy) (MIT), with official [en_core_web_sm 3.8.0](https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.8.0) (MIT) and [ro_core_news_sm 3.8.0](https://github.com/explosion/spacy-models/releases/tag/ro_core_news_sm-3.8.0) (CC BY-SA 4.0) models from Explosion and the contributors/data sources named in each model's metadata. The Romanian model's metadata identifies [UD Romanian RRT v2.8](https://github.com/UniversalDependencies/UD_Romanian-RRT) (CC BY-SA 4.0; Barbu Mititelu, Verginica; Irimia, Elena; Perez, Cenel-Augusto; Ion, Radu; Simionescu, Radu; Popel, Martin) and [RONEC](https://github.com/dumitrescustefan/ronec) (MIT; Dumitrescu, Stefan Daniel; Avram, Andrei-Marius; Morogan, Luciana; Toma; Stefan) as sources. CC BY-SA 4.0 terms: https://creativecommons.org/licenses/by-sa/4.0/ .

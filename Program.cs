@@ -11,6 +11,7 @@ using Microsoft.ML.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
+builder.Services.AddSingleton<BookLibrary>();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
@@ -45,7 +46,8 @@ builder.Services.AddRateLimiter(options =>
         }));
     options.OnRejected = async (context, cancellationToken) =>
     {
-        var isEntityLookup = context.HttpContext.Request.Path.StartsWithSegments("/v1/entities");
+        var isEntityLookup = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName
+            == TymRateLimit.EntityPolicyName;
         var limit = isEntityLookup ? TymRateLimit.EntityPermitLimit : TymRateLimit.DailyPermitLimit;
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry)
             ? retry
@@ -92,6 +94,9 @@ app.MapGet("/", () => Results.Json(new
     {
         "GET /health",
         "GET /openapi.yaml",
+        "GET /v1/books",
+        "POST /v1/books/{id}/diagrams",
+        "POST /v1/books/{id}/entities",
         "POST /v1/entities",
         "POST /v1/diagrams",
         "POST /v1/diagrams/svg",
@@ -126,6 +131,34 @@ app.MapPost("/v1/entities", (EntityRecognitionRequest request, HttpContext conte
     if (string.IsNullOrWhiteSpace(request.Language) || NormalizeLanguage(request.Language) is not { } language)
         return Results.BadRequest(new ErrorResponse("'language' must be one of: en, ro."));
     return Results.Json(TymAnalyzer.RecognizeEntities(request.Text, language));
+}).RequireRateLimiting(TymRateLimit.EntityPolicyName);
+
+app.MapGet("/v1/books", (BookLibrary library, HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    return Results.Json(new { books = library.Catalog, analysis_character_limit = BookLibrary.AnalysisLimit });
+});
+
+app.MapPost("/v1/books/{id}/diagrams", (string id, BookAnalysisRequest selection, BookLibrary library, HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    var request = library.Read(id, selection);
+    if (request is null) return Results.NotFound(new ErrorResponse("Book or section not found."));
+    if (request.Text.Length > BookLibrary.AnalysisLimit)
+        return Results.BadRequest(new ErrorResponse("Select a chapter or reading section of at most 100,000 characters. No text is truncated."));
+    var validation = Validate(request);
+    return validation is not null ? Results.BadRequest(new ErrorResponse(validation))
+        : Results.Json(TymAnalyzer.Analyze(request.Text, request.Options!));
+}).RequireRateLimiting(TymRateLimit.PolicyName);
+
+app.MapPost("/v1/books/{id}/entities", (string id, BookAnalysisRequest selection, BookLibrary library, HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    var request = library.Read(id, selection);
+    if (request is null) return Results.NotFound(new ErrorResponse("Book or section not found."));
+    if (request.Text.Length > BookLibrary.AnalysisLimit)
+        return Results.BadRequest(new ErrorResponse("Select a chapter or reading section of at most 100,000 characters. No text is truncated."));
+    return Results.Json(TymAnalyzer.RecognizeEntities(request.Text, request.Options!.Language));
 }).RequireRateLimiting(TymRateLimit.EntityPolicyName);
 
 app.MapPost("/v1/diagrams/svg", (DiagramRequest request) =>

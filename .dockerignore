@@ -6,6 +6,7 @@
 !AnaphoraResolution.cs
 !PosTagging.cs
 !TrackGeneration.cs
+!BookLibrary.cs
 !openapi.yaml
 !sample_input.json
 !sample_input_ro.json
