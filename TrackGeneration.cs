@@ -6,7 +6,12 @@ internal sealed record TrackDescriptor(string NaturalKey, string ContextKey);
 
 internal static class TymDensityCache
 {
-    public static readonly int[] Presets = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    public static readonly int[] Presets = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+    public static CachedDensityView View(DiagramResponse response) => new(response.Diagram.Tracks,
+        response.Diagram.Segments.Select(segment => new SegmentPlacement(segment.Id, segment.TrackId, segment.StoryOrder)).ToList(),
+        response.Diagram.Endpoints, response.Diagram.Relations, response.Diagram.Boundaries,
+        response.Analysis, response.Render, response.Xml, response.Warnings);
 
     public static DensityCacheInfo Build(DiagramResponse baseline, IReadOnlyList<TrackDescriptor> descriptors,
         int[] baselineAssignments, Func<int, int[], DiagramResponse> generate)

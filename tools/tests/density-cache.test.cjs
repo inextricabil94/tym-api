@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { choices, select } = require('../../ui/Tym.Ui/wwwroot/density-cache.js');
+const { choices, select, append } = require('../../ui/Tym.Ui/wwwroot/density-cache.js');
 
 function fixture() {
   return {
@@ -67,4 +67,16 @@ test('missing or out-of-range cached options are not advertised', () => {
   const base = fixture();
   base.density_cache.options.push({ density: 20, view_id: 'missing', track_count: 8 }, { density: 101, view_id: 'base', track_count: 1 });
   assert.deepEqual(choices(base).map(option => option.density), [1, 50, 100]);
+});
+
+test('background arrivals add a density without replacing the selected primary diagram', () => {
+  const original = fixture();
+  const view = original.density_cache.views.v1;
+  const pending = { ...original, density_cache: { session_id: 'opaque', options: [original.density_cache.options[1]], views: {}, pending_densities: [100] } };
+  const updated = append(pending, 100, view);
+  assert.equal(updated.render.svg, 'base svg');
+  assert.equal(updated.track_generation.density, 50);
+  assert.equal(select(updated, 100).render.svg, 'detailed svg');
+  assert.deepEqual(updated.density_cache.pending_densities, []);
+  assert.deepEqual(pending.density_cache.pending_densities, [100]);
 });

@@ -12,7 +12,6 @@ public sealed class BookLibrary
 {
     // Cached source text stays outside wwwroot and is never returned by a GET endpoint.
     private readonly IReadOnlyDictionary<string, (LibraryBook Book, string Text)> books;
-    public const int AnalysisLimit = 100_000;
 
     public BookLibrary(IConfiguration configuration)
     {

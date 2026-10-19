@@ -44,5 +44,15 @@
     };
   }
 
-  return { choices, select };
+  function append(response, density, view) {
+    if (!response?.density_cache || !view?.render?.svg || !Array.isArray(view.segment_placements)) return response;
+    const id = `density-${density}`;
+    const cache = response.density_cache;
+    return { ...response, density_cache: { ...cache,
+      options: [...cache.options.filter(option => option.density !== density), { density, view_id: id, track_count: view.tracks.length }],
+      views: { ...cache.views, [id]: view },
+      pending_densities: (cache.pending_densities || []).filter(value => value !== density) } };
+  }
+
+  return { choices, select, append };
 });

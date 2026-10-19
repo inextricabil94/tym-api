@@ -12,6 +12,7 @@ using Microsoft.ML.Data;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.AddSingleton<BookLibrary>();
+builder.Services.AddSingleton<DensitySessions>();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
@@ -44,14 +45,18 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
+    options.AddPolicy(TymRateLimit.DensityPolicyName, context =>
+        RateLimitPartition.GetFixedWindowLimiter(ClientIpResolver.Resolve(context), _ => new FixedWindowRateLimiterOptions
+        { PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
     options.OnRejected = async (context, cancellationToken) =>
     {
         var isEntityLookup = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName
             == TymRateLimit.EntityPolicyName;
-        var limit = isEntityLookup ? TymRateLimit.EntityPermitLimit : TymRateLimit.DailyPermitLimit;
+        var isDensity = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == TymRateLimit.DensityPolicyName;
+        var limit = isDensity ? 60 : isEntityLookup ? TymRateLimit.EntityPermitLimit : TymRateLimit.DailyPermitLimit;
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry)
             ? retry
-            : isEntityLookup ? TimeSpan.FromMinutes(1) : TymRateLimit.Window;
+            : isEntityLookup || isDensity ? TimeSpan.FromMinutes(1) : TymRateLimit.Window;
         var retryAfterSeconds = Math.Max(1, (long)Math.Ceiling(retryAfter.TotalSeconds));
         var response = context.HttpContext.Response;
 
@@ -61,9 +66,9 @@ builder.Services.AddRateLimiter(options =>
 
         await response.WriteAsJsonAsync(
             new RateLimitErrorResponse(
-                isEntityLookup ? "Entity lookup limit exceeded for this IP address." : "Daily diagram-generation limit exceeded for this IP address.",
+                isDensity ? "Density layout limit exceeded for this IP address." : isEntityLookup ? "Entity lookup limit exceeded for this IP address." : "Daily diagram-generation limit exceeded for this IP address.",
                 limit,
-                isEntityLookup ? "1 minute" : "24 hours",
+                isEntityLookup || isDensity ? "1 minute" : "24 hours",
                 retryAfterSeconds),
             cancellationToken);
     };
@@ -114,13 +119,13 @@ app.MapGet("/openapi.yaml", () =>
         : Results.NotFound(new { error = "openapi.yaml not found" });
 });
 
-app.MapPost("/v1/diagrams", (DiagramRequest request, HttpContext context) =>
+app.MapPost("/v1/diagrams", (DiagramRequest request, HttpContext context, DensitySessions sessions) =>
 {
     context.Response.Headers.CacheControl = "no-store";
     var validation = Validate(request);
     return validation is not null
         ? Results.BadRequest(new ErrorResponse(validation))
-        : Results.Json(TymAnalyzer.Analyze(request.Text, request.Options ?? new DiagramOptions()));
+        : Results.Json(AnalyzeForClient(request, context, sessions));
 }).RequireRateLimiting(TymRateLimit.PolicyName);
 
 app.MapPost("/v1/entities", (EntityRecognitionRequest request, HttpContext context) =>
@@ -136,28 +141,33 @@ app.MapPost("/v1/entities", (EntityRecognitionRequest request, HttpContext conte
 app.MapGet("/v1/books", (BookLibrary library, HttpContext context) =>
 {
     context.Response.Headers.CacheControl = "no-store";
-    return Results.Json(new { books = library.Catalog, analysis_character_limit = BookLibrary.AnalysisLimit });
+    return Results.Json(new { books = library.Catalog });
 });
 
-app.MapPost("/v1/books/{id}/diagrams", (string id, BookAnalysisRequest selection, BookLibrary library, HttpContext context) =>
+app.MapPost("/v1/books/{id}/diagrams", (string id, BookAnalysisRequest selection, BookLibrary library, HttpContext context, DensitySessions sessions) =>
 {
     context.Response.Headers.CacheControl = "no-store";
     var request = library.Read(id, selection);
     if (request is null) return Results.NotFound(new ErrorResponse("Book or section not found."));
-    if (request.Text.Length > BookLibrary.AnalysisLimit)
-        return Results.BadRequest(new ErrorResponse("Select a chapter or reading section of at most 100,000 characters. No text is truncated."));
     var validation = Validate(request);
     return validation is not null ? Results.BadRequest(new ErrorResponse(validation))
-        : Results.Json(TymAnalyzer.Analyze(request.Text, request.Options!));
+        : Results.Json(AnalyzeForClient(request with { Options = request.Options! with { OmitXmlExports = true } }, context, sessions));
 }).RequireRateLimiting(TymRateLimit.PolicyName);
+
+app.MapGet("/v1/density-sessions/{id}/{density:int}", async (string id, int density, DensitySessions sessions, HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    if (!TymDensityCache.Presets.Contains(density)) return Results.BadRequest(new ErrorResponse("Density must be 10, 20, ..., 100."));
+    var view = await sessions.Generate(id, ClientIpResolver.Resolve(context), density, context.RequestAborted);
+    return view is null ? Results.NotFound(new ErrorResponse("Density cache expired. The current diagram remains available."))
+        : Results.Json(new { density, view });
+}).RequireRateLimiting(TymRateLimit.DensityPolicyName);
 
 app.MapPost("/v1/books/{id}/entities", (string id, BookAnalysisRequest selection, BookLibrary library, HttpContext context) =>
 {
     context.Response.Headers.CacheControl = "no-store";
     var request = library.Read(id, selection);
     if (request is null) return Results.NotFound(new ErrorResponse("Book or section not found."));
-    if (request.Text.Length > BookLibrary.AnalysisLimit)
-        return Results.BadRequest(new ErrorResponse("Select a chapter or reading section of at most 100,000 characters. No text is truncated."));
     return Results.Json(TymAnalyzer.RecognizeEntities(request.Text, request.Options!.Language));
 }).RequireRateLimiting(TymRateLimit.EntityPolicyName);
 
@@ -186,6 +196,19 @@ app.MapPost("/v1/diagrams/xml", (DiagramRequest request) =>
 }).RequireRateLimiting(TymRateLimit.PolicyName);
 
 app.Run();
+
+static DiagramResponse AnalyzeForClient(DiagramRequest request, HttpContext context, DensitySessions sessions)
+{
+    var options = request.Options ?? new DiagramOptions();
+    if (!options.ProgressiveDensityCache) return TymAnalyzer.Analyze(request.Text, options);
+    var prepared = TymAnalyzer.Prepare(request.Text, options with { CacheTrackDensities = false });
+    var response = prepared.Response;
+    var id = sessions.Add(ClientIpResolver.Resolve(context), request.Text.Length, prepared.GenerateDensity);
+    return response with { DensityCache = new DensityCacheInfo(
+        [new DensityCacheOption(options.TrackDensity, "base", response.Diagram.Tracks.Count)],
+        new Dictionary<string, CachedDensityView>(), id,
+        TymDensityCache.Presets.Where(density => density != options.TrackDensity).ToArray()) };
+}
 
 static string? Validate(DiagramRequest? request)
 {
@@ -240,9 +263,11 @@ public sealed record DiagramOptions(
     bool IncludeDebug = false,
     string Language = "en",
     int TrackDensity = 50,
-    bool CacheTrackDensities = false)
+    bool CacheTrackDensities = false,
+    bool ProgressiveDensityCache = false)
 {
     internal IReadOnlyList<HighlightSpan>? HighlightSpans { get; init; }
+    internal bool OmitXmlExports { get; init; }
 }
 
 public sealed record ErrorResponse(string Error);
@@ -265,6 +290,7 @@ internal static class TymRateLimit
 {
     public const string PolicyName = "diagram-generation-per-ip";
     public const string EntityPolicyName = "entity-recognition-per-ip";
+    public const string DensityPolicyName = "density-layout-per-ip";
     public const int EntityPermitLimit = 30;
     public const int DailyPermitLimit = 5;
     public static readonly TimeSpan Window = TimeSpan.FromDays(1);
@@ -342,7 +368,7 @@ public sealed record DiagramResponse(
 
 public sealed record TrackGenerationInfo(int Density, string TitleMethod);
 public sealed record DensityCacheInfo(IReadOnlyList<DensityCacheOption> Options,
-    IReadOnlyDictionary<string, CachedDensityView> Views);
+    IReadOnlyDictionary<string, CachedDensityView> Views, string? SessionId = null, int[]? PendingDensities = null);
 public sealed record DensityCacheOption(int Density, string ViewId, int TrackCount);
 public sealed record SegmentPlacement(string Id, string TrackId, double StoryOrder);
 public sealed record CachedDensityView(IReadOnlyList<TimeTrack> Tracks, IReadOnlyList<SegmentPlacement> SegmentPlacements,
@@ -985,7 +1011,9 @@ internal static partial class TymAnalyzer
         if (runStart >= 0) yield return (text[runStart..runEnd], runStart);
     }
 
-    public static DiagramResponse Analyze(string text, DiagramOptions options)
+    public static DiagramResponse Analyze(string text, DiagramOptions options) => Prepare(text, options).Response;
+
+    public static PreparedAnalysis Prepare(string text, DiagramOptions options)
     {
         var language = NormalizeLanguageCode(options.Language);
         if (options.HighlightEntities is { Length: > 0 })
@@ -1216,7 +1244,7 @@ internal static partial class TymAnalyzer
                 timeMl);
             var analysis = BuildAnalysis(text, diagram);
             var render = TymSvgRenderer.Render(diagram, options with { TrackDensity = density });
-            var xml = TymXmlSerializer.Serialize(diagram);
+            var xml = options.OmitXmlExports ? "" : TymXmlSerializer.Serialize(diagram);
             var warnings = new List<string>
             {
                 "Time segment types follow the paper labels: NAR, REM, SUP, GEN, and FIC.",
@@ -1246,9 +1274,10 @@ internal static partial class TymAnalyzer
 
         var assignments = TymTrackGranularity.Assign(descriptors, options.TrackDensity);
         var response = BuildDensityView(options.TrackDensity, assignments);
-        return options.CacheTrackDensities
+        var completed = options.CacheTrackDensities
             ? response with { DensityCache = TymDensityCache.Build(response, descriptors, assignments, BuildDensityView) }
             : response;
+        return new PreparedAnalysis(completed, density => BuildDensityView(density, TymTrackGranularity.Assign(descriptors, density)));
     }
 
     private static AnalysisReport BuildAnalysis(string sourceText, Diagram diagram)

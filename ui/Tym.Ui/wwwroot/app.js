@@ -198,6 +198,7 @@ function App() {
   const [apiBaseUrl, setApiBaseUrl] = React.useState(apiDefault);
   const [baseResult, setBaseResult] = React.useState(null);
   const [cacheResolution, setCacheResolution] = React.useState('');
+  const [cacheStatus, setCacheStatus] = React.useState('');
   const [viewerDensity, setViewerDensity] = React.useState(50);
   const generationVersion = React.useRef(0);
   const [activeTab, setActiveTab] = React.useState('diagram');
@@ -221,7 +222,6 @@ function App() {
   const [libraryError, setLibraryError] = React.useState('');
   const [loadingLibrary, setLoadingLibrary] = React.useState(false);
   const [libraryRefresh, setLibraryRefresh] = React.useState(0);
-  const [bookLimit, setBookLimit] = React.useState(100000);
   const [selectedBookId, setSelectedBookId] = React.useState('');
   const [bookEntityRequest, setBookEntityRequest] = React.useState('');
   const selectedBook = library.find(book => book.id === selectedBookId);
@@ -262,7 +262,7 @@ function App() {
           || typeof book.label !== 'string' || !['en', 'ro'].includes(book.language) || !Array.isArray(book.sections)))
           throw new Error('Invalid book catalog.');
         if (!request.signal.aborted) {
-          setLibrary(data.books); setBookLimit(data.analysis_character_limit || 100000);
+          setLibrary(data.books);
         }
       }).catch(error => { if (!request.signal.aborted) setLibraryError(error.message); })
       .finally(() => { if (!request.signal.aborted) setLoadingLibrary(false); });
@@ -277,7 +277,7 @@ function App() {
     setEntityOptions([]);
     setEntityError('');
     if (loadingText || (!selectedBook && !text.trim()) || !apiBaseUrl.trim()
-      || (selectedBook && (bookEntityRequest !== bookSelectionKey || selectedCharacters > bookLimit))) {
+      || (selectedBook && bookEntityRequest !== bookSelectionKey)) {
       setLoadingEntities(false);
       return () => request.abort();
     }
@@ -316,13 +316,40 @@ function App() {
       }
     }, 600);
     return () => { active = false; clearTimeout(timer); request.abort(); };
-  }, [text, language, apiBaseUrl, loadingText, entityRefresh, selectedBook, bookEntityRequest, bookSelectionKey, selectedCharacters, bookLimit]);
+  }, [text, language, apiBaseUrl, loadingText, entityRefresh, selectedBook, bookEntityRequest, bookSelectionKey]);
   const selectedHighlight = entityOptions.some(entity => entity.name === highlightEntity) ? highlightEntity : '';
 
   React.useEffect(() => { generationVersion.current++; setBaseResult(null); }, [text, language, diagramWidth, apiBaseUrl, selectedHighlight, bookSelectionKey]);
   const currentResult = cacheResolution === resolution.key ? baseResult : null;
   const densityChoices = React.useMemo(() => window.TymDensityCache.choices(currentResult), [currentResult]);
   const result = React.useMemo(() => window.TymDensityCache.select(currentResult, viewerDensity), [currentResult, viewerDensity]);
+  const densitySession = currentResult?.density_cache?.session_id;
+  React.useEffect(() => {
+    setCacheStatus('');
+    if (!densitySession) return;
+    const request = new AbortController();
+    const version = generationVersion.current;
+    const pending = currentResult.density_cache.pending_densities || [];
+    (async () => {
+      // Let the selected diagram paint before starting additional layouts.
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      try {
+        for (const density of pending) {
+          if (request.signal.aborted || generationVersion.current !== version) return;
+          setCacheStatus(`Caching density ${density}...`);
+          const response = await fetch(`${apiBaseUrl.trim().replace(/\/+$/, '')}/v1/density-sessions/${encodeURIComponent(densitySession)}/${density}`,
+            { signal: request.signal, cache: 'no-store' });
+          if (!response.ok) throw new Error('Background cache paused. Current diagram remains available.');
+          const data = await response.json();
+          if (request.signal.aborted || generationVersion.current !== version) return;
+          setBaseResult(current => current?.density_cache?.session_id === densitySession
+            ? window.TymDensityCache.append(current, density, data.view) : current);
+        }
+        setCacheStatus('10 densities cached');
+      } catch (error) { if (!request.signal.aborted) setCacheStatus(error.message); }
+    })();
+    return () => request.abort();
+  }, [densitySession, resolution.key, apiBaseUrl]);
   const svg = result?.render?.svg || result?.renderings?.svg || '';
   const diagram = result && result.diagram ? result.diagram : {};
   const analysis = result && result.analysis ? result.analysis : null;
@@ -376,7 +403,7 @@ function App() {
     update();
     return () => observer.disconnect();
   }, [svg, activeTab]);
-  const jsonText = React.useMemo(() => formatJson(result), [result]);
+  const jsonText = React.useMemo(() => protectedSource ? '' : formatJson(result), [result, protectedSource]);
   const xmlText = result && result.xml ? result.xml : '';
   const timeMlText = React.useMemo(() => timeMlSummary(timeMl), [timeMl]);
   const statusClass = busy || loadingText ? 'busy' : message ? 'error' : result ? 'ready' : '';
@@ -498,10 +525,6 @@ function App() {
       setMessage('Provide an API URL and input text.');
       return;
     }
-    if (selectedBook && selectedCharacters > bookLimit) {
-      setMessage(`Select a chapter or reading section of at most ${bookLimit.toLocaleString()} characters. No text is truncated.`);
-      return;
-    }
 
     const payload = {
       text,
@@ -510,6 +533,7 @@ function App() {
         width: diagramWidth,
         track_density: trackDensity,
         cache_track_densities: true,
+        progressive_density_cache: true,
         highlight_entities: selectedHighlight ? [selectedHighlight] : [],
         include_debug: true,
         language
@@ -521,6 +545,7 @@ function App() {
     }
 
     setBusy(true);
+    setBaseResult(null);
     setMessage('');
 
     try {
@@ -908,9 +933,8 @@ function App() {
                 role: 'radio',
                 'aria-checked': textScope === scope,
                 className: `tab ${textScope === scope ? 'active' : ''}`,
-                disabled: busy || (selectedBook && scope === 'full' && selectedBook.character_count > bookLimit),
-                title: selectedBook && scope === 'full' && selectedBook.character_count > bookLimit
-                  ? `Full book retained; analyze chapters or sections up to ${bookLimit.toLocaleString()} characters.` : label,
+                disabled: busy,
+                title: label,
                 onClick: () => selectScope(scope)
               }, label))
             ),
@@ -988,7 +1012,7 @@ function App() {
                 })
               ),
               e('button', { className: 'tool entity-refresh', type: 'button', title: 'Refresh entities', 'aria-label': 'Refresh entities',
-                disabled: busy || loadingText || loadingEntities || (!selectedBook && !text.trim()) || (selectedBook && selectedCharacters > bookLimit),
+                disabled: busy || loadingText || loadingEntities || (!selectedBook && !text.trim()),
                 onClick: () => { setBookEntityRequest(bookSelectionKey); setEntityRefresh(value => value + 1); } },
                 e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2,
                   strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
@@ -1007,7 +1031,7 @@ function App() {
           ),
           e('div', { className: 'field' },
             e('label', { htmlFor: 'track-density' }, `TT density ${trackDensity}`),
-            e('input', { id: 'track-density', className: 'range-input', type: 'range', min: '0', max: '100', step: '1',
+            e('input', { id: 'track-density', className: 'range-input', type: 'range', min: '10', max: '100', step: '10',
               value: trackDensity, disabled: busy,
               onChange: event => {
                 const density = Number(event.target.value);
@@ -1015,16 +1039,11 @@ function App() {
                 if (densityChoices.some(choice => choice.density === density)) selectDensity(density);
               } }),
             e('div', { className: 'density-scale', 'aria-hidden': true },
-              e('span', null, '0 - Overview'), e('span', null, '100 - Detailed'))
+              e('span', null, '10 - Overview'), e('span', null, '100 - Detailed'))
           ),
-          e('div', { className: 'field' },
-            e('label', { htmlFor: protectedSource ? undefined : 'text' }, protectedSource ? 'Source' : 'Text'),
-            protectedSource ? e('div', { className: 'book-source', 'data-testid': 'book-source' },
-              e('strong', null, selectedBook?.label || selectedExampleItem.label),
-              e('span', null, selectedSection?.label || 'Full text'),
-              e('small', null, 'Complete source retained on the server. No source-text export.'),
-              selectedBook ? e('small', null, `Analysis limit: ${bookLimit.toLocaleString()} characters per section; nothing is truncated.`) : null
-            ) : e('textarea', {
+          !protectedSource ? e('div', { className: 'field' },
+            e('label', { htmlFor: 'text' }, 'Text'),
+            e('textarea', {
               id: 'text',
               className: 'text-input',
               disabled: loadingText || busy,
@@ -1040,7 +1059,7 @@ function App() {
                 loading: 'lazy'
               })
             ) : null
-          ),
+          ) : null,
           e('div', { className: 'actions' },
             e('button', { className: 'primary', type: 'button', onClick: generate, disabled: busy || loadingText || loadingEntities }, busy ? 'Generating...' : 'Generate diagram'),
             e('div', { className: 'download-actions' },
@@ -1062,9 +1081,13 @@ function App() {
             e('label', { htmlFor: 'cached-density' }, 'Cached TT density'),
             e('select', { id: 'cached-density', className: 'language-select', value: result ? viewerDensity : '',
               disabled: busy || densityChoices.length < 2, onChange: event => selectDensity(Number(event.target.value)) },
-              densityChoices.length ? densityChoices.map(choice => e('option', { key: choice.density, value: choice.density },
-                `${choice.density} - ${choice.track_count} track${choice.track_count === 1 ? '' : 's'}`))
+              densityChoices.length ? Array.from({ length: 10 }, (_, index) => (index + 1) * 10).map(density => {
+                const choice = densityChoices.find(option => option.density === density);
+                return e('option', { key: density, value: density, disabled: !choice }, choice
+                  ? `${density} - ${choice.track_count} track${choice.track_count === 1 ? '' : 's'}` : `${density} - Pending`);
+              })
                 : e('option', { value: '' }, 'No cached diagrams'))
+            , e('small', { className: 'entity-status', role: 'status' }, cacheStatus)
           ),
           e('div', { className: 'tabs', role: 'tablist', 'aria-label': 'Result views' },
             resultTab('diagram', 'SVG'),

@@ -190,7 +190,7 @@ foreach (var sample in samples)
     Check(baseline.Diagram.Tracks.Any(track => track.Name.Contains(sample.Language == "en" ? "searched" : "cautat")), "Titles did not summarize actions");
     var cached = (DiagramResponse)analyze.Invoke(null, [sample.Text, new DiagramOptions(Language: sample.Language, CacheTrackDensities: true)])!;
     Check(JsonSerializer.Serialize(cached with { DensityCache = null }) == JsonSerializer.Serialize(baseline), "Caching changed the primary diagram");
-    Check(cached.DensityCache!.Options.Select(option => option.Density).SequenceEqual(new[] { 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 }), "Missing cache presets");
+    Check(cached.DensityCache!.Options.Select(option => option.Density).SequenceEqual(new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 }), "Missing cache presets");
     foreach (var option in cached.DensityCache.Options)
     {
         var expected = Run(option.Density);
@@ -217,7 +217,7 @@ foreach (var sample in samples)
     reports.Add(new { language = sample.Language, density_cases = counts.Count, coarse_tracks = counts[0], default_tracks = counts[50], detailed_tracks = counts[100], events = baseline.Diagram.Events.Count, segments = baseline.Diagram.Segments.Count });
 }
 var single = (DiagramResponse)analyze.Invoke(null, ["Adam waited.", new DiagramOptions(CacheTrackDensities: true)])!;
-Check(single.DensityCache!.Options.Count == 11 && single.DensityCache.Views.Count == 0
+Check(single.DensityCache!.Options.Count == 10 && single.DensityCache.Views.Count == 0
     && single.DensityCache.Options.All(option => option.ViewId == "base"), "Identical density views must reuse the base payload");
 if (args.Contains("--refresh-sample"))
 {

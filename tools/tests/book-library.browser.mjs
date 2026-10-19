@@ -47,7 +47,11 @@ try {
     assert.equal((await fetch(`${api}${url}`)).status, 404);
   assert.equal((await post('/v1/books/missing/entities', {})).status, 404);
   assert.equal((await post('/v1/books/leghe/entities', { section_id: '../leghe' })).status, 404);
-  assert.equal((await post('/v1/books/oversized/diagrams', {})).status, 400);
+  const complete = await post('/v1/books/oversized/diagrams', {});
+  assert.equal(complete.status, 200);
+  const completeResult = await complete.json();
+  assert.equal(completeResult.analysis.character_count, books.find(book => book.id === 'oversized').character_count);
+  assert.equal(completeResult.xml, '');
 
   await page.route('**/config.js', route => route.fulfill({ contentType: 'application/javascript', body: `window.TYM_CONFIG = ${JSON.stringify({ apiBaseUrl: api, examples: [] })};` }));
   await page.goto(process.env.TYM_UI_URL || 'http://127.0.0.1:8780/');
@@ -69,17 +73,27 @@ try {
   assert.equal((await entityResponse).status(), 200);
   await page.waitForFunction(() => !document.getElementById('highlight').disabled);
   await page.locator('#highlight').selectOption('Adam');
+  let allowBackground;
+  const backgroundGate = new Promise(resolve => { allowBackground = resolve; });
+  await page.route('**/v1/density-sessions/**', async route => { await backgroundGate; await route.continue(); });
   const responsePromise = page.waitForResponse(response => response.url().endsWith('/v1/books/colind/diagrams'));
   await page.getByRole('button', { name: 'Generate diagram', exact: true }).click();
   const response = await responsePromise;
   assert.equal(response.status(), 200);
   const result = await response.json();
+  assert.equal(result.density_cache.options.length, 1, 'Initial response must contain only the selected density');
+  assert.equal(result.density_cache.pending_densities.length, 9);
+  await page.waitForFunction(() => document.querySelector('.diagram-area svg'));
+  assert.equal(await page.locator('#cached-density').inputValue(), '50');
+  assert.doesNotMatch(await page.locator('body').innerText(), /Complete source retained|Analysis limit:|unlabeled local input/);
+  assert.equal(await page.getByRole('radio', { name: 'Full text', exact: true }).isEnabled(), true);
+  allowBackground();
   assert.equal(result.analysis.character_count, text.length - books[0].sections[1].start);
   assert.equal(posts.find(post => post.url.endsWith('/diagrams')).body.options.width, 1440);
-  await page.waitForFunction(() => document.querySelectorAll('#cached-density option').length === 11);
+  await page.waitForFunction(() => document.querySelectorAll('#cached-density option:not([disabled])').length === 10);
   const generated = posts.filter(post => post.url.endsWith('/diagrams')).length;
   await page.locator('#cached-density').selectOption('100');
-  await page.locator('#cached-density').selectOption('1');
+  await page.locator('#cached-density').selectOption('10');
   assert.equal(posts.filter(post => post.url.endsWith('/diagrams')).length, generated);
   for (const request of posts.filter(post => post.url.includes('/v1/books/'))) {
     assert.ok(!('text' in request.body));
@@ -140,7 +154,7 @@ try {
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ passed: true, books: books.length, tested_viewports: screenshots.length,
     source_gets_blocked: true, no_source_editor_or_text_exports: true, shared_daily_quota: true,
-    separate_entity_quota: true, cached_presets: 11, window_width_applied: true,
+    separate_entity_quota: true, cached_presets: 10, selected_density_first: true, full_book_over_100000: true, window_width_applied: true,
     resize_invalidates_cache: true, resize_requests: 0, stale_resolution_response_ignored: true }, null, 2));
 } finally {
   await browser.close(); server.kill();

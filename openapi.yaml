@@ -62,11 +62,8 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [books, analysis_character_limit]
+                required: [books]
                 properties:
-                  analysis_character_limit:
-                    type: integer
-                    const: 100000
                   books:
                     type: array
                     items:
@@ -75,7 +72,7 @@ paths:
     post:
       operationId: generateBookDiagram
       summary: Analyze an entire hosted book or its selected chapter/reading section
-      description: Shares the normal five-per-IP daily generation quota. Selection must not exceed 100000 UTF-16 units; never truncated. Language is fixed by the book. Results may contain excerpts; this is not DRM.
+      description: Shares the normal five-per-IP daily generation quota. Complete hosted books are supported without a per-section character cap. Language is fixed by the book. Book XML exports are omitted to avoid duplicate source payloads. Results may contain excerpts; this is not DRM.
       parameters:
         - in: path
           name: id
@@ -467,7 +464,11 @@ components:
             cache_track_densities:
               type: boolean
               default: false
-              description: For JSON generation, compute cached density views for 1, 10, 20, 30, 40, 50, 60, 70, 80, 90 and 100 from one shared NLP analysis. One request consumes one daily diagram permit. Identical partitions share a view payload; source events and TimeML remain in the primary diagram.
+              description: Compute cached views for 10, 20, ..., 100 from one NLP analysis. One request consumes one daily permit.
+            progressive_density_cache:
+              type: boolean
+              default: false
+              description: Return the selected density first, with a density_cache.session_id and pending_densities. Fetch each remaining layout from GET /v1/density-sessions/{id}/{density}. Sessions are IP-bound, memory-bounded and expire after ten idle minutes. Layouts have a separate 60/minute/IP limit and do not consume daily generation permits.
             language:
               type: string
               enum:
@@ -587,15 +588,16 @@ components:
       properties:
         options:
           type: array
-          minItems: 11
-          maxItems: 11
+          minItems: 1
+          maxItems: 10
           items:
             type: object
             required: [density, view_id, track_count]
             properties:
               density:
                 type: integer
-                enum: [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+                minimum: 0
+                maximum: 100
               view_id:
                 type: string
                 description: base reuses the primary response; other IDs reference entries in views. Multiple densities may share an ID.
@@ -606,6 +608,12 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/CachedDensityView"
+        session_id:
+          type: string
+        pending_densities:
+          type: array
+          items:
+            type: integer
     CachedDensityView:
       type: object
       required: [tracks, segment_placements, endpoints, relations, boundaries, analysis, render, xml, warnings]
