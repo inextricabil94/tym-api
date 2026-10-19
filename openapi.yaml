@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TYM Diagram API
-  version: 0.6.0
+  version: 0.7.0
   description: API for generating paper-guided Time Yards Model diagrams and TimeML-style temporal annotations from English or Romanian narrative text.
 servers:
   - url: http://127.0.0.1:8765
@@ -50,6 +50,147 @@ paths:
                     type: string
                   version:
                     type: string
+  /v1/entities:
+    post:
+      operationId: recognizeEntities
+      summary: Recognize entities and resolve references for highlight selection
+      description: Local English/Romanian spaCy POS tagging filters rule-based NER and conservative two-sentence anaphora resolution. Selectable names require PROPN; standalone references require nonpossessive PRON. Other POS classes are excluded from standalone options, but resolved possessives/place adverbs can remain linked evidence. Ambiguous, unsupported and quoted references stay unresolved. No LLM or trained coreference model. Separate limit of 30 requests per minute per IP; does not consume the diagram quota. Missing Python/runtime/models return 503 without an unfiltered fallback.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000000
+                  description: Complete current input or selected chapter. Limits and offsets use UTF-16 code units.
+                language:
+                  type: string
+                  enum: [en, ro]
+                  default: en
+      responses:
+        "200":
+          description: Named entities with resolved-reference counts, unresolved reference options and UTF-16 mention evidence
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [language, method, entities, references, pos_filter]
+                properties:
+                  language:
+                    type: string
+                  method:
+                    type: string
+                    const: spacy-pos+rule-ner-anaphora-en-ro-v3
+                  pos_filter:
+                    type: object
+                    required: [provider, model, allowed_pos, excluded_token_counts]
+                    properties:
+                      provider:
+                        type: string
+                        const: spaCy
+                      model:
+                        type: string
+                        examples: [en_core_web_sm/3.8.0, ro_core_news_sm/3.8.0]
+                      allowed_pos:
+                        type: array
+                        items:
+                          type: string
+                          enum: [PROPN, PRON]
+                        description: Eligible standalone POS classes; candidate and reference rules further restrict options.
+                      excluded_token_counts:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                          minimum: 0
+                        description: Input token counts outside eligible POS classes, including EXPLETIVE. Not rejected-entity counts or accuracy measurements.
+                  entities:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, label, mention_count, span_start, span_end, parts_of_speech]
+                      properties:
+                        name:
+                          type: string
+                        label:
+                          type: string
+                          enum: [PERSON, LOCATION, REFERENCE]
+                        mention_count:
+                          type: integer
+                          minimum: 1
+                          description: Explicit plus resolved mentions for named entities; literal occurrences for unresolved references.
+                        resolved_mention_count:
+                          type: integer
+                          minimum: 0
+                        reference_forms:
+                          type: array
+                          items:
+                            type: string
+                        parts_of_speech:
+                          type: array
+                          minItems: 1
+                          items:
+                            type: string
+                            enum: [PROPN, PRON]
+                          description: PROPN for named entities; PRON for unresolved reference options.
+                        span_start:
+                          type: integer
+                          description: First explicit name/reference start in UTF-16 code units.
+                        span_end:
+                          type: integer
+                          description: First explicit name/reference exclusive end in UTF-16 code units.
+                  references:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        label:
+                          type: string
+                          enum: [PERSON, LOCATION, PRONOUN, DEICTIC]
+                        span_start:
+                          type: integer
+                        span_end:
+                          type: integer
+                        antecedents:
+                          type: array
+                          items:
+                            type: string
+                        resolution:
+                          type: string
+                          description: Explicit-name evidence, applied heuristic, or reason resolution was withheld.
+                        part_of_speech:
+                          type: string
+                          enum: [PROPN, PRON, DET, ADV]
+                          description: Model POS of the mention. Resolved possessives/place adverbs may remain evidence without becoming standalone options.
+        "400":
+          description: Invalid text or language
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Entity lookup limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+                const: 30
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "503":
+          $ref: "#/components/responses/PosTaggingUnavailable"
   /v1/diagrams:
     post:
       operationId: createDiagram
@@ -73,6 +214,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "503":
+          $ref: "#/components/responses/PosTaggingUnavailable"
   /v1/diagrams/svg:
     post:
       operationId: createDiagramSvg
@@ -96,6 +241,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "503":
+          $ref: "#/components/responses/PosTaggingUnavailable"
   /v1/diagrams/xml:
     post:
       operationId: createDiagramXml
@@ -119,7 +268,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "503":
+          $ref: "#/components/responses/PosTaggingUnavailable"
 components:
+  responses:
+    PosTaggingUnavailable:
+      description: Local POS runtime or language model unavailable. For diagrams, applicable when entity highlighting is requested. No unfiltered fallback.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimitExceeded:
+      description: Daily diagram-generation limit exceeded for the client IP.
+      headers:
+        Retry-After:
+          description: Seconds until this IP partition can acquire another permit.
+          schema:
+            type: integer
+            minimum: 1
+        X-RateLimit-Limit:
+          description: Maximum requests allowed in the fixed window.
+          schema:
+            type: integer
+            const: 5
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RateLimitErrorResponse"
   schemas:
     DiagramRequest:
       type: object
@@ -146,6 +323,7 @@ components:
               minimum: 720
               maximum: 2400
               default: 1200
+              description: SVG canvas width. Track cells retain readable spacing and wrap onto continuation rows.
             highlight_entities:
               type: array
               items:
@@ -154,6 +332,16 @@ components:
             include_debug:
               type: boolean
               default: false
+            track_density:
+              type: integer
+              minimum: 0
+              maximum: 100
+              default: 50
+              description: Track granularity. 0 groups natural tracks by narrative mode and temporal category; 50 preserves actor/perspective grouping; 100 creates one track per temporal segment. Events and segments are retained at every density.
+            cache_track_densities:
+              type: boolean
+              default: false
+              description: For JSON generation, compute cached density views for 1, 10, 20, 30, 40, 50, 60, 70, 80, 90 and 100 from one shared NLP analysis. One request consumes one daily diagram permit. Identical partitions share a view payload; source events and TimeML remain in the primary diagram.
             language:
               type: string
               enum:
@@ -176,6 +364,18 @@ components:
           type: string
         model_version:
           type: string
+        density_cache:
+          $ref: "#/components/schemas/DensityCacheInfo"
+        track_generation:
+          type: object
+          properties:
+            density:
+              type: integer
+              minimum: 0
+              maximum: 100
+            title_method:
+              type: string
+              const: extractive-event-summary-v1
         warnings:
           type: array
           items:
@@ -251,9 +451,78 @@ components:
               type: integer
             svg:
               type: string
+              description: Self-contained SVG with wrapped time tracks, mode/endpoint icons, an embedded legend, and complete track/segment content. Large text-order overviews sample evenly spaced segment IDs. Track groups expose data-track-id, data-y, and data-height for client-side navigation.
         xml:
           type: string
           description: Paper-style XML notation with TA, TL, EVENT, TT, TREL/TIME, ENDPOINT, POINT, and inline TS elements.
+    DensityCacheInfo:
+      type: object
+      required: [options, views]
+      properties:
+        options:
+          type: array
+          minItems: 11
+          maxItems: 11
+          items:
+            type: object
+            required: [density, view_id, track_count]
+            properties:
+              density:
+                type: integer
+                enum: [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+              view_id:
+                type: string
+                description: base reuses the primary response; other IDs reference entries in views. Multiple densities may share an ID.
+              track_count:
+                type: integer
+                minimum: 0
+        views:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/CachedDensityView"
+    CachedDensityView:
+      type: object
+      required: [tracks, segment_placements, endpoints, relations, boundaries, analysis, render, xml, warnings]
+      properties:
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeTrack"
+        segment_placements:
+          type: array
+          description: Merge by segment ID into primary diagram.segments. Other segment/event/TimeML fields are shared, not recomputed.
+          items:
+            type: object
+            required: [id, track_id, story_order]
+            properties:
+              id:
+                type: string
+              track_id:
+                type: string
+              story_order:
+                type: number
+        endpoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/Endpoint"
+        relations:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeRelation"
+        boundaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/SegmentBoundary"
+        analysis:
+          $ref: "#/components/schemas/AnalysisReport"
+        render:
+          $ref: "#/components/schemas/DiagramResponse/properties/render"
+        xml:
+          type: string
+        warnings:
+          type: array
+          items:
+            type: string
     AnalysisReport:
       type: object
       required:
@@ -469,6 +738,7 @@ components:
           type: string
         name:
           type: string
+          description: Short extractive summary of representative events on this track; not just actor names.
         left_endpoint:
           type: string
         right_endpoint:
@@ -823,3 +1093,22 @@ components:
       properties:
         error:
           type: string
+    RateLimitErrorResponse:
+      type: object
+      required:
+        - error
+        - limit
+        - window
+        - retry_after_seconds
+      properties:
+        error:
+          type: string
+        limit:
+          type: integer
+          enum: [5, 30]
+        window:
+          type: string
+          enum: [24 hours, 1 minute]
+        retry_after_seconds:
+          type: integer
+          minimum: 1

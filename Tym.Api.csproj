@@ -7,15 +7,28 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Update="openapi.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Remove="openapi.yaml" />
+    <Content Include="openapi.yaml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Update="sample_input.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="sample_input_ro.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="tools\tym_pos_worker.py" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="ui\**\*.cs" />
     <Compile Remove="build_verify\**\*.cs" />
     <Compile Remove="build_publish\**\*.cs" />
+    <Compile Remove="tools\Tym.ExamplePreviews\**\*.cs" />
+    <Content Remove="tools\Tym.ExamplePreviews\**" />
+    <None Remove="tools\Tym.ExamplePreviews\**" />
+    <Compile Remove="tools\Tym.GenerationChecks\**\*.cs" />
+    <Content Remove="tools\Tym.GenerationChecks\**" />
+    <None Remove="tools\Tym.GenerationChecks\**" />
+    <Content Remove="private-examples\**" />
+    <None Remove="private-examples\**" />
+    <Compile Remove="private-models\**\*.cs" />
+    <Content Remove="private-models\**" />
+    <None Remove="private-models\**" />
     <Content Remove="ui\**" />
     <Content Remove="build_verify\**" />
     <Content Remove="build_publish\**" />

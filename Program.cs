@@ -4,10 +4,13 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
@@ -18,9 +21,66 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(TymRateLimit.PolicyName, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ClientIpResolver.Resolve(context),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = TymRateLimit.DailyPermitLimit,
+                Window = TymRateLimit.Window,
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy(TymRateLimit.EntityPolicyName, context =>
+        RateLimitPartition.GetFixedWindowLimiter(ClientIpResolver.Resolve(context), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = TymRateLimit.EntityPermitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        var isEntityLookup = context.HttpContext.Request.Path.StartsWithSegments("/v1/entities");
+        var limit = isEntityLookup ? TymRateLimit.EntityPermitLimit : TymRateLimit.DailyPermitLimit;
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry)
+            ? retry
+            : isEntityLookup ? TimeSpan.FromMinutes(1) : TymRateLimit.Window;
+        var retryAfterSeconds = Math.Max(1, (long)Math.Ceiling(retryAfter.TotalSeconds));
+        var response = context.HttpContext.Response;
+
+        response.Headers.RetryAfter = retryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        response.Headers["X-RateLimit-Limit"] = limit.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        response.Headers.CacheControl = "no-store";
+
+        await response.WriteAsJsonAsync(
+            new RateLimitErrorResponse(
+                isEntityLookup ? "Entity lookup limit exceeded for this IP address." : "Daily diagram-generation limit exceeded for this IP address.",
+                limit,
+                isEntityLookup ? "1 minute" : "24 hours",
+                retryAfterSeconds),
+            cancellationToken);
+    };
+});
 
 var app = builder.Build();
+app.UseResponseCompression();
 app.UseCors();
+app.Use(async (context, next) =>
+{
+    try { await next(context); }
+    catch (PosTaggingUnavailableException)
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.Headers.CacheControl = "no-store";
+        await context.Response.WriteAsJsonAsync(new ErrorResponse("POS tagging is unavailable. Configure the local spaCy Python runtime and English/Romanian models, then retry."));
+    }
+});
+app.UseRateLimiter();
 
 app.MapGet("/", () => Results.Json(new
 {
@@ -32,6 +92,7 @@ app.MapGet("/", () => Results.Json(new
     {
         "GET /health",
         "GET /openapi.yaml",
+        "POST /v1/entities",
         "POST /v1/diagrams",
         "POST /v1/diagrams/svg",
         "POST /v1/diagrams/xml"
@@ -48,13 +109,24 @@ app.MapGet("/openapi.yaml", () =>
         : Results.NotFound(new { error = "openapi.yaml not found" });
 });
 
-app.MapPost("/v1/diagrams", (DiagramRequest request) =>
+app.MapPost("/v1/diagrams", (DiagramRequest request, HttpContext context) =>
 {
+    context.Response.Headers.CacheControl = "no-store";
     var validation = Validate(request);
     return validation is not null
         ? Results.BadRequest(new ErrorResponse(validation))
         : Results.Json(TymAnalyzer.Analyze(request.Text, request.Options ?? new DiagramOptions()));
-});
+}).RequireRateLimiting(TymRateLimit.PolicyName);
+
+app.MapPost("/v1/entities", (EntityRecognitionRequest request, HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    if (string.IsNullOrWhiteSpace(request.Text) || request.Text.Length > 2_000_000)
+        return Results.BadRequest(new ErrorResponse("'text' must contain between 1 and 2,000,000 UTF-16 code units."));
+    if (string.IsNullOrWhiteSpace(request.Language) || NormalizeLanguage(request.Language) is not { } language)
+        return Results.BadRequest(new ErrorResponse("'language' must be one of: en, ro."));
+    return Results.Json(TymAnalyzer.RecognizeEntities(request.Text, language));
+}).RequireRateLimiting(TymRateLimit.EntityPolicyName);
 
 app.MapPost("/v1/diagrams/svg", (DiagramRequest request) =>
 {
@@ -64,9 +136,9 @@ app.MapPost("/v1/diagrams/svg", (DiagramRequest request) =>
         return Results.BadRequest(new ErrorResponse(validation));
     }
 
-    var response = TymAnalyzer.Analyze(request.Text, request.Options ?? new DiagramOptions());
+    var response = TymAnalyzer.Analyze(request.Text, (request.Options ?? new DiagramOptions()) with { CacheTrackDensities = false });
     return Results.Text(response.Render.Svg, "image/svg+xml; charset=utf-8");
-});
+}).RequireRateLimiting(TymRateLimit.PolicyName);
 
 app.MapPost("/v1/diagrams/xml", (DiagramRequest request) =>
 {
@@ -76,9 +148,9 @@ app.MapPost("/v1/diagrams/xml", (DiagramRequest request) =>
         return Results.BadRequest(new ErrorResponse(validation));
     }
 
-    var response = TymAnalyzer.Analyze(request.Text, request.Options ?? new DiagramOptions());
+    var response = TymAnalyzer.Analyze(request.Text, (request.Options ?? new DiagramOptions()) with { CacheTrackDensities = false });
     return Results.Text(response.Xml, "application/xml; charset=utf-8");
-});
+}).RequireRateLimiting(TymRateLimit.PolicyName);
 
 app.Run();
 
@@ -106,6 +178,11 @@ static string? Validate(DiagramRequest? request)
         return "'options.language' must be one of: en, ro.";
     }
 
+    if (request.Options?.TrackDensity is < 0 or > 100)
+    {
+        return "'options.track_density' must be an integer between 0 and 100.";
+    }
+
     return null;
 }
 
@@ -128,9 +205,96 @@ public sealed record DiagramOptions(
     int Width = 1200,
     string[]? HighlightEntities = null,
     bool IncludeDebug = false,
-    string Language = "en");
+    string Language = "en",
+    int TrackDensity = 50,
+    bool CacheTrackDensities = false)
+{
+    internal IReadOnlyList<HighlightSpan>? HighlightSpans { get; init; }
+}
 
 public sealed record ErrorResponse(string Error);
+
+public sealed record EntityRecognitionRequest(string Text, string Language = "en");
+public sealed record RecognizedEntity(string Name, string Label, int MentionCount, int SpanStart, int SpanEnd,
+    int ResolvedMentionCount = 0, IReadOnlyList<string>? ReferenceForms = null, IReadOnlyList<string>? PartsOfSpeech = null);
+public sealed record EntityReference(string Text, string Label, int SpanStart, int SpanEnd,
+    IReadOnlyList<string> Antecedents, string Resolution, string? PartOfSpeech = null);
+public sealed record EntityRecognitionResponse(string Language, string Method, IReadOnlyList<RecognizedEntity> Entities,
+    IReadOnlyList<EntityReference>? References = null, PosFilterInfo? PosFilter = null);
+
+public sealed record RateLimitErrorResponse(
+    string Error,
+    int Limit,
+    string Window,
+    long RetryAfterSeconds);
+
+internal static class TymRateLimit
+{
+    public const string PolicyName = "diagram-generation-per-ip";
+    public const string EntityPolicyName = "entity-recognition-per-ip";
+    public const int EntityPermitLimit = 30;
+    public const int DailyPermitLimit = 5;
+    public static readonly TimeSpan Window = TimeSpan.FromDays(1);
+}
+
+internal static class ClientIpResolver
+{
+    public static string Resolve(HttpContext context)
+    {
+        // Azure Container Apps appends the connecting client to X-Forwarded-For.
+        // Reading from the right avoids trusting values prepended by the caller.
+        if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
+        {
+            var candidates = forwardedFor
+                .SelectMany(value => (value ?? string.Empty).Split(
+                    ',',
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Reverse();
+
+            foreach (var candidate in candidates)
+            {
+                if (TryNormalize(candidate, out var address))
+                {
+                    return address;
+                }
+            }
+        }
+
+        return Normalize(context.Connection.RemoteIpAddress) ?? "unknown";
+    }
+
+    private static bool TryNormalize(string candidate, out string normalized)
+    {
+        candidate = candidate.Trim().Trim('"');
+
+        if (IPAddress.TryParse(candidate, out var address))
+        {
+            normalized = Normalize(address)!;
+            return true;
+        }
+
+        if (IPEndPoint.TryParse(candidate, out var endpoint))
+        {
+            normalized = Normalize(endpoint.Address)!;
+            return true;
+        }
+
+        normalized = string.Empty;
+        return false;
+    }
+
+    private static string? Normalize(IPAddress? address)
+    {
+        if (address is null)
+        {
+            return null;
+        }
+
+        return address.IsIPv4MappedToIPv6
+            ? address.MapToIPv4().ToString()
+            : address.ToString();
+    }
+}
 
 public sealed record DiagramResponse(
     string Id,
@@ -139,7 +303,18 @@ public sealed record DiagramResponse(
     AnalysisReport Analysis,
     RenderResult Render,
     string Xml,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    TrackGenerationInfo TrackGeneration,
+    DensityCacheInfo? DensityCache = null);
+
+public sealed record TrackGenerationInfo(int Density, string TitleMethod);
+public sealed record DensityCacheInfo(IReadOnlyList<DensityCacheOption> Options,
+    IReadOnlyDictionary<string, CachedDensityView> Views);
+public sealed record DensityCacheOption(int Density, string ViewId, int TrackCount);
+public sealed record SegmentPlacement(string Id, string TrackId, double StoryOrder);
+public sealed record CachedDensityView(IReadOnlyList<TimeTrack> Tracks, IReadOnlyList<SegmentPlacement> SegmentPlacements,
+    IReadOnlyList<Endpoint> Endpoints, IReadOnlyList<TimeRelation> Relations, IReadOnlyList<SegmentBoundary> Boundaries,
+    AnalysisReport Analysis, RenderResult Render, string Xml, IReadOnlyList<string> Warnings);
 
 public sealed record AnalysisReport(
     int CharacterCount,
@@ -321,13 +496,13 @@ public sealed record RenderResult(
 
 internal static class TymConstants
 {
-    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.6";
+    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.7";
 }
 
 internal sealed class MutableTrack
 {
     public required string Id { get; init; }
-    public required string Name { get; init; }
+    public required string Name { get; set; }
     public string LeftEndpoint { get; set; } = "START";
     public string RightEndpoint { get; set; } = "STOP";
 
@@ -721,233 +896,326 @@ internal static partial class TymAnalyzer
         "Si", "The", "Un", "Odinioară", "Odinioara"
     };
 
+    public static EntityRecognitionResponse RecognizeEntities(string text, string language)
+    {
+        language = NormalizeLanguageCode(language);
+        var pos = TymPosTagger.Tag(text, language);
+        var entities = new Dictionary<string, RecognizedEntity>(StringComparer.OrdinalIgnoreCase);
+        var pattern = IsRomanian(language) ? RomanianEntityPattern() : EntityPattern();
+        var stopwords = IsRomanian(language) ? RomanianEntityStopwords : EntityStopwords;
+        var mentions = new List<NamedMention>();
+        var sentenceIndex = 0;
+        foreach (Match sentence in SentenceWithOffsetPattern().Matches(text))
+        {
+            var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Match match in pattern.Matches(sentence.Value))
+            foreach (var part in ProperNameParts(text, sentence.Index + match.Index, sentence.Index + match.Index + match.Length, pos))
+            {
+                var name = part.Name;
+                if (name.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(stopwords.Contains)
+                    || LooksLikeTemporalEntity(name, language) || AnaphoraResolution.IsReference(name, language)) continue;
+                if (!labels.TryGetValue(name, out var label))
+                {
+                    label = LooksLikeLocationEntity(sentence.Value, name, language) ? "LOCATION" : "PERSON";
+                    labels[name] = label;
+                }
+                var start = part.Start;
+                var key = $"{label}:{name}";
+                mentions.Add(new NamedMention(name, label, start, start + name.Length, sentenceIndex));
+                entities[key] = entities.TryGetValue(key, out var existing)
+                    ? existing with { MentionCount = existing.MentionCount + 1 }
+                    : new RecognizedEntity(name, label, 1, start, start + name.Length, PartsOfSpeech: ["PROPN"]);
+            }
+            sentenceIndex++;
+        }
+        return AnaphoraResolution.Resolve(text, language, mentions, entities.Values.ToList(), pos);
+    }
+
+    private static IEnumerable<(string Name, int Start)> ProperNameParts(string text, int start, int end, PosTaggedText pos)
+    {
+        var runStart = -1;
+        var runEnd = -1;
+        foreach (var token in pos.Overlapping(start, end))
+        {
+            var proper = token.Pos == "PROPN" && token.SpanStart >= start && token.SpanEnd <= end;
+            if (runStart >= 0 && (!proper || !string.IsNullOrWhiteSpace(text[runEnd..token.SpanStart])))
+            {
+                yield return (text[runStart..runEnd], runStart);
+                runStart = -1;
+            }
+            if (proper)
+            {
+                if (runStart < 0) runStart = token.SpanStart;
+                runEnd = token.SpanEnd;
+            }
+        }
+        if (runStart >= 0) yield return (text[runStart..runEnd], runStart);
+    }
+
     public static DiagramResponse Analyze(string text, DiagramOptions options)
     {
         var language = NormalizeLanguageCode(options.Language);
+        if (options.HighlightEntities is { Length: > 0 })
+        {
+            var selected = new HashSet<string>(options.HighlightEntities, StringComparer.OrdinalIgnoreCase);
+            var recognition = RecognizeEntities(text, language);
+            options = options with { HighlightSpans = recognition.References!.Where(reference =>
+                reference.Antecedents.Any(selected.Contains) || (reference.Antecedents.Count == 0 && selected.Contains(reference.Text)))
+                .Select(reference => new HighlightSpan(reference.SpanStart, reference.SpanEnd)).ToList() };
+        }
         var events = ExtractEvents(text, language);
         var candidates = BuildTimeSegmentCandidates(events);
+        var plans = candidates.Select(candidate =>
+        {
+            var classification = ClassifySegment(candidate.Text, HeuristicClassifySegment(candidate.Text, language), language);
+            var entities = candidate.Actors.Count > 0 ? candidate.Actors : ExtractEntities(candidate.Text, language);
+            var perspective = InferPerspective(classification.Label, candidate.Text, entities, language);
+            var naturalKey = TrackKey(entities, classification.Label, candidate.TemporalCategory, perspective, candidate.Text, language);
+            var mode = HasParallelCue(candidate.Text, language) ? "parallel" : classification.Label == "REM" ? "memory" : "main";
+            return (classification, entities, perspective, descriptor: new TrackDescriptor(naturalKey, $"{mode}:{candidate.TemporalCategory}"));
+        }).ToList();
+        var descriptors = plans.Select(plan => plan.descriptor).ToArray();
         var actors = BuildActors(events, language);
         var locations = BuildLocations(events, language);
         var entityMentions = BuildEntityMentions(events);
+        var eventRecords = events.Select(ev => ev.ToRecord()).ToList();
+        var timeMl = BuildTimeMl(events, language);
         var locationIdByName = locations.ToDictionary(location => location.Name, location => location.Id, StringComparer.OrdinalIgnoreCase);
-        var tracks = new List<MutableTrack>();
-        var trackByKey = new Dictionary<string, MutableTrack>(StringComparer.OrdinalIgnoreCase);
-        var trackStoryCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-        var segments = new List<MutableSegment>();
-        var endpoints = new List<Endpoint>();
-        var relations = new List<TimeRelation>();
-        var boundaries = new List<SegmentBoundary>();
 
-        MutableSegment? previousSegment = null;
-        MutableTrack? previousTrack = null;
-
-        for (var index = 0; index < candidates.Count; index++)
+        DiagramResponse BuildDensityView(int density, int[] trackAssignments)
         {
-            var candidate = candidates[index];
-            var raw = candidate.Text;
-            var fallbackSegmentType = HeuristicClassifySegment(raw, language);
-            var classification = ClassifySegment(raw, fallbackSegmentType, language);
-            var segmentType = classification.Label;
-            var entities = candidate.Actors.Count > 0 ? candidate.Actors : ExtractEntities(raw, language);
-            var perspective = InferPerspective(segmentType, raw, entities, language);
-            var key = TrackKey(entities, segmentType, candidate.TemporalCategory, perspective, raw, language);
+            var tracks = new List<MutableTrack>();
+            var trackByKey = new Dictionary<int, MutableTrack>();
+            var trackStoryCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            var segments = new List<MutableSegment>();
+            var endpoints = new List<Endpoint>();
+            var relations = new List<TimeRelation>();
+            var boundaries = new List<SegmentBoundary>();
 
-            if (!trackByKey.TryGetValue(key, out var track))
+            MutableSegment? previousSegment = null;
+            MutableTrack? previousTrack = null;
+
+            for (var index = 0; index < candidates.Count; index++)
             {
-                track = new MutableTrack
+                var candidate = candidates[index];
+                var raw = candidate.Text;
+                var (classification, entities, perspective, _) = plans[index];
+                var segmentType = classification.Label;
+                var key = trackAssignments[index];
+
+                if (!trackByKey.TryGetValue(key, out var track))
                 {
-                    Id = $"TT{tracks.Count + 1}",
-                    Name = TrackName(entities, "Narrative")
-                };
-                trackByKey[key] = track;
-                tracks.Add(track);
-                trackStoryCounts[track.Id] = 0;
-            }
-
-            trackStoryCounts[track.Id] += 1;
-            var storyOrder = (double)trackStoryCounts[track.Id];
-            if (segmentType == "REM")
-            {
-                storyOrder -= 0.35;
-            }
-
-            var segment = new MutableSegment
-            {
-                Id = $"TS{index + 1}",
-                Text = raw,
-                TrackId = track.Id,
-                Type = segmentType,
-                Perspective = perspective,
-                TextOrder = index + 1,
-                StoryOrder = storyOrder,
-                Entities = entities,
-                Actors = candidate.Actors,
-                LocationId = candidate.Location.Length > 0 && locationIdByName.TryGetValue(candidate.Location, out var locationId) ? locationId : "",
-                TemporalAnchor = candidate.TemporalAnchor,
-                TemporalCategory = candidate.TemporalCategory,
-                SpanStart = candidate.SpanStart,
-                SpanEnd = candidate.SpanEnd,
-                EventIds = candidate.Events.Select(ev => ev.Id).ToList(),
-                Confidence = classification.Confidence,
-                Classifier = classification.Source
-            };
-            segments.Add(segment);
-
-            if (previousSegment is null)
-            {
-                boundaries.Add(new SegmentBoundary(
-                    $"B{boundaries.Count + 1}",
-                    "START",
-                    null,
-                    segment.Id,
-                    [track.Id],
-                    "First TS in text order."));
-            }
-
-            if (previousSegment is not null)
-            {
-                AddSegmentTemporalRelation(relations, previousSegment, segment, candidate.Events.FirstOrDefault());
-                if (track.Id != previousSegment.TrackId)
-                {
-                    var parallelMatch = ParallelMatch(raw, language);
-                    var rel = parallelMatch.Success ? "SIMULTANEOUS" : "BEFORE";
-                    relations.Add(new TimeRelation(
-                        previousSegment.TrackId,
-                        rel,
-                        track.Id,
-                        parallelMatch.Success ? parallelMatch.Value : "",
-                        parallelMatch.Success
-                            ? "Parallel cue triggered a cross-track relation."
-                            : "Adjacent text segments belong to different time tracks."));
-                    boundaries.Add(new SegmentBoundary(
-                        $"B{boundaries.Count + 1}",
-                        "RUPTURE",
-                        previousSegment.Id,
-                        segment.Id,
-                        [previousSegment.TrackId, track.Id],
-                        "Adjacent text segments belong to different time tracks."));
+                    track = new MutableTrack
+                    {
+                        Id = $"TT{tracks.Count + 1}",
+                        Name = TrackName(entities, "Narrative")
+                    };
+                    trackByKey[key] = track;
+                    tracks.Add(track);
+                    trackStoryCounts[track.Id] = 0;
                 }
-                else if (previousSegment.Type != segment.Type ||
-                    previousSegment.Perspective != segment.Perspective ||
-                    previousSegment.TemporalCategory != segment.TemporalCategory)
+
+                trackStoryCounts[track.Id] += 1;
+                var storyOrder = (double)trackStoryCounts[track.Id];
+                if (segmentType == "REM")
+                {
+                    storyOrder -= 0.35;
+                }
+
+                var segment = new MutableSegment
+                {
+                    Id = $"TS{index + 1}",
+                    Text = raw,
+                    TrackId = track.Id,
+                    Type = segmentType,
+                    Perspective = perspective,
+                    TextOrder = index + 1,
+                    StoryOrder = storyOrder,
+                    Entities = entities,
+                    Actors = candidate.Actors,
+                    LocationId = candidate.Location.Length > 0 && locationIdByName.TryGetValue(candidate.Location, out var locationId) ? locationId : "",
+                    TemporalAnchor = candidate.TemporalAnchor,
+                    TemporalCategory = candidate.TemporalCategory,
+                    SpanStart = candidate.SpanStart,
+                    SpanEnd = candidate.SpanEnd,
+                    EventIds = candidate.Events.Select(ev => ev.Id).ToList(),
+                    Confidence = classification.Confidence,
+                    Classifier = classification.Source
+                };
+                segments.Add(segment);
+
+                if (previousSegment is null)
                 {
                     boundaries.Add(new SegmentBoundary(
                         $"B{boundaries.Count + 1}",
-                        "COMMUTE",
-                        previousSegment.Id,
+                        "START",
+                        null,
                         segment.Id,
                         [track.Id],
-                        "Story remains on the same time track but changes temporal category, TS type, or perspective."));
+                        "First TS in text order."));
                 }
-            }
 
-            if ((IsRomanian(language) ? RomanianJoinPattern() : JoinPattern()).IsMatch(raw) &&
-                previousTrack is not null &&
-                previousTrack.Id != track.Id)
-            {
-                var endpoint = new Endpoint(
-                    $"EP{endpoints.Count + 1}",
-                    "JOIN",
-                    $"{previousTrack.Name}+{track.Name}",
-                    [previousTrack.Id, track.Id],
-                    segment.Id);
-                endpoints.Add(endpoint);
-                previousTrack.RightEndpoint = endpoint.Id;
-                track.LeftEndpoint = endpoint.Id;
-                boundaries.Add(new SegmentBoundary(
-                    $"B{boundaries.Count + 1}",
-                    "JOIN",
-                    previousSegment?.Id,
-                    segment.Id,
-                    [previousTrack.Id, track.Id],
-                    "Text indicates that separate developments meet and continue together."));
-            }
-
-            if ((IsRomanian(language) ? RomanianSplitPattern() : SplitPattern()).IsMatch(raw))
-            {
-                var splitTrackIds = previousTrack is not null && previousTrack.Id != track.Id
-                    ? new[] { previousTrack.Id, track.Id }
-                    : new[] { track.Id };
-                var endpoint = new Endpoint(
-                    $"EP{endpoints.Count + 1}",
-                    "SPLIT",
-                    $"{track.Name} split",
-                    splitTrackIds,
-                    segment.Id);
-                endpoints.Add(endpoint);
-                if (previousTrack is not null && previousTrack.Id != track.Id)
+                if (previousSegment is not null)
                 {
+                    AddSegmentTemporalRelation(relations, previousSegment, segment, candidate.Events.FirstOrDefault());
+                    if (track.Id != previousSegment.TrackId)
+                    {
+                        var parallelMatch = ParallelMatch(raw, language);
+                        var rel = parallelMatch.Success ? "SIMULTANEOUS" : "BEFORE";
+                        relations.Add(new TimeRelation(
+                            previousSegment.TrackId,
+                            rel,
+                            track.Id,
+                            parallelMatch.Success ? parallelMatch.Value : "",
+                            parallelMatch.Success
+                                ? "Parallel cue triggered a cross-track relation."
+                                : "Adjacent text segments belong to different time tracks."));
+                        boundaries.Add(new SegmentBoundary(
+                            $"B{boundaries.Count + 1}",
+                            "RUPTURE",
+                            previousSegment.Id,
+                            segment.Id,
+                            [previousSegment.TrackId, track.Id],
+                            "Adjacent text segments belong to different time tracks."));
+                    }
+                    else if (previousSegment.Type != segment.Type ||
+                        previousSegment.Perspective != segment.Perspective ||
+                        previousSegment.TemporalCategory != segment.TemporalCategory)
+                    {
+                        boundaries.Add(new SegmentBoundary(
+                            $"B{boundaries.Count + 1}",
+                            "COMMUTE",
+                            previousSegment.Id,
+                            segment.Id,
+                            [track.Id],
+                            "Story remains on the same time track but changes temporal category, TS type, or perspective."));
+                    }
+                }
+
+                if ((IsRomanian(language) ? RomanianJoinPattern() : JoinPattern()).IsMatch(raw) &&
+                    previousTrack is not null &&
+                    previousTrack.Id != track.Id)
+                {
+                    var endpoint = new Endpoint(
+                        $"EP{endpoints.Count + 1}",
+                        "JOIN",
+                        $"{previousTrack.Name}+{track.Name}",
+                        [previousTrack.Id, track.Id],
+                        segment.Id);
+                    endpoints.Add(endpoint);
                     previousTrack.RightEndpoint = endpoint.Id;
                     track.LeftEndpoint = endpoint.Id;
-                }
-                else
-                {
-                    track.RightEndpoint = endpoint.Id;
+                    boundaries.Add(new SegmentBoundary(
+                        $"B{boundaries.Count + 1}",
+                        "JOIN",
+                        previousSegment?.Id,
+                        segment.Id,
+                        [previousTrack.Id, track.Id],
+                        "Text indicates that separate developments meet and continue together."));
                 }
 
-                boundaries.Add(new SegmentBoundary(
-                    $"B{boundaries.Count + 1}",
-                    "SPLIT",
-                    previousSegment?.Id,
-                    segment.Id,
-                    splitTrackIds,
-                    "Text indicates separation, disappearance, or an actor continuing alone."));
+                if ((IsRomanian(language) ? RomanianSplitPattern() : SplitPattern()).IsMatch(raw))
+                {
+                    var splitTrackIds = previousTrack is not null && previousTrack.Id != track.Id
+                        ? new[] { previousTrack.Id, track.Id }
+                        : new[] { track.Id };
+                    var endpoint = new Endpoint(
+                        $"EP{endpoints.Count + 1}",
+                        "SPLIT",
+                        $"{track.Name} split",
+                        splitTrackIds,
+                        segment.Id);
+                    endpoints.Add(endpoint);
+                    if (previousTrack is not null && previousTrack.Id != track.Id)
+                    {
+                        previousTrack.RightEndpoint = endpoint.Id;
+                        track.LeftEndpoint = endpoint.Id;
+                    }
+                    else
+                    {
+                        track.RightEndpoint = endpoint.Id;
+                    }
+
+                    boundaries.Add(new SegmentBoundary(
+                        $"B{boundaries.Count + 1}",
+                        "SPLIT",
+                        previousSegment?.Id,
+                        segment.Id,
+                        splitTrackIds,
+                        "Text indicates separation, disappearance, or an actor continuing alone."));
+                }
+
+                previousSegment = segment;
+                previousTrack = track;
             }
 
-            previousSegment = segment;
-            previousTrack = track;
+            if (segments.Count > 0)
+            {
+                var lastSegment = segments[^1];
+                boundaries.Add(new SegmentBoundary(
+                    $"B{boundaries.Count + 1}",
+                    "STOP",
+                    lastSegment.Id,
+                    null,
+                    [lastSegment.TrackId],
+                    "Last TS in text order."));
+            }
+
+            var eventsById = events.ToDictionary(ev => ev.Id);
+            var segmentsByTrack = segments.ToLookup(segment => segment.TrackId);
+            foreach (var track in tracks)
+            {
+                var eventTexts = segmentsByTrack[track.Id].SelectMany(segment => segment.EventIds)
+                    .Select(id => eventsById[id].Text).ToList();
+                track.Name = TymTrackTitles.Generate(eventTexts, track.Name);
+            }
+
+            var diagram = new Diagram(
+                actors,
+                locations,
+                entityMentions,
+                eventRecords,
+                tracks.Select(track => track.ToRecord()).ToList(),
+                segments.Select(segment => segment.ToRecord()).ToList(),
+                endpoints,
+                relations,
+                boundaries,
+                timeMl);
+            var analysis = BuildAnalysis(text, diagram);
+            var render = TymSvgRenderer.Render(diagram, options with { TrackDensity = density });
+            var xml = TymXmlSerializer.Serialize(diagram);
+            var warnings = new List<string>
+            {
+                "Time segment types follow the paper labels: NAR, REM, SUP, GEN, and FIC.",
+                "The XML output follows the paper notation: TT-SECTION, TIME-SECTION, EP-SECTION, and inline TS tags.",
+                "The diagram includes a TimeML-style layer with EVENT, TIMEX3, SIGNAL, MAKEINSTANCE, and TLINK annotations.",
+                "TT titles are short extractive event summaries, not LLM-generated or validated reference summaries.",
+                language == "ro"
+                    ? "Romanian extraction uses non-LLM rule profiles for Romanian entities, temporal cues, tense, and TimeML-like annotations."
+                    : "English extraction uses non-LLM rules plus ML.NET seed classifiers for event temporal category and TS type.",
+                language == "ro"
+                    ? "Romanian mode intentionally avoids the English ML.NET seed classifiers; train Romanian annotated TYM/TimeML data for production use."
+                    : "ML.NET calculates event temporal category and TS type from bundled paper-guided seed examples; replace these with an annotated corpus for production use."
+            };
+            if (candidates.Count == 0)
+            {
+                warnings.Add("No text segments were detected.");
+            }
+
+            foreach (var issue in analysis.Issues.Where(issue => issue.Severity != "info"))
+            {
+                warnings.Add($"{issue.Code}: {issue.Message}");
+            }
+
+            return new DiagramResponse(HashId(text), TymConstants.Version, diagram, analysis, render, xml, warnings,
+                new TrackGenerationInfo(density, "extractive-event-summary-v1"));
         }
 
-        if (segments.Count > 0)
-        {
-            var lastSegment = segments[^1];
-            boundaries.Add(new SegmentBoundary(
-                $"B{boundaries.Count + 1}",
-                "STOP",
-                lastSegment.Id,
-                null,
-                [lastSegment.TrackId],
-                "Last TS in text order."));
-        }
-
-        var timeMl = BuildTimeMl(events, language);
-        var diagram = new Diagram(
-            actors,
-            locations,
-            entityMentions,
-            events.Select(ev => ev.ToRecord()).ToList(),
-            tracks.Select(track => track.ToRecord()).ToList(),
-            segments.Select(segment => segment.ToRecord()).ToList(),
-            endpoints,
-            relations,
-            boundaries,
-            timeMl);
-        var analysis = BuildAnalysis(text, diagram);
-        var render = TymSvgRenderer.Render(diagram, options);
-        var xml = TymXmlSerializer.Serialize(diagram);
-        var warnings = new List<string>
-        {
-            "Time segment types follow the paper labels: NAR, REM, SUP, GEN, and FIC.",
-            "The XML output follows the paper notation: TT-SECTION, TIME-SECTION, EP-SECTION, and inline TS tags.",
-            "The diagram includes a TimeML-style layer with EVENT, TIMEX3, SIGNAL, MAKEINSTANCE, and TLINK annotations.",
-            language == "ro"
-                ? "Romanian extraction uses non-LLM rule profiles for Romanian entities, temporal cues, tense, and TimeML-like annotations."
-                : "English extraction uses non-LLM rules plus ML.NET seed classifiers for event temporal category and TS type.",
-            language == "ro"
-                ? "Romanian mode intentionally avoids the English ML.NET seed classifiers; train Romanian annotated TYM/TimeML data for production use."
-                : "ML.NET calculates event temporal category and TS type from bundled paper-guided seed examples; replace these with an annotated corpus for production use."
-        };
-        if (candidates.Count == 0)
-        {
-            warnings.Add("No text segments were detected.");
-        }
-
-        foreach (var issue in analysis.Issues.Where(issue => issue.Severity != "info"))
-        {
-            warnings.Add($"{issue.Code}: {issue.Message}");
-        }
-
-        return new DiagramResponse(HashId(text), TymConstants.Version, diagram, analysis, render, xml, warnings);
+        var assignments = TymTrackGranularity.Assign(descriptors, options.TrackDensity);
+        var response = BuildDensityView(options.TrackDensity, assignments);
+        return options.CacheTrackDensities
+            ? response with { DensityCache = TymDensityCache.Build(response, descriptors, assignments, BuildDensityView) }
+            : response;
     }
 
     private static AnalysisReport BuildAnalysis(string sourceText, Diagram diagram)
@@ -2262,9 +2530,9 @@ internal static class TymSvgRenderer
             StringComparer.OrdinalIgnoreCase);
 
         var parts = new StringBuilder();
-        const int marginLeft = 105;
+        const int marginLeft = 112;
         const int marginRight = 80;
-        const int legendHeight = 112;
+        const int legendHeight = 256;
         var usable = Math.Max(400, width - marginLeft - marginRight);
 
         var y = 38.0;
@@ -2272,20 +2540,23 @@ internal static class TymSvgRenderer
         if (layout is "both" or "text_order")
         {
             var chainY = y + 38;
+            parts.Append("<g data-section=\"text-order\" data-height=\"158\"><title>Text order overview; large diagrams show evenly spaced segment IDs.</title>");
 
             if (diagram.Segments.Count > 0)
             {
-                var step = usable / Math.Max(1.0, diagram.Segments.Count);
+                var markerCount = Math.Min(diagram.Segments.Count, Math.Max(2, usable / 90));
+                var step = usable / Math.Max(1.0, markerCount - 1);
                 var startX = marginLeft;
-                var endX = marginLeft + step * diagram.Segments.Count;
+                var endX = marginLeft + usable;
                 parts.Append(Line(startX, chainY, endX, chainY, stroke: "#374151", strokeWidth: "2"));
 
-                for (var i = 0; i < diagram.Segments.Count; i++)
+                for (var i = 0; i < markerCount; i++)
                 {
                     var x = marginLeft + step * i;
+                    var segmentIndex = markerCount == 1 ? 0 : (int)Math.Round(i * (diagram.Segments.Count - 1.0) / (markerCount - 1));
                     parts.Append(Line(x, chainY - 12, x, chainY + 12, strokeWidth: "1.5"));
                     var labelY = i % 2 == 0 ? chainY - 22 : chainY + 34;
-                    parts.Append(SvgText(x + 8, labelY, diagram.Segments[i].Id, 13));
+                    parts.Append(SvgText(x, labelY, diagram.Segments[segmentIndex].Id, 13));
                 }
 
                 parts.Append(Line(endX, chainY - 12, endX, chainY + 12, strokeWidth: "1.5"));
@@ -2296,6 +2567,7 @@ internal static class TymSvgRenderer
             }
 
             y = chainY + 82;
+            parts.Append("</g>");
             contentBottom = Math.Max(contentBottom, y);
         }
 
@@ -2306,98 +2578,144 @@ internal static class TymSvgRenderer
                 y += 24;
             }
 
-            var segmentsByTrack = diagram.Tracks.ToDictionary(
-                track => track.Id,
-                track => diagram.Segments
-                    .Where(segment => segment.TrackId == track.Id)
-                    .OrderBy(segment => segment.StoryOrder)
-                    .ThenBy(segment => segment.TextOrder)
-                    .ToList());
+            var segmentsByTrack = diagram.Segments.ToLookup(segment => segment.TrackId);
+            var locationNames = diagram.Locations.ToDictionary(location => location.Id, location => location.Name);
+            var endpointById = diagram.Endpoints.ToDictionary(endpoint => endpoint.Id);
+            var columns = Math.Max(1, usable / 240);
+            var step = (double)usable / columns;
+            const int rowGap = 144;
 
-            var rowGap = 86;
-            var maxTrackSpan = Math.Max(1, segmentsByTrack.Values.Select(items => items.Count).DefaultIfEmpty(1).Max());
-            var step = Math.Min(145.0, usable / Math.Max(1.0, maxTrackSpan + 1));
-
-            for (var row = 0; row < diagram.Tracks.Count; row++)
+            foreach (var track in diagram.Tracks)
             {
-                var track = diagram.Tracks[row];
-                var trackY = y + row * rowGap;
-                var items = segmentsByTrack.GetValueOrDefault(track.Id) ?? [];
-                var trackEntities = track.Name.Replace("&", " ", StringComparison.Ordinal).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                var highlighted = trackEntities.Any(highlightEntities.Contains);
+                var items = segmentsByTrack[track.Id]
+                    .OrderBy(segment => segment.StoryOrder).ThenBy(segment => segment.TextOrder).ToList();
+                var trackEntities = items.SelectMany(segment => segment.Entities.Concat(segment.Actors)
+                    .Append(locationNames.GetValueOrDefault(segment.LocationId, "")));
+                var highlighted = options.HighlightSpans is { } highlightSpans
+                    ? items.Any(segment => highlightSpans.Any(span => span.Start < segment.SpanEnd && span.End > segment.SpanStart))
+                    : trackEntities.Any(highlightEntities.Contains) || items.Any(segment =>
+                    highlightEntities.Any(entity => locationNames.GetValueOrDefault(segment.LocationId, "")
+                        .EndsWith(" " + entity, StringComparison.OrdinalIgnoreCase)));
                 var strokeWidth = highlighted ? "5" : "2.4";
 
-                parts.Append(SvgText(18, trackY + 5, $"{track.Id}: {track.Name}", 12, anchor: "start", weight: "700"));
-                if (items.Count == 0)
+                var trackEndpoints = new[] { track.LeftEndpoint, track.RightEndpoint }.Distinct()
+                    .Where(endpointById.ContainsKey).Select(id => endpointById[id]).ToList();
+                var firstRowY = 60 + (trackEndpoints.Count > 0 ? 28 : 0);
+                var rows = Math.Max(1, (items.Count + columns - 1) / columns);
+                var trackHeight = firstRowY + (rows - 1) * rowGap + 112;
+                parts.Append(FormattableString.Invariant($"<g class=\"time-track\" data-track-id=\"{WebUtility.HtmlEncode(track.Id)}\" data-y=\"{y:F1}\" data-height=\"{trackHeight}\" transform=\"translate(0 {y:F1})\"><title>{SvgContent(track.Id)}</title>"));
+                parts.Append(Line(24, 0, width - 24, 0, stroke: "#d8ddd8", strokeWidth: "1"));
+                parts.Append("<g class=\"track-heading\">");
+                parts.Append(SvgText(24, 22, track.Id, 15, anchor: "start", weight: "700"));
+                parts.Append("</g>");
+                for (var index = 0; index < trackEndpoints.Count; index++)
                 {
-                    continue;
+                    var endpoint = trackEndpoints[index];
+                    var endpointX = 24 + index * 260;
+                    var endpointY = 44;
+                    parts.Append(TagIcon(endpoint.Type, endpointX, endpointY - 14));
+                    parts.Append(SvgText(endpointX + 26, endpointY, $"{endpoint.Type} {endpoint.Id}", 12, anchor: "start"));
                 }
-
-                var firstX = marginLeft;
-                var lastX = marginLeft + step * Math.Max(1, items.Count);
-                parts.Append(Triangle(firstX - 35, trackY, "start"));
-                parts.Append(Triangle(lastX + 35, trackY, "stop"));
 
                 for (var index = 0; index < items.Count; index++)
                 {
                     var segment = items[index];
-                    var x1 = marginLeft + step * index;
-                    var x2 = marginLeft + step * (index + 1);
-                    var dash = segment.Type is "REM" or "SUP" or "FIC" ? "2 6" : "";
+                    var column = index % columns;
+                    var trackY = firstRowY + index / columns * rowGap;
+                    var x1 = marginLeft + step * column;
+                    var x2 = x1 + step;
+                    var markerWidth = Math.Max(42, segment.Id.Length * 8 + 16);
+                    var dash = segment.Type is "REM" or "SUP" or "GEN" or "FIC" ? "2 6" : "";
+                    parts.Append($"<g class=\"time-segment\" data-segment-id=\"{WebUtility.HtmlEncode(segment.Id)}\"><title>{SvgContent(segment.Id + ": " + segment.Text)}</title>");
                     parts.Append(Line(x1, trackY, x2, trackY, strokeWidth: strokeWidth, dashArray: dash));
-                    parts.Append(Rect(x1 - 13, trackY - 12, 26, 24));
-                    parts.Append(SvgText(x1, trackY + 4, segment.Id, 10, weight: "700"));
+                    parts.Append(Rect(x1 - markerWidth / 2.0, trackY - 14, markerWidth, 28));
+                    parts.Append(SvgText(x1, trackY + 4, segment.Id, 12, weight: "700"));
                     parts.Append(Line(x2, trackY - 13, x2, trackY + 13, strokeWidth: "1.4"));
 
-                    var label = $"{segment.Id}: {TruncateLabel(segment.Text, 44)}";
-                    var labelY = index % 2 == 0 ? trackY - 25 : trackY + 38;
-                    parts.Append(SvgText((x1 + x2) / 2, labelY, label, 12));
-                    if (segment.Type != "NAR")
+                    var label = WrapLabel(segment.Text, (int)((step - 32) / 13), 3);
+                    parts.Append("<g class=\"segment-label\">");
+                    parts.Append(TagIcon(segment.Type, x1 - 12, trackY + 24));
+                    parts.Append(SvgText(x1 + 14, trackY + 38, segment.Type, 12, anchor: "start", weight: "700"));
+                    for (var line = 0; line < label.Count; line++)
                     {
-                        parts.Append(SvgText((x1 + x2) / 2, labelY + 16, segment.Type, 10, weight: "700"));
+                        parts.Append(SvgText(x1 - 12, trackY + 60 + line * 18, label[line], 13, anchor: "start"));
                     }
+                    parts.Append("</g></g>");
+                    if (index == 0) parts.Append(Triangle(x1 - 50, trackY, "start"));
+                    if (index == items.Count - 1) parts.Append(Triangle(x2 + 40, trackY, "stop"));
+                    else if (column == columns - 1) parts.Append(SvgText(x2 + 25, trackY + 4, "...", 13));
+                    if (column == 0 && index > 0) parts.Append(SvgText(24, trackY + 4, track.Id, 11, anchor: "start", weight: "700"));
                 }
+                parts.Append("</g>");
+                y += trackHeight + 16;
             }
 
-            var endpointYBase = y + diagram.Tracks.Count * rowGap + 8;
+            parts.Append("<g data-section=\"endpoints\">");
+            var endpointYBase = y + 8;
+            var endpointColumns = Math.Max(1, (width - 64) / 260);
+            var endpointStep = (double)(width - 64) / endpointColumns;
             for (var index = 0; index < diagram.Endpoints.Count; index++)
             {
                 var endpoint = diagram.Endpoints[index];
                 var label = $"{endpoint.Id}: {endpoint.Type} at {endpoint.SegmentId}";
-                parts.Append(SvgText(marginLeft + 180 * (index % 5), endpointYBase + 18 * (index / 5), label, 11, anchor: "start"));
+                var labels = WrapLabel(label, (int)((endpointStep - 40) / 12), 2);
+                parts.Append(TagIcon(endpoint.Type, 32 + endpointStep * (index % endpointColumns), endpointYBase + 44 * (index / endpointColumns) - 14));
+                for (var line = 0; line < labels.Count; line++)
+                {
+                    parts.Append(SvgText(58 + endpointStep * (index % endpointColumns), endpointYBase + 44 * (index / endpointColumns) + line * 18, labels[line], 12, anchor: "start"));
+                }
             }
 
-            var endpointRows = Math.Max(1, (diagram.Endpoints.Count + 4) / 5);
-            contentBottom = Math.Max(contentBottom, endpointYBase + endpointRows * 18);
+            var endpointRows = (diagram.Endpoints.Count + endpointColumns - 1) / endpointColumns;
+            contentBottom = Math.Max(contentBottom, endpointYBase + endpointRows * 44);
+            parts.Append("</g>");
         }
 
         var legendY = contentBottom + 28;
-        parts.Append(Legend(18, legendY, width - 36));
+        parts.Append(FormattableString.Invariant($"<g data-section=\"legend\" data-height=\"{legendHeight}\" transform=\"translate(0 {legendY:F1})\">"));
+        parts.Append(Legend(18, 0, width - 36));
+        parts.Append("</g>");
 
         var height = Math.Max(240, (int)(legendY + legendHeight + 24));
         var svg =
             $"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="TYM time-yard diagram">""" +
             """<rect width="100%" height="100%" fill="#ffffff"/>""" +
             """<style>text{dominant-baseline:auto}</style>""" +
+            IconDefinitions() +
             parts +
             "</svg>";
 
         return new RenderResult("svg", width, height, svg);
     }
 
-    private static string TruncateLabel(string value, int limit)
+    private static IReadOnlyList<string> WrapLabel(string value, int columns, int maxLines)
     {
-        var normalized = Regex.Replace(value, @"\s+", " ").Trim();
-        return normalized.Length <= limit
-            ? normalized
-            : normalized[..Math.Max(0, limit - 1)].TrimEnd() + "...";
+        var characters = Regex.Replace(value, @"\s+", " ").Trim().EnumerateRunes().Select(rune => rune.ToString()).ToArray();
+        var lines = new List<string>();
+        var start = 0;
+        columns = Math.Max(6, columns);
+        while (start < characters.Length && lines.Count < maxLines)
+        {
+            while (start < characters.Length && characters[start] == " ") start++;
+            if (start == characters.Length) break;
+            var clipped = lines.Count == maxLines - 1 && characters.Length - start > columns;
+            var take = Math.Min(columns - (clipped ? 3 : 0), characters.Length - start);
+            if (start + take < characters.Length)
+            {
+                var boundary = Array.FindLastIndex(characters, start + take - 1, take, character => character == " ");
+                if (boundary > start) take = boundary - start;
+            }
+            lines.Add(string.Concat(characters.Skip(start).Take(take)).TrimEnd() + (clipped ? "..." : ""));
+            start += take;
+        }
+        return lines;
     }
 
     private static string SvgText(double x, double y, string value, int size, string anchor = "middle", string weight = "400")
     {
-        return $"""
-            <text x="{x:F1}" y="{y:F1}" text-anchor="{anchor}" font-family="Arial, Helvetica, sans-serif" font-size="{size}" font-weight="{weight}" fill="#111827">{WebUtility.HtmlEncode(value)}</text>
-            """;
+        return FormattableString.Invariant($"""
+            <text x="{x:F1}" y="{y:F1}" text-anchor="{anchor}" font-family="Arial, Helvetica, sans-serif" font-size="{size}" font-weight="{weight}" fill="#111827">{SvgContent(value)}</text>
+            """);
     }
 
     private static string Line(
@@ -2410,23 +2728,23 @@ internal static class TymSvgRenderer
         string dashArray = "")
     {
         var dash = string.IsNullOrWhiteSpace(dashArray) ? "" : $" stroke-dasharray=\"{dashArray}\"";
-        return $"""
+        return FormattableString.Invariant($"""
             <line x1="{x1:F1}" y1="{y1:F1}" x2="{x2:F1}" y2="{y2:F1}" stroke="{stroke}" stroke-width="{strokeWidth}" stroke-linecap="round"{dash}/>
-            """;
+            """);
     }
 
     private static string Rect(double x, double y, double width, double height)
     {
-        return $"""
+        return FormattableString.Invariant($"""
             <rect x="{x:F1}" y="{y:F1}" width="{width:F1}" height="{height:F1}" fill="#dbeafe" stroke="#111827" stroke-width="1.5" rx="2"/>
-            """;
+            """);
     }
 
     private static string Triangle(double cx, double cy, string direction)
     {
         var points = direction == "start"
-            ? $"{cx - 13:F1},{cy - 12:F1} {cx - 13:F1},{cy + 12:F1} {cx + 9:F1},{cy:F1}"
-            : $"{cx + 13:F1},{cy - 12:F1} {cx + 13:F1},{cy + 12:F1} {cx - 9:F1},{cy:F1}";
+            ? FormattableString.Invariant($"{cx - 13:F1},{cy - 12:F1} {cx - 13:F1},{cy + 12:F1} {cx + 9:F1},{cy:F1}")
+            : FormattableString.Invariant($"{cx + 13:F1},{cy - 12:F1} {cx + 13:F1},{cy + 12:F1} {cx - 9:F1},{cy:F1}");
 
         return $"""
             <polygon points="{points}" fill="#dbeafe" stroke="#111827" stroke-width="1.5"/>
@@ -2441,9 +2759,9 @@ internal static class TymSvgRenderer
         var rightX = x + 18 + columnWidth + 16;
         var itemY = y + 48;
 
-        parts.Append($"""
-            <rect x="{x:F1}" y="{y:F1}" width="{width:F1}" height="112.0" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.2" rx="6"/>
-            """);
+        parts.Append(FormattableString.Invariant($"""
+            <rect x="{x:F1}" y="{y:F1}" width="{width:F1}" height="256.0" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.2" rx="6"/>
+            """));
         parts.Append(SvgText(x + 18, y + 25, "Legend", 13, anchor: "start", weight: "700"));
 
         parts.Append(LegendLine(leftX, itemY, "Solid line: narrative continuity"));
@@ -2456,6 +2774,15 @@ internal static class TymSvgRenderer
         itemY += 28;
         parts.Append(LegendTick(leftX, itemY, "Vertical tick: segment boundary"));
         parts.Append(LegendEndpoint(rightX, itemY, "Endpoint text: JOIN/SPLIT"));
+
+        var tags = new[] { "NAR", "REM", "SUP", "GEN", "FIC", "JOIN", "SPLIT" };
+        for (var index = 0; index < tags.Length; index++)
+        {
+            var iconX = index % 2 == 0 ? leftX : rightX;
+            var iconY = y + 140 + index / 2 * 28;
+            parts.Append(TagIcon(tags[index], iconX + 12, iconY - 15));
+            parts.Append(SvgText(iconX + 56, iconY, tags[index] + ": " + TagDescription(tags[index]), 12, anchor: "start"));
+        }
 
         return parts.ToString();
     }
@@ -2470,7 +2797,7 @@ internal static class TymSvgRenderer
     {
         return Triangle(x + 10, y - 5, "start") +
             Triangle(x + 43, y - 5, "stop") +
-            SvgText(x + 56, y, label, 11, anchor: "start");
+            SvgText(x + 70, y, label, 11, anchor: "start");
     }
 
     private static string LegendRect(double x, double y, string label)
@@ -2491,4 +2818,52 @@ internal static class TymSvgRenderer
         return SvgText(x + 12, y, "EP", 11, anchor: "start", weight: "700") +
             SvgText(x + 56, y, label, 11, anchor: "start");
     }
+
+    private static string TagDescription(string tag) => tag switch
+    {
+        "NAR" => "Narration",
+        "REM" => "Memory / flashback",
+        "SUP" => "Supposition",
+        "GEN" => "Generalization",
+        "FIC" => "Fiction / imagined event",
+        "JOIN" => "Tracks meet",
+        "SPLIT" => "Tracks separate",
+        _ => tag
+    };
+
+    private static string SvgContent(string value) => WebUtility.HtmlEncode(string.Concat(value.EnumerateRunes()
+        .Select(rune => (rune.Value >= 0x20 && rune.Value is not (0xFFFE or 0xFFFF)) || rune.Value is 9 or 10 or 13
+            ? rune.ToString() : " ")));
+
+    private static string TagIcon(string tag, double x, double y)
+    {
+        var color = tag switch
+        {
+            "NAR" => "#0369a1", "REM" => "#7e22ce", "SUP" => "#a16207",
+            "GEN" => "#0f766e", "FIC" => "#be185d", "JOIN" => "#15803d", "SPLIT" => "#b91c1c", _ => "#374151"
+        };
+        var icon = tag is "NAR" or "REM" or "SUP" or "GEN" or "FIC" or "JOIN" or "SPLIT" ? tag : "SUP";
+        return FormattableString.Invariant($"<g data-tag-icon=\"{WebUtility.HtmlEncode(tag)}\" color=\"{color}\"><title>{WebUtility.HtmlEncode(TagDescription(tag))}</title><use href=\"#tym-icon-{icon}\" x=\"{x:F1}\" y=\"{y:F1}\" width=\"18\" height=\"18\"/></g>");
+    }
+
+    // Lucide icon paths; ISC/MIT notices are retained in THIRD_PARTY_NOTICES.md.
+    private static string IconDefinitions() => """
+        <metadata>
+        Lucide Icons. Copyright (c) 2026 Lucide Icons and Contributors. ISC License.
+        Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+        THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+        Feather-derived icons: Copyright (c) 2013-present Cole Bemis. MIT License.
+        Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+        </metadata>
+        <defs>
+          <symbol id="tym-icon-NAR" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></symbol>
+          <symbol id="tym-icon-REM" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6a2 2 0 0 0-3.414-1.414l-6 6a2 2 0 0 0 0 2.828l6 6A2 2 0 0 0 12 18z"/><path d="M22 6a2 2 0 0 0-3.414-1.414l-6 6a2 2 0 0 0 0 2.828l6 6A2 2 0 0 0 22 18z"/></symbol>
+          <symbol id="tym-icon-SUP" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+          <symbol id="tym-icon-GEN" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 9 3-3 3 3"/><path d="M13 18H7a2 2 0 0 1-2-2V6"/><path d="m22 15-3 3-3-3"/><path d="M11 6h6a2 2 0 0 1 2 2v10"/></symbol>
+          <symbol id="tym-icon-FIC" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></symbol>
+          <symbol id="tym-icon-JOIN" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></symbol>
+          <symbol id="tym-icon-SPLIT" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/></symbol>
+        </defs>
+        """;
 }

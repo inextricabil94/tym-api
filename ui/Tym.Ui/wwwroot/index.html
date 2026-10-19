@@ -1,16 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#292b2a">
   <title>TYM Diagram UI</title>
-  <link rel="stylesheet" href="/styles.css">
+  <script src="/theme.js?v=20261019-density"></script>
+  <link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/fonts.css?v=20261019-density">
+  <link rel="stylesheet" href="/styles.css?v=20261019-density">
 </head>
 <body>
   <div id="root"></div>
   <script src="/config.js"></script>
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="/app.js"></script>
+  <script src="/chapter-splitter.js?v=20261019-density"></script>
+  <script src="/track-groups.js?v=20261019-density"></script>
+  <script src="/density-cache.js?v=20261019-density"></script>
+  <script src="/app.js?v=20261019-density"></script>
 </body>
 </html>

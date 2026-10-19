@@ -1,0 +1,6 @@
+spacy==3.8.14
+# spaCy imports Click directly; keep its CLI dependencies aligned with the tested runtime.
+click==8.4.2
+typer==0.26.8
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+ro_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/ro_core_news_sm-3.8.0/ro_core_news_sm-3.8.0-py3-none-any.whl

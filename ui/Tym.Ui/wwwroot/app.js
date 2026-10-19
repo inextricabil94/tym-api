@@ -20,6 +20,37 @@ const examples = [
   }
 ];
 
+const privateExamples = window.TYM_CONFIG && window.TYM_CONFIG.examples;
+if (Array.isArray(privateExamples)) {
+  for (const example of privateExamples) {
+    if (example && typeof example.id === 'string' && typeof example.label === 'string'
+      && typeof example.text === 'string' && example.text.trim()
+      && ['en', 'ro'].includes(example.language)
+      && !examples.some(existing => existing.id === example.id)) {
+      examples.push({ ...example, highlight: typeof example.highlight === 'string' ? example.highlight : '' });
+    }
+  }
+}
+
+const bookExamples = examples.filter(example => example.is_private);
+const { splitChapters } = window.TymChapters;
+const { partitionTracks } = window.TymTrackGroups;
+
+function themeIcon(dark) {
+  return e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }, dark
+    ? [e('circle', { key: 'circle', cx: 12, cy: 12, r: 4 }),
+      e('path', { key: 'rays', d: 'M12 2v2M12 20v2m4.93-17.07-1.42 1.42M6.49 17.51l-1.42 1.42M22 12h-2M4 12H2m17.07 7.07-1.42-1.42M6.49 6.49 5.07 5.07' })]
+    : e('path', { d: 'M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6.25 6.25 0 0 0 8.268 8.268c.344-.215.825-.004.803.401' }));
+}
+
+// Lucide chevron-left/right (ISC), as credited in THIRD_PARTY_NOTICES.md.
+function chapterArrow(next) {
+  return e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+    e('path', { d: next ? 'm9 18 6-6-6-6' : 'm15 18-6-6 6-6' }));
+}
+
 function count(value) {
   return Array.isArray(value) ? value.length : 0;
 }
@@ -39,6 +70,48 @@ function parseSvgSize(svg) {
     width: widthMatch ? Number(widthMatch[1]) : 1200,
     height: heightMatch ? Number(heightMatch[1]) : 800
   };
+}
+
+function parseTrackSvg(svg) {
+  if (!svg) return null;
+  const root = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
+  if (root.localName !== 'svg' || root.querySelector('parsererror')) return null;
+  const tracks = new Map(Array.from(root.querySelectorAll('g.time-track[data-track-id]'))
+    .map(track => [track.getAttribute('data-track-id'), track]));
+  return tracks.size ? { root, tracks } : null;
+}
+
+function renderTrackPage(parsed, tracks) {
+  if (!parsed) return '';
+  const root = parsed.root.cloneNode(false);
+  for (const child of parsed.root.children) {
+    if (['rect', 'style', 'defs', 'metadata'].includes(child.localName)) root.appendChild(child.cloneNode(true));
+  }
+  const overview = parsed.root.querySelector('g[data-section="text-order"]');
+  if (overview) root.appendChild(overview.cloneNode(true));
+  let y = overview ? Number(overview.getAttribute('data-height')) : 24;
+  for (const track of tracks) {
+    const original = parsed.tracks.get(track.id);
+    if (!original) continue;
+    const group = original.cloneNode(true);
+    group.setAttribute('transform', `translate(0 ${y})`);
+    group.setAttribute('data-y', String(y));
+    root.appendChild(group);
+    y += Number(group.getAttribute('data-height')) + 16;
+  }
+  const legend = parsed.root.querySelector('g[data-section="legend"]');
+  if (legend) {
+    const group = legend.cloneNode(true);
+    group.setAttribute('transform', `translate(0 ${y + 20})`);
+    root.appendChild(group);
+    y += Number(group.getAttribute('data-height')) + 20;
+  }
+  const width = Number(root.getAttribute('width'));
+  const height = Math.ceil(y + 24);
+  root.setAttribute('height', String(height));
+  root.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  root.setAttribute('aria-label', `TYM time tracks ${tracks.map(track => track.id).join(', ')}`);
+  return new XMLSerializer().serializeToString(root);
 }
 
 function formatJson(value) {
@@ -90,40 +163,251 @@ function timeMlSummary(timeMl) {
 }
 
 function App() {
+  const [theme, setTheme] = React.useState(document.documentElement.dataset.theme);
   const [selectedExample, setSelectedExample] = React.useState(examples[0].id);
-  const [text, setText] = React.useState(examples[0].text);
+  const [sourceText, setSourceText] = React.useState(examples[0].text);
   const [language, setLanguage] = React.useState(examples[0].language);
   const [highlightEntity, setHighlightEntity] = React.useState(examples[0].highlight);
+  const [entityOptions, setEntityOptions] = React.useState([]);
+  const [loadingEntities, setLoadingEntities] = React.useState(false);
+  const [entityError, setEntityError] = React.useState('');
+  const [entityRefresh, setEntityRefresh] = React.useState(0);
   const [diagramWidth, setDiagramWidth] = React.useState(1200);
+  const [trackDensity, setTrackDensity] = React.useState(50);
   const [apiBaseUrl, setApiBaseUrl] = React.useState(apiDefault);
-  const [result, setResult] = React.useState(null);
-  const [svg, setSvg] = React.useState('');
+  const [baseResult, setBaseResult] = React.useState(null);
+  const [viewerDensity, setViewerDensity] = React.useState(50);
+  const generationVersion = React.useRef(0);
   const [activeTab, setActiveTab] = React.useState('diagram');
-  const [fitToWidth, setFitToWidth] = React.useState(true);
-  const [zoom, setZoom] = React.useState(0.75);
+  const [fitToWidth, setFitToWidth] = React.useState(false);
+  const [zoom, setZoom] = React.useState(1);
+  const [trackQuery, setTrackQuery] = React.useState('');
+  const [trackPage, setTrackPage] = React.useState(0);
+  const [trackGroupCount, setTrackGroupCount] = React.useState(0);
+  const [viewportWidth, setViewportWidth] = React.useState(800);
+  const diagramArea = React.useRef(null);
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState('');
+  const [textScope, setTextScope] = React.useState('excerpt');
+  const [sourceScope, setSourceScope] = React.useState('excerpt');
+  const [loadingText, setLoadingText] = React.useState(false);
+  const textRequest = React.useRef(null);
+  const fullTextCache = React.useRef(null);
+  const [chapterIndex, setChapterIndex] = React.useState(0);
+  const [chapterDetection, setChapterDetection] = React.useState('auto');
+  const getSections = React.useCallback(value => splitChapters(value, { standalone: chapterDetection }), [chapterDetection]);
+  const sections = React.useMemo(() => getSections(sourceText), [sourceText, getSections]);
+  const currentChapterIndex = Math.min(chapterIndex, Math.max(0, sections.length - 1));
+  const selectedSection = textScope === 'chapters' ? sections[currentChapterIndex] : null;
+  const text = selectedSection ? sourceText.slice(selectedSection.start, selectedSection.end) : sourceText;
+  const chapterCount = sections.filter(section => section.kind === 'chapter').length;
 
+  React.useEffect(() => () => textRequest.current?.abort(), []);
+  React.useEffect(() => { window.TymTheme.set(theme); }, [theme]);
+  React.useEffect(() => {
+    const request = new AbortController();
+    let active = true;
+    setEntityOptions([]);
+    setEntityError('');
+    if (loadingText || !text.trim() || !apiBaseUrl.trim()) {
+      setLoadingEntities(false);
+      return () => request.abort();
+    }
+    setLoadingEntities(true);
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl.trim().replace(/\/+$/, '')}/v1/entities`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, language }), signal: request.signal, cache: 'no-store'
+        });
+        if (!response.ok) {
+          let details = null;
+          try { details = await response.json(); } catch {}
+          throw new Error(response.status === 429 ? 'Entity lookup limit reached. Retry in a minute.'
+            : `Entity lookup failed (HTTP ${response.status}).${details?.error ? ` ${details.error}` : ''}`);
+        }
+        const data = await response.json();
+        if (!Array.isArray(data.entities)) throw new Error('The API returned an invalid entity list.');
+        if (!data.pos_filter || data.pos_filter.provider !== 'spaCy') throw new Error('The API did not return model-backed POS filtering.');
+        const recognized = data.entities.filter(entity => entity && typeof entity.name === 'string'
+          && entity.name.trim() && ['PERSON', 'LOCATION', 'REFERENCE'].includes(entity.label)
+          && Array.isArray(entity.parts_of_speech) && entity.parts_of_speech.length > 0
+          && entity.parts_of_speech.every(pos => pos === (entity.label === 'REFERENCE' ? 'PRON' : 'PROPN')));
+        if (active) {
+          setEntityOptions(recognized);
+          setHighlightEntity(value => recognized.some(entity => entity.name === value) ? value : '');
+        }
+      } catch (error) {
+        if (active && error.name !== 'AbortError') {
+          setEntityError(error instanceof Error ? error.message : 'Entity lookup failed.');
+          setHighlightEntity('');
+        }
+      } finally {
+        if (active) setLoadingEntities(false);
+      }
+    }, 600);
+    return () => { active = false; clearTimeout(timer); request.abort(); };
+  }, [text, language, apiBaseUrl, loadingText, entityRefresh]);
+  const selectedHighlight = entityOptions.some(entity => entity.name === highlightEntity) ? highlightEntity : '';
+
+  React.useEffect(() => { generationVersion.current++; setBaseResult(null); }, [text, language, diagramWidth, apiBaseUrl, selectedHighlight]);
+  const densityChoices = React.useMemo(() => window.TymDensityCache.choices(baseResult), [baseResult]);
+  const result = React.useMemo(() => window.TymDensityCache.select(baseResult, viewerDensity), [baseResult, viewerDensity]);
+  const svg = result?.render?.svg || result?.renderings?.svg || '';
   const diagram = result && result.diagram ? result.diagram : {};
   const analysis = result && result.analysis ? result.analysis : null;
   const warnings = result && Array.isArray(result.warnings) ? result.warnings : [];
+  const selectedExampleItem = examples.find(example => example.id === selectedExample);
+  const selectedSource = selectedSection && selectedExampleItem
+    ? `${selectedExampleItem.label}; ${selectedSection.label}; unlabeled local chapter`
+    : sourceScope === 'excerpt' ? selectedExampleItem?.source : selectedExampleItem?.full_source;
+  const selectedPreview = textScope === 'excerpt' ? selectedExampleItem?.preview_svg : null;
+  const hasChapters = chapterCount > 0;
   const timeMl = diagram.time_ml || {};
-  const svgSize = parseSvgSize(svg);
-  const jsonText = formatJson(result);
-  const xmlText = result && result.xml ? result.xml : '';
-  const timeMlText = timeMlSummary(timeMl);
-  const statusClass = busy ? 'busy' : message ? 'error' : result ? 'ready' : '';
-  const statusText = busy ? 'Generating' : message ? 'Needs attention' : result ? 'Ready' : 'Idle';
+  const parsedTrackSvg = React.useMemo(() => parseTrackSvg(svg), [svg]);
+  const trackActors = React.useMemo(() => {
+    const actors = new Map();
+    for (const segment of diagram.segments || []) {
+      if (!actors.has(segment.track_id)) actors.set(segment.track_id, new Set());
+      for (const actor of segment.actors || []) actors.get(segment.track_id).add(actor);
+    }
+    return actors;
+  }, [diagram.segments]);
+  const filteredTracks = React.useMemo(() => (diagram.tracks || []).filter(track =>
+    `${track.id} ${track.name} ${Array.from(trackActors.get(track.id) || []).join(' ')}`.toLocaleLowerCase()
+      .includes(trackQuery.trim().toLocaleLowerCase())), [diagram.tracks, trackActors, trackQuery]);
+  const pageSize = 12;
+  const totalTracks = count(diagram.tracks);
+  const effectiveGroupCount = Math.min(trackGroupCount, totalTracks);
+  const trackGroups = React.useMemo(() => partitionTracks(effectiveGroupCount ? diagram.tracks : filteredTracks,
+    effectiveGroupCount, pageSize), [diagram.tracks, filteredTracks, effectiveGroupCount]);
+  const displayGroups = React.useMemo(() => {
+    if (!effectiveGroupCount) return trackGroups;
+    const matchingIds = new Set(filteredTracks.map(track => track.id));
+    return trackGroups.map(group => ({ ...group, tracks: group.tracks.filter(track => matchingIds.has(track.id)) }))
+      .filter(group => group.tracks.length > 0);
+  }, [trackGroups, filteredTracks, effectiveGroupCount]);
+  const trackPageCount = Math.max(1, displayGroups.length);
+  const currentTrackPage = Math.min(trackPage, trackPageCount - 1);
+  const currentGroup = displayGroups[currentTrackPage];
+  const visibleTracks = React.useMemo(() => currentGroup?.tracks || [], [currentGroup]);
+  const displaySvg = React.useMemo(() => parsedTrackSvg ? renderTrackPage(parsedTrackSvg, visibleTracks) : svg, [parsedTrackSvg, visibleTracks, svg]);
+  const svgSize = parseSvgSize(displaySvg);
+  const displayZoom = fitToWidth ? viewportWidth / svgSize.width : zoom;
 
-  function loadExample(example) {
+  React.useEffect(() => {
+    const area = diagramArea.current;
+    if (!area) return;
+    const update = () => {
+      const style = getComputedStyle(area);
+      setViewportWidth(Math.max(1, area.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(area);
+    update();
+    return () => observer.disconnect();
+  }, [svg, activeTab]);
+  const jsonText = React.useMemo(() => formatJson(result), [result]);
+  const xmlText = result && result.xml ? result.xml : '';
+  const timeMlText = React.useMemo(() => timeMlSummary(timeMl), [timeMl]);
+  const statusClass = busy || loadingText ? 'busy' : message ? 'error' : result ? 'ready' : '';
+  const statusText = loadingText ? 'Loading text' : busy ? 'Generating' : message ? 'Needs attention' : result ? 'Ready' : 'Idle';
+
+  function selectDensity(density) {
+    const choice = densityChoices.find(option => option.density === density);
+    if (!choice) return;
+    setViewerDensity(density);
+    setTrackDensity(density);
+    setTrackPage(0);
+    setTrackGroupCount(value => Math.min(value, choice.track_count));
+    diagramArea.current?.scrollTo(0, 0);
+  }
+
+  function clearResult() {
+    generationVersion.current++;
+    setMessage('');
+    setBaseResult(null);
+  }
+
+  function selectChapter(index) {
+    setChapterIndex(index);
+    clearResult();
+  }
+
+  function selectScope(scope) {
+    if (scope === textScope) return;
+    if (scope !== 'chapters' && selectedExampleItem?.full_text_url && scope !== sourceScope) {
+      loadExample(selectedExampleItem, scope);
+      return;
+    }
+    setTextScope(scope);
+    clearResult();
+  }
+
+  function editText(value) {
+    const updated = selectedSection
+      ? sourceText.slice(0, selectedSection.start) + value + sourceText.slice(selectedSection.end)
+      : value;
+    setSourceText(updated);
+    if (selectedSection) {
+      const updatedSections = getSections(updated);
+      const index = updatedSections.findIndex(section => section.start <= selectedSection.start && section.end > selectedSection.start);
+      setChapterIndex(Math.max(0, index));
+      if (!updatedSections.length) setTextScope('full');
+    } else {
+      setChapterIndex(Math.max(0, getSections(updated).findIndex(section => section.kind === 'chapter')));
+    }
+    setSelectedExample('');
+    clearResult();
+  }
+
+  async function loadExample(example, scope = example.full_text_url ? 'auto' : 'excerpt') {
+    textRequest.current?.abort();
+    const request = new AbortController();
+    textRequest.current = request;
     setSelectedExample(example.id);
-    setText(example.text);
+    setTextScope(scope === 'auto' ? 'full' : scope);
+    setSourceScope(scope === 'excerpt' ? 'excerpt' : 'full');
+    setSourceText('');
+    setChapterIndex(0);
     setLanguage(example.language);
     setHighlightEntity(example.highlight);
-    setMessage('');
+    clearResult();
+
+    if (scope === 'excerpt') {
+      setLoadingText(false);
+      setSourceText(example.text);
+      return;
+    }
+
+    setLoadingText(true);
+    try {
+      let completeText = fullTextCache.current?.id === example.id ? fullTextCache.current.text : null;
+      if (completeText === null) {
+        const response = await fetch(example.full_text_url, { signal: request.signal, cache: 'no-store' });
+        if (!response.ok) throw new Error(`Full text could not be loaded (HTTP ${response.status}).`);
+        completeText = await response.text();
+      }
+      if (completeText.length !== example.full_text_characters) {
+        throw new Error('Full text length differs from the imported source. Prepare the local examples again.');
+      }
+      if (textRequest.current === request) {
+        const parts = getSections(completeText);
+        fullTextCache.current = { id: example.id, text: completeText, hasChapters: parts.length > 0 };
+        setSourceText(completeText);
+        const useChapters = parts.length > 0 && (scope === 'chapters' || (scope === 'auto' && completeText.length > 20000));
+        setTextScope(useChapters ? 'chapters' : 'full');
+        setChapterIndex(Math.max(0, parts.findIndex(section => section.kind === 'chapter')));
+      }
+    } catch (error) {
+      if (textRequest.current === request && error.name !== 'AbortError') setMessage(error.message);
+    } finally {
+      if (textRequest.current === request) setLoadingText(false);
+    }
   }
 
   async function generate() {
+    const version = generationVersion.current;
     const trimmedApi = apiBaseUrl.trim().replace(/\/+$/, '');
     const trimmedText = text.trim();
 
@@ -133,11 +417,13 @@ function App() {
     }
 
     const payload = {
-      text: trimmedText,
+      text,
       options: {
         layout: 'both',
         width: diagramWidth,
-        highlight_entities: highlightEntity.trim() ? [highlightEntity.trim()] : [],
+        track_density: trackDensity,
+        cache_track_densities: true,
+        highlight_entities: selectedHighlight ? [selectedHighlight] : [],
         include_debug: true,
         language
       }
@@ -154,22 +440,47 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error(`API returned HTTP ${response.status}`);
+        let apiError = null;
+
+        try {
+          apiError = await response.json();
+        } catch {
+          // The status code remains useful when a proxy returns a non-JSON error.
+        }
+
+        if (response.status === 429) {
+          const retrySeconds = Number(apiError && apiError.retry_after_seconds)
+            || Number(response.headers.get('Retry-After'));
+          const retryHours = Number.isFinite(retrySeconds)
+            ? Math.max(1, Math.ceil(retrySeconds / 3600))
+            : null;
+          throw new Error(retryHours
+            ? `Daily limit reached. Try again in about ${retryHours} hour${retryHours === 1 ? '' : 's'}.`
+            : 'Daily limit reached. Try again later.');
+        }
+
+        throw new Error((apiError && apiError.error) || `API returned HTTP ${response.status}`);
       }
 
       const data = await response.json();
+      if (generationVersion.current !== version) return;
       const returnedSvg = (data.render && data.render.svg) || (data.renderings && data.renderings.svg) || '';
 
-      setResult(data);
-      setSvg(returnedSvg);
+      setBaseResult(data);
+      setViewerDensity(data.track_generation?.density ?? trackDensity);
       setActiveTab('diagram');
+      setTrackQuery('');
+      setTrackPage(0);
+      setTrackGroupCount(value => Math.min(value, count(data.diagram?.tracks)));
+      setFitToWidth(false);
+      setZoom(1);
 
       if (!returnedSvg) {
         setMessage('The API returned JSON but no SVG rendering.');
       }
     } catch (error) {
-      setResult(null);
-      setSvg('');
+      if (generationVersion.current !== version) return;
+      setBaseResult(null);
       setMessage(error instanceof Error ? error.message : 'Diagram generation failed.');
     } finally {
       setBusy(false);
@@ -357,8 +668,53 @@ function App() {
       return renderAnalysis();
     }
 
-    return e('div', { className: 'diagram-area' },
-      svg
+    return e('div', { className: 'diagram-view' },
+      parsedTrackSvg ? e('div', { className: 'track-toolbar' },
+        e('input', {
+          type: 'search', className: 'api-input track-search', 'aria-label': 'Filter time tracks',
+          placeholder: 'Track ID or character', value: trackQuery,
+          onChange: event => { setTrackQuery(event.target.value); setTrackPage(0); }
+        }),
+        e('div', { className: 'track-group-controls' },
+          e('div', { className: 'field' },
+            e('label', { htmlFor: 'track-groups' }, 'Display groups'),
+            e('select', { id: 'track-groups', className: 'language-select', value: effectiveGroupCount,
+              onChange: event => { setTrackGroupCount(Number(event.target.value)); setTrackPage(0); diagramArea.current?.scrollTo(0, 0); } },
+              Array.from({ length: 11 }, (_, groups) => {
+                const low = groups ? Math.floor(totalTracks / groups) : 0;
+                const high = groups ? Math.ceil(totalTracks / groups) : 0;
+                const size = low === high ? String(low) : `${low}-${high}`;
+                return e('option', { key: groups, value: groups, disabled: groups > totalTracks },
+                  groups === 0 ? '0 - Paged (12 tracks)' : `${groups} - ${size} tracks/group`);
+              })
+            )
+          ),
+          effectiveGroupCount ? e('div', { className: 'field' },
+            e('label', { htmlFor: 'track-group' }, 'Group'),
+            e('select', { id: 'track-group', className: 'language-select', disabled: !currentGroup,
+              value: currentGroup?.index ?? '', onChange: event => {
+                setTrackPage(displayGroups.findIndex(group => group.index === Number(event.target.value)));
+                diagramArea.current?.scrollTo(0, 0);
+              } }, currentGroup
+                ? displayGroups.map(group => e('option', { key: group.index, value: group.index },
+                  `${group.index + 1}: ${diagram.tracks[group.start].id}-${diagram.tracks[group.end - 1].id} (${group.tracks.length})`))
+                : e('option', { value: '' }, 'No matching groups'))
+          ) : null
+        ),
+        e('div', { className: 'track-paging' },
+          e('span', { className: 'track-range', 'aria-live': 'polite' }, currentGroup
+            ? effectiveGroupCount
+              ? `Group ${currentGroup.index + 1} of ${trackGroups.length} | Tracks ${currentGroup.start + 1}-${currentGroup.end} of ${totalTracks}${trackQuery.trim() ? ` | ${currentGroup.tracks.length} matching` : ''}`
+              : `Tracks ${currentGroup.start + 1}-${currentGroup.end} of ${filteredTracks.length}`
+            : 'No matching tracks'),
+          e('button', { type: 'button', className: 'tool', title: 'Previous tracks', 'aria-label': 'Previous tracks',
+            disabled: currentTrackPage === 0, onClick: () => { setTrackPage(currentTrackPage - 1); diagramArea.current?.scrollTo(0, 0); } }, chapterArrow(false)),
+          e('button', { type: 'button', className: 'tool', title: 'Next tracks', 'aria-label': 'Next tracks',
+            disabled: currentTrackPage >= trackPageCount - 1, onClick: () => { setTrackPage(currentTrackPage + 1); diagramArea.current?.scrollTo(0, 0); } }, chapterArrow(true))
+        )
+      ) : null,
+      e('div', { className: 'diagram-area', ref: diagramArea },
+      svg && (!parsedTrackSvg || visibleTracks.length > 0)
         ? e('div', {
             className: `diagram-frame ${fitToWidth ? 'fit' : ''}`,
             style: fitToWidth ? null : {
@@ -369,43 +725,107 @@ function App() {
             e('div', {
               className: 'diagram-scale',
               style: fitToWidth ? null : { transform: `scale(${zoom})` },
-              dangerouslySetInnerHTML: { __html: svg }
+              dangerouslySetInnerHTML: { __html: displaySvg }
             })
           )
         : e('div', { className: 'empty' },
             e('div', null,
-              e('strong', null, 'No diagram yet'),
-              e('span', null, 'Select an example and generate a diagram.')
+              e('strong', null, svg ? 'No matching tracks' : 'No diagram yet')
             )
           )
-    );
+    ));
   }
 
   return e('main', { className: 'shell' },
     e('header', { className: 'topbar' },
       e('div', { className: 'brand' },
-        e('strong', null, 'TYM Diagram UI'),
+        e('strong', null, e('span', { className: 'brand-accent' }, 'TYM'), ' Diagram UI'),
         e('span', null, 'Natural-language text to temporal-segment diagram')
       ),
+      e('div', { className: 'header-tools' },
       e('div', { className: 'status' },
         e('span', { className: `status-dot ${statusClass}` }),
         e('span', null, statusText)
-      )
+      ),
+      e('button', { className: 'tool theme-toggle', type: 'button', title: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`,
+        'aria-label': `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`, 'aria-pressed': theme === 'light',
+        onClick: () => setTheme(theme === 'dark' ? 'light' : 'dark') }, themeIcon(theme === 'dark')))
     ),
     e('section', { className: 'workspace' },
       e('section', { className: 'panel input-panel' },
         e('div', { className: 'panel-header' },
           e('h1', { className: 'panel-title' }, 'Input'),
           e('div', { className: 'tabs', role: 'tablist', 'aria-label': 'Examples' },
-            examples.map(example => e('button', {
+            examples.filter(example => !example.is_private).map(example => e('button', {
               key: example.id,
               className: `tab ${selectedExample === example.id ? 'active' : ''}`,
+              title: example.source || example.label,
+              disabled: busy,
               onClick: () => loadExample(example),
               type: 'button'
             }, example.label))
           )
         ),
         e('div', { className: 'fields' },
+          bookExamples.length ? e('div', { className: 'field' },
+            e('label', { htmlFor: 'book-example' }, 'Book example'),
+            e('select', {
+              id: 'book-example',
+              className: 'language-select',
+              disabled: busy,
+              value: bookExamples.some(example => example.id === selectedExample) ? selectedExample : '',
+              onChange: event => {
+                const example = bookExamples.find(item => item.id === event.target.value);
+                if (example) loadExample(example);
+              }
+            },
+              e('option', { value: '', disabled: true }, 'Select a book'),
+              bookExamples.map(example => e('option', { key: example.id, value: example.id }, example.label))
+            )
+          ) : null,
+          selectedExampleItem?.full_text_url || chapterCount > 0 ? e('div', { className: 'source-controls' },
+            e('div', { className: 'tabs', role: 'radiogroup', 'aria-label': 'Text scope' },
+              [['full', 'Full text'], ...(hasChapters ? [['chapters', 'Chapters']] : []),
+                ...(selectedExampleItem?.full_text_url ? [['excerpt', 'Excerpt']] : [])].map(([scope, label]) => e('button', {
+                key: scope,
+                type: 'button',
+                role: 'radio',
+                'aria-checked': textScope === scope,
+                className: `tab ${textScope === scope ? 'active' : ''}`,
+                disabled: busy,
+                onClick: () => selectScope(scope)
+              }, label))
+            ),
+            e('span', { className: 'text-count', 'aria-live': 'polite' }, loadingText
+              ? 'Loading...'
+              : selectedSection
+                ? `${text.length.toLocaleString()} / ${sourceText.length.toLocaleString()} characters`
+                : `${text.length.toLocaleString()} characters`)
+          ) : null,
+          selectedSection ? e('div', { className: 'field chapter-field' },
+            e('label', { htmlFor: 'chapter' }, `Chapter (${chapterCount} detected)`),
+            e('div', { className: 'chapter-controls' },
+              e('select', { id: 'chapter', className: 'language-select', value: currentChapterIndex, disabled: busy || loadingText,
+                onChange: event => selectChapter(Number(event.target.value)) },
+                sections.map((section, index) => e('option', { key: index, value: index }, section.label))),
+              e('button', { className: 'tool chapter-step', type: 'button', title: 'Previous chapter', 'aria-label': 'Previous chapter',
+                disabled: busy || loadingText || currentChapterIndex === 0, onClick: () => selectChapter(currentChapterIndex - 1) }, chapterArrow(false)),
+              e('button', { className: 'tool chapter-step', type: 'button', title: 'Next chapter', 'aria-label': 'Next chapter',
+                disabled: busy || loadingText || currentChapterIndex === sections.length - 1, onClick: () => selectChapter(currentChapterIndex + 1) }, chapterArrow(true))
+            ),
+            e('small', { className: 'chapter-range', 'aria-live': 'polite' },
+              `Section ${currentChapterIndex + 1} of ${sections.length} | UTF-16 [${selectedSection.start}, ${selectedSection.end})`)
+          ) : null,
+          e('div', { className: 'field' },
+            e('label', { htmlFor: 'chapter-detection' }, 'Chapter detection'),
+            e('select', { id: 'chapter-detection', className: 'language-select', value: chapterDetection,
+              disabled: busy || loadingText, onChange: event => {
+                setChapterDetection(event.target.value); setChapterIndex(0); clearResult();
+              } },
+              e('option', { value: 'auto' }, 'Auto'),
+              e('option', { value: 'off' }, 'Prefixed headings only'),
+              e('option', { value: 'always' }, 'Include short numbered sections'))
+          ),
           e('div', { className: 'field' },
             e('label', { htmlFor: 'api-url' }, 'API URL'),
             e('input', {
@@ -431,13 +851,32 @@ function App() {
           e('div', { className: 'field-grid' },
             e('div', { className: 'field' },
               e('label', { htmlFor: 'highlight' }, 'Highlight entity'),
-              e('input', {
+              e('div', { className: 'entity-controls' },
+              e('select', {
                 id: 'highlight',
-                className: 'api-input',
-                value: highlightEntity,
-                onChange: event => setHighlightEntity(event.target.value),
-                spellCheck: false
-              })
+                className: 'language-select',
+                value: selectedHighlight,
+                disabled: busy || loadingText || loadingEntities || !entityOptions.length,
+                'aria-describedby': 'entity-status',
+                onChange: event => setHighlightEntity(event.target.value)
+              },
+                e('option', { value: '' }, 'No highlight'),
+                ['PERSON', 'LOCATION', 'REFERENCE'].map(label => {
+                  const items = entityOptions.filter(entity => entity.label === label);
+                  return items.length ? e('optgroup', { label: label === 'PERSON' ? 'People' : label === 'LOCATION' ? 'Places' : 'Unresolved references', key: label },
+                    items.map(entity => e('option', { key: `${label}:${entity.name}`, value: entity.name },
+                      `${entity.name} (${entity.mention_count})${entity.reference_forms?.length ? ` - ${entity.reference_forms.join(', ')}` : ''}`))) : null;
+                })
+              ),
+              e('button', { className: 'tool entity-refresh', type: 'button', title: 'Refresh entities', 'aria-label': 'Refresh entities',
+                disabled: busy || loadingText || loadingEntities || !text.trim(), onClick: () => setEntityRefresh(value => value + 1) },
+                e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2,
+                  strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+                  e('path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.02 6.74 2.74L21 8' }),
+                  e('path', { d: 'M21 3v5h-5' })))
+              ),
+              e('small', { id: 'entity-status', className: `entity-status${entityError ? ' error' : ''}`, role: 'status' },
+                loadingEntities ? 'Recognizing entities...' : entityError || `${entityOptions.length} entities detected`)
             ),
             e('div', { className: 'field' },
               e('label', { htmlFor: 'width' }, `Diagram width ${diagramWidth}px`),
@@ -454,16 +893,38 @@ function App() {
             )
           ),
           e('div', { className: 'field' },
+            e('label', { htmlFor: 'track-density' }, `TT density ${trackDensity}`),
+            e('input', { id: 'track-density', className: 'range-input', type: 'range', min: '0', max: '100', step: '1',
+              value: trackDensity, disabled: busy,
+              onChange: event => {
+                const density = Number(event.target.value);
+                setTrackDensity(density);
+                if (densityChoices.some(choice => choice.density === density)) selectDensity(density);
+              } }),
+            e('div', { className: 'density-scale', 'aria-hidden': true },
+              e('span', null, '0 - Overview'), e('span', null, '100 - Detailed'))
+          ),
+          e('div', { className: 'field' },
             e('label', { htmlFor: 'text' }, 'Text'),
             e('textarea', {
               id: 'text',
               className: 'text-input',
+              disabled: loadingText || busy,
               value: text,
-              onChange: event => setText(event.target.value)
-            })
+              onChange: event => editText(event.target.value)
+            }),
+            selectedSource ? e('small', { className: 'example-source' }, selectedSource) : null,
+            selectedPreview ? e('details', { className: 'example-preview' },
+              e('summary', null, 'Excerpt diagram preview'),
+              e('img', {
+                src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(selectedPreview)}`,
+                alt: `Generated TYM diagram for ${selectedExampleItem.label}`,
+                loading: 'lazy'
+              })
+            ) : null
           ),
           e('div', { className: 'actions' },
-            e('button', { className: 'primary', type: 'button', onClick: generate, disabled: busy }, busy ? 'Generating...' : 'Generate diagram'),
+            e('button', { className: 'primary', type: 'button', onClick: generate, disabled: busy || loadingText || loadingEntities }, busy ? 'Generating...' : 'Generate diagram'),
             e('div', { className: 'download-actions' },
               e('button', { className: 'secondary', type: 'button', onClick: downloadSvg, disabled: !svg }, 'SVG'),
               e('button', { className: 'secondary', type: 'button', onClick: () => downloadText('tym-diagram.json', jsonText, 'application/json'), disabled: !result }, 'JSON'),
@@ -479,6 +940,14 @@ function App() {
           result ? e('span', { className: 'status' }, result.model_version || '') : null
         ),
         e('div', { className: 'result-toolbar' },
+          e('div', { className: 'field density-cache-control' },
+            e('label', { htmlFor: 'cached-density' }, 'Cached TT density'),
+            e('select', { id: 'cached-density', className: 'language-select', value: result ? viewerDensity : '',
+              disabled: busy || densityChoices.length < 2, onChange: event => selectDensity(Number(event.target.value)) },
+              densityChoices.length ? densityChoices.map(choice => e('option', { key: choice.density, value: choice.density },
+                `${choice.density} - ${choice.track_count} track${choice.track_count === 1 ? '' : 's'}`))
+                : e('option', { value: '' }, 'No cached diagrams'))
+          ),
           e('div', { className: 'tabs', role: 'tablist', 'aria-label': 'Result views' },
             resultTab('diagram', 'SVG'),
             resultTab('analysis', 'Analysis'),
@@ -487,10 +956,10 @@ function App() {
             resultTab('xml', 'XML')
           ),
           e('div', { className: 'zoom-tools' },
-            e('button', { className: `tool ${fitToWidth ? 'active' : ''}`, type: 'button', onClick: () => setFitToWidth(!fitToWidth), disabled: !svg }, 'Fit'),
-            e('button', { className: 'tool', type: 'button', onClick: () => setZoom(value => Math.max(0.45, Number((value - 0.1).toFixed(2)))), disabled: !svg || fitToWidth }, '-'),
-            e('span', { className: 'zoom-value' }, `${Math.round(zoom * 100)}%`),
-            e('button', { className: 'tool', type: 'button', onClick: () => setZoom(value => Math.min(1.5, Number((value + 0.1).toFixed(2)))), disabled: !svg || fitToWidth }, '+')
+            e('button', { className: `tool ${fitToWidth ? 'active' : ''}`, type: 'button', title: 'Fit diagram to viewport width', 'aria-pressed': fitToWidth, onClick: () => setFitToWidth(!fitToWidth), disabled: !svg }, 'Fit'),
+            e('button', { className: 'tool', type: 'button', title: 'Zoom out', 'aria-label': 'Zoom out', onClick: () => { setFitToWidth(false); setZoom(Math.max(0.5, Number((displayZoom - 0.25).toFixed(2)))); }, disabled: !svg }, '-'),
+            e('button', { className: 'tool zoom-value', type: 'button', title: 'Actual size (100%)', 'aria-label': 'Actual size (100%)', onClick: () => { setFitToWidth(false); setZoom(1); }, disabled: !svg }, `${Math.round(displayZoom * 100)}%`),
+            e('button', { className: 'tool', type: 'button', title: 'Zoom in', 'aria-label': 'Zoom in', onClick: () => { setFitToWidth(false); setZoom(Math.min(3, Number((displayZoom + 0.25).toFixed(2)))); }, disabled: !svg }, '+')
           )
         ),
         e('div', { className: 'metrics' },
