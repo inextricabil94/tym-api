@@ -54,10 +54,10 @@ paths:
     get:
       operationId: listBooks
       summary: List available complete books and chapter metadata, without source text
-      description: Optional server-only library. Empty when TYM_LIBRARY_PATH is not configured. No sign-in or source download endpoint. See docs/book-library-api.md.
+      description: Optional library metadata without source text. Empty when TYM_LIBRARY_PATH is not configured. Analysis and source reading are public by default; TYM_REQUIRE_LOGIN_FOR_TEXT=true restores confirmed-account-only reading. See docs/book-library-api.md and docs/accounts.md.
       responses:
         "200":
-          description: Book metadata and analysis limit in UTF-16 code units
+          description: Book metadata and section ranges in UTF-16 code units
           content:
             application/json:
               schema:
@@ -68,6 +68,138 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/LibraryBook"
+  /v1/books/{id}/source:
+    get:
+      operationId: readBookSource
+      summary: Read selected chapter or full source text
+      description: Exact cleaned source, no-store, 60 reads per minute per IP. Public for all user types by default. TYM_REQUIRE_LOGIN_FOR_TEXT=true requires a confirmed account instead. Omit sectionId to read the full book.
+      security:
+        - {}
+        - accountBearer: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: sectionId
+          schema: { type: string }
+      responses:
+        "200":
+          description: Book source with whole-source hash and half-open UTF-16 range
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [book_id, language, sha256_utf8, start, end, text]
+                properties:
+                  book_id: { type: string }
+                  section_id: { type: string }
+                  language: { type: string, enum: [en, ro] }
+                  sha256_utf8: { type: string }
+                  start: { type: integer }
+                  end: { type: integer }
+                  text: { type: string }
+        "401": { description: Missing or invalid bearer token when restricted reading is enabled }
+        "403": { description: Unconfirmed or revoked account when restricted reading is enabled }
+        "404": { description: Unknown book or section }
+        "429": { description: Source-reading quota exceeded }
+  /v1/account/config:
+    get:
+      operationId: getAccountConfiguration
+      summary: Non-secret availability and Google Web client ID
+      responses:
+        "200":
+          description: enabled, email_enabled, email_delivery (local_test/smtp/unavailable), text_requires_login and optional google_client_id
+  /v1/account/register:
+    post:
+      operationId: registerEmailAccount
+      summary: Register an email account and send confirmation
+      description: Accounts require confirmation before sign-in. Twenty account requests per five minutes per IP. See docs/accounts.md for provider/storage setup and the remaining standard Identity endpoints.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 12, writeOnly: true }
+      responses:
+        "200": { description: Account created; confirmation email sent }
+        "400": { description: Invalid email or password, or account already exists }
+        "429": { description: Account quota exceeded }
+        "503": { description: Accounts or email sender not configured }
+  /v1/account/login:
+    post:
+      operationId: signInWithEmail
+      summary: Exchange confirmed email credentials for Identity bearer/refresh tokens
+      description: Cookie sign-in is not supported. Tokens use the standard Identity accessToken, refreshToken, tokenType and expiresIn response. Refresh request field is refresh_token. Password-reset fields are email, reset_code and new_password, consistent with this API's snake-case JSON policy.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, writeOnly: true }
+      responses:
+        "200": { description: Bearer token pair; access expires after 15 minutes }
+        "401": { description: Invalid credentials, unconfirmed email or locked account }
+        "429": { description: Account quota exceeded }
+        "503": { description: Accounts not configured }
+  /v1/account/google/nonce:
+    post:
+      operationId: createGoogleSignInNonce
+      summary: Create a single-use five-minute Google sign-in nonce
+      responses:
+        "200": { description: Object containing nonce }
+        "429": { description: Account quota exceeded }
+        "503": { description: Google sign-in not configured }
+  /v1/account/google:
+    post:
+      operationId: signInWithGoogle
+      summary: Register or sign in using a verified Gmail or Workspace ID token
+      description: Official Google signature/audience/issuer/expiry verification plus nonce matching. Uses Google subject, never silently merges by email. No Firebase dependency.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [credential, nonce]
+              properties:
+                credential: { type: string, writeOnly: true }
+                nonce: { type: string }
+      responses:
+        "200": { description: Identity bearer token pair }
+        "400": { description: Unsupported or unverified Google account }
+        "401": { description: Invalid token or expired/reused nonce }
+        "409": { description: Existing account uses another sign-in method }
+        "429": { description: Account quota exceeded }
+        "503": { description: Google sign-in not configured or unavailable }
+  /v1/account/me:
+    get:
+      operationId: getCurrentAccount
+      security:
+        - accountBearer: []
+      responses:
+        "200": { description: Email and confirmation status }
+        "401": { description: Invalid bearer token }
+        "403": { description: Revoked account session }
+  /v1/account/logout:
+    post:
+      operationId: signOutAccount
+      summary: Revoke all sessions for the current account
+      security:
+        - accountBearer: []
+      responses:
+        "204": { description: Security stamp updated; clients must discard tokens }
+        "401": { description: Invalid bearer token }
+        "403": { description: Revoked account session }
   /v1/books/{id}/diagrams:
     post:
       operationId: generateBookDiagram
@@ -93,7 +225,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DiagramResponse"
         "400":
-          description: Invalid options or selection above the analysis limit
+          description: Invalid options
         "404":
           description: Unknown book or section
         "429":
@@ -121,7 +253,7 @@ paths:
         "200":
           description: Existing entity/POS/reference response
         "400":
-          description: Selection above the analysis limit
+          description: Invalid selection
         "404":
           description: Unknown book or section
         "429":
@@ -351,6 +483,11 @@ paths:
         "503":
           $ref: "#/components/responses/PosTaggingUnavailable"
 components:
+  securitySchemes:
+    accountBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: ASP.NET Core Identity protected token (not JWT)
   responses:
     PosTaggingUnavailable:
       description: Local POS runtime or language model unavailable. For diagrams, applicable when entity highlighting is requested. No unfiltered fallback.

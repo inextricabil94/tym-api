@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <UserSecretsId>TYM.Api.LocalDevelopment.7ba08973-28dc-469f-a496-d0b273f93aa2</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +25,9 @@
     <Compile Remove="tools\Tym.GenerationChecks\**\*.cs" />
     <Content Remove="tools\Tym.GenerationChecks\**" />
     <None Remove="tools\Tym.GenerationChecks\**" />
+    <Compile Remove="tools\Tym.AccountSetup\**\*.cs" />
+    <Content Remove="tools\Tym.AccountSetup\**" />
+    <None Remove="tools\Tym.AccountSetup\**" />
     <Content Remove="private-examples\**" />
     <None Remove="private-examples\**" />
     <Compile Remove="private-models\**\*.cs" />
@@ -39,6 +43,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.ML" Version="5.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.21" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.21" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.21" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="9.0.21" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.77.0" />
+    <PackageReference Include="MailKit" Version="4.18.1" />
   </ItemGroup>
 
   <ItemGroup>

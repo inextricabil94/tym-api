@@ -7,10 +7,12 @@ public sealed record BookSection(string Id, string Label, string Kind, int Start
 public sealed record LibraryBook(string Id, string Label, string Language, string Source, int CharacterCount,
     int OriginalCharacterCount, string Sha256Utf8, IReadOnlyList<BookSection> Sections);
 public sealed record BookAnalysisRequest(string? SectionId = null, DiagramOptions? Options = null);
+public sealed record BookSource(string BookId, string? SectionId, string Language, string Sha256Utf8,
+    int Start, int End, string Text);
 
 public sealed class BookLibrary
 {
-    // Cached source text stays outside wwwroot and is never returned by a GET endpoint.
+    // Source stays outside wwwroot; access policy is applied by the source endpoint.
     private readonly IReadOnlyDictionary<string, (LibraryBook Book, string Text)> books;
 
     public BookLibrary(IConfiguration configuration)
@@ -47,6 +49,16 @@ public sealed class BookLibrary
     }
 
     public IEnumerable<LibraryBook> Catalog => books.Values.Select(value => value.Book);
+
+    public BookSource? ReadSource(string id, string? sectionId)
+    {
+        if (!books.TryGetValue(id, out var entry)) return null;
+        var section = sectionId is null ? null : entry.Book.Sections.FirstOrDefault(item => item.Id == sectionId);
+        if (sectionId is not null && section is null) return null;
+        var start = section?.Start ?? 0;
+        var end = section?.End ?? entry.Text.Length;
+        return new BookSource(id, section?.Id, entry.Book.Language, entry.Book.Sha256Utf8, start, end, entry.Text[start..end]);
+    }
 
     public DiagramRequest? Read(string id, BookAnalysisRequest request)
     {

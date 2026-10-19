@@ -25,6 +25,12 @@ try
     Check(library.Read("fixture", new BookAnalysisRequest())!.Text == text, "Full book truncated");
     var part = library.Read("fixture", new BookAnalysisRequest("s2", new DiagramOptions(Language: "en")))!;
     Check(part.Text == text[boundary..] && part.Options!.Language == "ro", "Chapter UTF-16 slice or book language incorrect");
+    var source = library.ReadSource("fixture", "s2")!;
+    Check(source.Text == text[boundary..] && source.Start == boundary && source.End == text.Length
+        && source.Sha256Utf8 == book.Sha256Utf8, "Source reader changed text, hash or UTF-16 range");
+    Check(library.ReadSource("fixture", null)!.Text == text, "Source reader truncated full text");
+    Check(library.ReadSource("fixture", "unknown") is null && library.ReadSource("../fixture", null) is null,
+        "Source reader accepted an unknown section or path");
     Check(library.Read("../fixture", new BookAnalysisRequest()) is null, "Book path traversal accepted");
     Check(library.Read("fixture", new BookAnalysisRequest("unknown")) is null, "Unknown chapter accepted");
     foreach (var invalid in new[] { book with { Sha256Utf8 = "invalid" }, book with { Id = "../fixture" },

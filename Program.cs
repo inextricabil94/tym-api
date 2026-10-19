@@ -10,6 +10,7 @@ using Microsoft.ML;
 using Microsoft.ML.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+var accountSettings = builder.AddAccounts();
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.AddSingleton<BookLibrary>();
 builder.Services.AddSingleton<DensitySessions>();
@@ -22,6 +23,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    options.AddPolicy("account-browser", policy =>
+    {
+        policy.WithOrigins(accountSettings.BrowserOrigins)
+            .WithMethods("GET", "POST", "OPTIONS").WithHeaders("Content-Type", "Authorization");
+    });
 });
 builder.Services.AddRateLimiter(options =>
 {
@@ -48,15 +54,24 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy(TymRateLimit.DensityPolicyName, context =>
         RateLimitPartition.GetFixedWindowLimiter(ClientIpResolver.Resolve(context), _ => new FixedWindowRateLimiterOptions
         { PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
+    options.AddPolicy(TymRateLimit.AuthPolicyName, context =>
+        RateLimitPartition.GetFixedWindowLimiter(ClientIpResolver.Resolve(context), _ => new FixedWindowRateLimiterOptions
+        { PermitLimit = 20, Window = TimeSpan.FromMinutes(5), QueueLimit = 0, AutoReplenishment = true }));
+    options.AddPolicy(TymRateLimit.SourcePolicyName, context =>
+        RateLimitPartition.GetFixedWindowLimiter(ClientIpResolver.Resolve(context), _ => new FixedWindowRateLimiterOptions
+        { PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
     options.OnRejected = async (context, cancellationToken) =>
     {
-        var isEntityLookup = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName
-            == TymRateLimit.EntityPolicyName;
-        var isDensity = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == TymRateLimit.DensityPolicyName;
-        var limit = isDensity ? 60 : isEntityLookup ? TymRateLimit.EntityPermitLimit : TymRateLimit.DailyPermitLimit;
+        var policy = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName;
+        var isEntityLookup = policy == TymRateLimit.EntityPolicyName;
+        var isDensity = policy == TymRateLimit.DensityPolicyName;
+        var isAuth = policy == TymRateLimit.AuthPolicyName;
+        var isSource = policy == TymRateLimit.SourcePolicyName;
+        var limit = isAuth ? 20 : isDensity || isSource ? 60 : isEntityLookup ? TymRateLimit.EntityPermitLimit : TymRateLimit.DailyPermitLimit;
+        var window = isAuth ? "5 minutes" : isEntityLookup || isDensity || isSource ? "1 minute" : "24 hours";
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry)
             ? retry
-            : isEntityLookup || isDensity ? TimeSpan.FromMinutes(1) : TymRateLimit.Window;
+            : isAuth ? TimeSpan.FromMinutes(5) : isEntityLookup || isDensity || isSource ? TimeSpan.FromMinutes(1) : TymRateLimit.Window;
         var retryAfterSeconds = Math.Max(1, (long)Math.Ceiling(retryAfter.TotalSeconds));
         var response = context.HttpContext.Response;
 
@@ -66,9 +81,10 @@ builder.Services.AddRateLimiter(options =>
 
         await response.WriteAsJsonAsync(
             new RateLimitErrorResponse(
-                isDensity ? "Density layout limit exceeded for this IP address." : isEntityLookup ? "Entity lookup limit exceeded for this IP address." : "Daily diagram-generation limit exceeded for this IP address.",
+                isAuth ? "Sign-in request limit exceeded. Retry later." : isSource ? "Text reading request limit exceeded. Retry in a minute."
+                    : isDensity ? "Density layout limit exceeded for this IP address." : isEntityLookup ? "Entity lookup limit exceeded for this IP address." : "Daily diagram-generation limit exceeded for this IP address.",
                 limit,
-                isEntityLookup || isDensity ? "1 minute" : "24 hours",
+                window,
                 retryAfterSeconds),
             cancellationToken);
     };
@@ -77,6 +93,38 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 app.UseResponseCompression();
 app.UseCors();
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/v1/account") || context.Request.Path.Value?.EndsWith("/source") == true)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    }
+    if (context.Request.Path.StartsWithSegments("/v1/account"))
+    {
+        var limit = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+        if (limit is { IsReadOnly: false }) limit.MaxRequestBodySize = 16_384;
+        if (context.Request.ContentLength > 16_384)
+        {
+            context.Response.StatusCode = 413;
+            await context.Response.WriteAsJsonAsync(new ErrorResponse("Account request too large."));
+            return;
+        }
+    }
+    try { await next(context); }
+    catch (Exception error) when ((context.Request.Path.StartsWithSegments("/v1/account")
+        || (accountSettings.RequireLoginForText && context.Request.Path.Value?.EndsWith("/source") == true))
+        && error is Microsoft.Data.SqlClient.SqlException or Microsoft.EntityFrameworkCore.DbUpdateException
+            or Microsoft.EntityFrameworkCore.Storage.RetryLimitExceededException)
+    {
+        if (context.Response.HasStarted) throw;
+        context.Response.StatusCode = 503;
+        context.Response.Headers.RetryAfter = "60";
+        await context.Response.WriteAsJsonAsync(new ErrorResponse("Account storage is temporarily unavailable. Retry in a minute."));
+    }
+});
+app.UseAuthentication();
+app.UseAuthorization();
 app.Use(async (context, next) =>
 {
     try { await next(context); }
@@ -88,6 +136,7 @@ app.Use(async (context, next) =>
     }
 });
 app.UseRateLimiter();
+await app.MapAccounts();
 
 app.MapGet("/", () => Results.Json(new
 {
@@ -100,6 +149,11 @@ app.MapGet("/", () => Results.Json(new
         "GET /health",
         "GET /openapi.yaml",
         "GET /v1/books",
+        "GET /v1/books/{id}/source",
+        "GET /v1/account/config",
+        "POST /v1/account/register",
+        "POST /v1/account/login",
+        "POST /v1/account/google",
         "POST /v1/books/{id}/diagrams",
         "POST /v1/books/{id}/entities",
         "POST /v1/entities",
@@ -143,6 +197,15 @@ app.MapGet("/v1/books", (BookLibrary library, HttpContext context) =>
     context.Response.Headers.CacheControl = "no-store";
     return Results.Json(new { books = library.Catalog });
 });
+
+var sourceEndpoint = app.MapGet("/v1/books/{id}/source", (string id, string? sectionId, BookLibrary library, HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    var source = library.ReadSource(id, sectionId);
+    return source is null ? Results.NotFound(new ErrorResponse("Book or section not found.")) : Results.Json(source);
+}).RequireRateLimiting(TymRateLimit.SourcePolicyName);
+if (accountSettings.RequireLoginForText)
+    sourceEndpoint.RequireAuthorization(TymAccounts.ReaderPolicy).RequireCors("account-browser");
 
 app.MapPost("/v1/books/{id}/diagrams", (string id, BookAnalysisRequest selection, BookLibrary library, HttpContext context, DensitySessions sessions) =>
 {
@@ -291,6 +354,8 @@ internal static class TymRateLimit
     public const string PolicyName = "diagram-generation-per-ip";
     public const string EntityPolicyName = "entity-recognition-per-ip";
     public const string DensityPolicyName = "density-layout-per-ip";
+    public const string AuthPolicyName = "account-per-ip";
+    public const string SourcePolicyName = "source-reading-per-ip";
     public const int EntityPermitLimit = 30;
     public const int DailyPermitLimit = 5;
     public static readonly TimeSpan Window = TimeSpan.FromDays(1);

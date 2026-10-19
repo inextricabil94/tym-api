@@ -196,6 +196,9 @@ function App() {
   const resolutionKey = React.useRef(resolution.key);
   const [trackDensity, setTrackDensity] = React.useState(50);
   const [apiBaseUrl, setApiBaseUrl] = React.useState(apiDefault);
+  const account = window.TymAccounts.useAccount(apiBaseUrl);
+  const [showAccount, setShowAccount] = React.useState(() => new URLSearchParams(window.location.hash.slice(1)).has('resetCode'));
+  const [accountDialogVersion, setAccountDialogVersion] = React.useState(0);
   const [baseResult, setBaseResult] = React.useState(null);
   const [cacheResolution, setCacheResolution] = React.useState('');
   const [cacheStatus, setCacheStatus] = React.useState('');
@@ -236,6 +239,15 @@ function App() {
   const selectedExampleItem = examples.find(example => example.id === selectedExample);
   const protectedSource = Boolean(selectedBook || selectedExampleItem?.is_private);
   const picture = examplePicture(selectedBookId || selectedExample);
+
+  React.useEffect(() => {
+    const resetLink = () => {
+      if (!new URLSearchParams(window.location.hash.slice(1)).has('resetCode')) return;
+      setAccountDialogVersion(value => value + 1); setShowAccount(true);
+    };
+    window.addEventListener('hashchange', resetLink);
+    return () => window.removeEventListener('hashchange', resetLink);
+  }, []);
 
   React.useEffect(() => {
     const update = () => {
@@ -862,6 +874,10 @@ function App() {
         e('span', null, 'Natural-language text to temporal-segment diagram')
       ),
       e('div', { className: 'header-tools' },
+      e('div', { className: 'account-tools' },
+        account.user ? e('span', { className: 'account-email', title: account.user.email }, account.user.email) : null,
+        e('button', { className: 'secondary', type: 'button', onClick: () => account.user ? account.client.logout() : setShowAccount(true) },
+          account.user ? 'Sign Out' : 'Sign In')),
       e('div', { className: 'status' },
         e('span', { className: `status-dot ${statusClass}` }),
         e('span', null, statusText)
@@ -870,6 +886,8 @@ function App() {
         'aria-label': `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`, 'aria-pressed': theme === 'light',
         onClick: () => setTheme(theme === 'dark' ? 'light' : 'dark') }, themeIcon(theme === 'dark')))
     ),
+    showAccount ? e(window.TymAccounts.AccountDialog, { key: `${apiBaseUrl}:${accountDialogVersion}`, account, onClose: () => setShowAccount(false) }) : null,
+    account.error ? e('p', { className: 'account-banner', role: 'status' }, account.error) : null,
     e('section', { className: 'workspace' },
       e('section', { className: 'panel input-panel' },
         e('div', { className: 'panel-header' },
@@ -949,7 +967,8 @@ function App() {
             e('div', { className: 'chapter-controls' },
               e('select', { id: 'chapter', className: 'language-select', value: currentChapterIndex, disabled: busy || loadingText,
                 onChange: event => selectChapter(Number(event.target.value)) },
-                sections.map((section, index) => e('option', { key: index, value: index }, section.label))),
+                sections.map((section, index) => e('option', { key: index, value: index, title: section.label },
+                  window.TymChapters.sectionLabel(section, index, language)))),
               e('button', { className: 'tool chapter-step', type: 'button', title: 'Previous chapter', 'aria-label': 'Previous chapter',
                 disabled: busy || loadingText || currentChapterIndex === 0, onClick: () => selectChapter(currentChapterIndex - 1) }, chapterArrow(false)),
               e('button', { className: 'tool chapter-step', type: 'button', title: 'Next chapter', 'aria-label': 'Next chapter',
@@ -958,6 +977,8 @@ function App() {
             e('small', { className: 'chapter-range', 'aria-live': 'polite' },
               `Section ${currentChapterIndex + 1} of ${sections.length} | UTF-16 [${selectedSection.start}, ${selectedSection.end})`)
           ) : null,
+          selectedBook ? e(window.TymAccounts.SourceReader, { account, book: selectedBook, section: selectedSection, language,
+            onSignIn: () => setShowAccount(true) }) : null,
           !selectedBook ? e('div', { className: 'field' },
             e('label', { htmlFor: 'chapter-detection' }, 'Chapter detection'),
             e('select', { id: 'chapter-detection', className: 'language-select', value: chapterDetection,

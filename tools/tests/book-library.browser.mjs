@@ -43,6 +43,9 @@ try {
   const catalog = await (await fetch(`${api}/v1/books`)).json();
   assert.equal(catalog.books.length, 5);
   assert.ok(catalog.books.every(book => !('text' in book) && !('full_text_url' in book)));
+  const publicSource = await fetch(`${api}/v1/books/leghe/source`);
+  assert.equal(publicSource.status, 200, 'Default reading must work with accounts disabled');
+  assert.equal((await publicSource.json()).text, text);
   for (const url of ['/v1/books/leghe/text', '/library/leghe.txt', '/library/catalog.json', '/leghe.txt'])
     assert.equal((await fetch(`${api}${url}`)).status, 404);
   assert.equal((await post('/v1/books/missing/entities', {})).status, 404);
@@ -65,6 +68,8 @@ try {
   await page.waitForTimeout(800);
   assert.equal(posts.length, before, 'Selecting a book/chapter must not trigger NLP');
   assert.equal(await page.locator('#text').count(), 0, 'Book source must not be exposed in the editor');
+  await page.waitForFunction(() => document.querySelector('.source-prose')?.textContent.includes('Chapter TWO'));
+  assert.equal(await page.locator('.source-prose').textContent(), text.slice(books[0].sections[1].start));
   assert.equal(await page.locator('.download-actions').getByRole('button', { name: 'JSON', exact: true }).count(), 0);
   assert.equal(await page.locator('.download-actions').getByRole('button', { name: 'XML', exact: true }).count(), 0);
   assert.equal(await page.getByRole('button', { name: 'JSON', exact: true }).count(), 0);
@@ -121,7 +126,8 @@ try {
   await page.waitForFunction(() => document.querySelector('.diagram-area svg')?.getAttribute('width') === '1920');
   assert.equal(posts.filter(post => post.url.endsWith('/diagrams')).at(-1).body.options.width, 1920);
   await page.setViewportSize({ width: 1920, height: 1051 });
-  await page.waitForFunction(() => document.getElementById('cached-density').disabled);
+  await page.waitForFunction(() => document.querySelector('[data-testid="window-resolution"]')?.textContent === 'Window 1920 x 1051'
+    && !document.querySelector('.diagram-area svg'));
   assert.equal(await page.locator('.diagram-area svg').count(), 0, 'Height-only resize must invalidate resolution cache');
 
   let release, requested;
@@ -153,7 +159,7 @@ try {
   assert.equal(entityLimit.window, '1 minute');
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ passed: true, books: books.length, tested_viewports: screenshots.length,
-    source_gets_blocked: true, no_source_editor_or_text_exports: true, shared_daily_quota: true,
+    legacy_source_paths_blocked: true, public_reader_without_accounts: true, no_source_editor_or_text_exports: true, shared_daily_quota: true,
     separate_entity_quota: true, cached_presets: 10, selected_density_first: true, full_book_over_100000: true, window_width_applied: true,
     resize_invalidates_cache: true, resize_requests: 0, stale_resolution_response_ignored: true }, null, 2));
 } finally {

@@ -8,6 +8,7 @@
 !TrackGeneration.cs
 !BookLibrary.cs
 !DensitySessions.cs
+!Accounts.cs
 !openapi.yaml
 !sample_input.json
 !sample_input_ro.json

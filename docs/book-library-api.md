@@ -1,10 +1,11 @@
 # Book Library API
 
-The optional `TYM_LIBRARY_PATH` contains `catalog.json` and ID-named UTF-8 TXT files. It is not a static-file directory. Missing configuration means an empty library; bad hashes, IDs or section boundaries fail integrity validation. There is no raw book-content route.
+The optional `TYM_LIBRARY_PATH` contains `catalog.json` and ID-named UTF-8 TXT files. It is not a static-file directory. Missing configuration means an empty library; bad hashes, IDs or section boundaries fail integrity validation. Source reading is temporarily public by default at the user's request; `TYM_REQUIRE_LOGIN_FOR_TEXT=true` restores the confirmed-account restriction.
 
 - `GET /v1/books`: `{ books: LibraryBook[] }`, with `Cache-Control: no-store`.
 - `POST /v1/books/{id}/diagrams`: `BookAnalysisRequest` below; response is the existing `DiagramResponse`, including the requested density cache. Shares the normal five-per-IP daily diagram quota.
 - `POST /v1/books/{id}/entities`: same selection; response is the existing entity/POS/reference result. Shares thirty lookups per minute per IP. No diagram usage.
+- `GET /v1/books/{id}/source?sectionId=s1`: available to every user type by default; omit `sectionId` for the complete book. Returns `{ book_id, section_id?, language, sha256_utf8, start, end, text }` with exact cleaned UTF-16 ranges and `Cache-Control: no-store`. The hash identifies the complete cleaned source. With `TYM_REQUIRE_LOGIN_FOR_TEXT=true`, anonymous/invalid sessions return 401 and revoked sessions return 403. Unknown IDs return 404 after any required authorization. Separate 60/minute/IP reading limit. See [account setup](accounts.md).
 
 ```json
 {

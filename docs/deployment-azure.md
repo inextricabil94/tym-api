@@ -12,7 +12,7 @@ node --test tools/tests/chapter-splitter.test.cjs tools/tests/track-groups.test.
 
 Generation/POS checks require the local spaCy setup in [the POS guide](plans/pos-filtering.md). The root Dockerfile installs Python, spaCy and both official English/Romanian models, then verifies that each loads. The UI has its own Dockerfile under `ui/Tym.Ui`. Azure Container Registry Tasks can build both images without a local Docker daemon. Use unique tags and inspect build status before updating live apps.
 
-For an API remote build, use a staged, allowlisted context containing only `Dockerfile`, `.dockerignore`, `Tym.Api.csproj`, the four root `.cs` files, `openapi.yaml`, `sample_input.json`, `sample_input_ro.json`, `THIRD_PARTY_NOTICES.md`, `tools/requirements-pos.txt` and `tools/tym_pos_worker.py`. No books, local virtual environments, private settings, screenshots or test outputs are needed. The UI build context is `ui/Tym.Ui`, with build output ignored.
+For an API remote build, use the explicit root `.dockerignore` allowlist: public project/runtime files, root API modules (including `Accounts.cs`), `openapi.yaml`, authored samples, third-party notices and POS worker requirements/script. No books, local virtual environments, private settings, screenshots or test outputs are needed. Existing private book-library layers can be copied within the registry instead of uploading the sources again. The UI build context is `ui/Tym.Ui`, with build output ignored.
 
 ## Release
 
@@ -35,3 +35,9 @@ Rollback uses the previous known-good image with `az containerapp update --image
 - The OpenAPI file is explicitly included in publish output. Fresh image installation uses the tested Click/Typer pins as well as spaCy/model pins. Build runs for the final images: API `cah`, UI `cag`.
 
 The public endpoints are [static UI](https://tymui20260707serban.z13.web.core.windows.net), [container UI](https://tym-ui-serban.livelyrock-2726c024.eastus.azurecontainerapps.io), and [API](https://tym-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io). Previous public static files are backed up locally under the ignored deployment staging directory. Verification details are processing/regression evidence, not NLP accuracy scores.
+
+## Release: 20 October 2026
+
+The API and both UI hosts now serve public full/chapter reading and numbered chapter labels. API/UI image tags are `release-20261020-publictext`; both ready revisions end in `r20261020publictext`. See the [release verification](verification/release-20261020.md) for exact builds and live tests. The older 19 October details above are historical.
+
+Live accounts remain disabled: Azure rejected the approved free-limit SQL server in three regions. Do not enable accounts against container-local SQLite. The implemented SQL provider uses managed identity and persistent SQL token keys; initialize and test a real free-limit database plus email delivery before activation. No billed-overage database or paid mail provider was substituted. The local preview still uses its separate private SQLite and SMTP configuration.

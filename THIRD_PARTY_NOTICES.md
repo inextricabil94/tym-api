@@ -1,6 +1,6 @@
 # Lucide icons
 
-The embedded diagram symbols use Lucide's `play`, `rewind`, `circle-question-mark`, `repeat-2`, `sparkles`, `merge`, and `split` SVG paths. The UI also uses `chevron-left`, `chevron-right`, `sun`, `moon`, and `rotate-cw`. Source: https://github.com/lucide-icons/lucide/tree/main/icons (retrieved 19 October 2026).
+The embedded diagram symbols use Lucide's `play`, `rewind`, `circle-question-mark`, `repeat-2`, `sparkles`, `merge`, and `split` SVG paths. The UI also uses `chevron-left`, `chevron-right`, `sun`, `moon`, `rotate-cw`, and `x`. Source: https://github.com/lucide-icons/lucide/tree/main/icons (retrieved 19 October 2026).
 
 ## ISC License
 
@@ -38,3 +38,7 @@ Downloaded from Wikimedia Commons on 19 October 2026. Images are unmodified Comm
 The entity highlight filter uses [spaCy](https://github.com/explosion/spaCy) (MIT), with official [en_core_web_sm 3.8.0](https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.8.0) (MIT) and [ro_core_news_sm 3.8.0](https://github.com/explosion/spacy-models/releases/tag/ro_core_news_sm-3.8.0) (CC BY-SA 4.0) models from Explosion and the contributors/data sources named in each model's metadata. The Romanian model's metadata identifies [UD Romanian RRT v2.8](https://github.com/UniversalDependencies/UD_Romanian-RRT) (CC BY-SA 4.0; Barbu Mititelu, Verginica; Irimia, Elena; Perez, Cenel-Augusto; Ion, Radu; Simionescu, Radu; Popel, Martin) and [RONEC](https://github.com/dumitrescustefan/ronec) (MIT; Dumitrescu, Stefan Daniel; Avram, Andrei-Marius; Morogan, Luciana; Toma; Stefan) as sources. CC BY-SA 4.0 terms: https://creativecommons.org/licenses/by-sa/4.0/ .
 
 These packages/weights are downloaded separately, are unmodified, and are not bundled in this repository or its .NET publish output. The API Dockerfile also installs them in its runtime image. Their original `LICENSE`, `LICENSES_SOURCES` (where supplied) and `meta.json` files remain in the installed packages. Keep those notices and review the applicable model/source license obligations before redistributing weights or adapting and distributing a model.
+
+# Account Dependencies
+
+ASP.NET Core Identity and Entity Framework Core are Microsoft packages (MIT). Google ID-token verification uses the official Google.Apis.Auth package (Apache-2.0). SMTP delivery uses MailKit and MimeKit (MIT). Dependencies are restored from NuGet with their original package metadata and notices. Google's sign-in button library is loaded directly from `https://accounts.google.com/gsi/client` only when configured sign-in is opened; it is not self-hosted or modified. Google accounts, consent and branding remain governed by Google's applicable terms.

@@ -119,6 +119,22 @@
     return sections.map((section, index) => ({ ...section, end: sections[index + 1]?.start ?? text.length }));
   }
 
-  if (typeof module === 'object' && module.exports) module.exports = { splitChapters, parseChapterNumber };
-  else root.TymChapters = { splitChapters, parseChapterNumber };
+  function sectionLabel(section, index, language = 'en') {
+    const original = section.label || '';
+    const ro = language === 'ro' || /^capitol(?:ul)?\b/i.test(original);
+    const part = original.match(/\s*\/\s*Part\s+(\d+)\s*$/i);
+    const heading = original.replace(/\s*\/\s*Part\s+\d+\s*$/i, '')
+      .replace(/^(?:capitolul|capitol|chapter)\s+/i, '');
+    const parsed = parseChapterNumber(heading);
+    if (section.kind === 'preamble') return ro ? 'Introducere' : 'Front Matter';
+    if (section.kind === 'chapter' || /^(?:capitolul|capitol|chapter)\s+/i.test(original)) {
+      const label = `${ro ? 'Capitolul' : 'Chapter'} ${parsed?.value ?? index + 1}`;
+      return part ? `${label} / ${ro ? 'Sec\u021biunea' : 'Section'} ${Number(part[1])}` : label;
+    }
+    return `${ro ? 'Sec\u021biunea' : 'Section'} ${part ? Number(part[1]) : index + 1}`;
+  }
+
+  const api = { splitChapters, parseChapterNumber, sectionLabel };
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.TymChapters = api;
 })(typeof window === 'object' ? window : globalThis);
