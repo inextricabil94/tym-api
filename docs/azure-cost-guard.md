@@ -134,6 +134,26 @@ types, subscription changes, or resource policies can affect execution.
 - All six Container Apps and both App Service sites were still stopped. This
   threshold update did not start apps or re-enable the static website.
 
+### Approved TYM Restart: 20 October 2026
+
+After the owner's explicit restart approval, reported current-month EUR cost was
+confirmed below EUR 20. Only `tym-api-serban`, `tym-ui-serban` and the
+`tymui20260707serban` static website were restored. The existing published images
+and website files were reused; no image build, new resource, or paid plan was
+needed. The four other Container Apps and both App Service sites remain stopped.
+
+- Static UI, container UI and API health returned HTTP 200.
+- Published index, application script, styles, translations and both flag SVGs
+  matched the local release by SHA-256. API CORS allowed the website and the
+  catalog contained 16 books, without reading or exporting their prose.
+- An authored sample generated a nonempty SVG with six segments and six tracks.
+  Two diagram requests were used in verification: the initial response check
+  incorrectly expected a top-level SVG field, then the corrected check used the
+  documented `render.svg` field. No application-code change was needed.
+- The EUR 20 budget, enabled workflow, enabled action group and actual-cost
+  notification link were verified again after restart. They were not disabled
+  or bypassed to restore service.
+
 ## Recovery
 
 Do not delete and recreate applications. Their stopped resources retain their
