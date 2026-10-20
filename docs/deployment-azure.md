@@ -2,6 +2,14 @@
 
 The existing deployment uses resource group `tym-llm-prod-rg`, registry `ca0e9fe87ad1acr`, API app `tym-api-serban`, UI app `tym-ui-serban`, and the static UI storage account `tymui20260707serban`.
 
+**Cost shutdown policy (20 October 2026):** the owner approved taking all hosted
+apps offline at EUR 20 combined monthly subscription cost (raised from EUR 10).
+Raising the threshold does not automatically restart sites. All six Container Apps
+are stopped, both existing App Service sites are stopped, and static website
+hosting is disabled with files preserved. These endpoints are intentionally
+offline, not a failed release. Review the [monthly cost guard](azure-cost-guard.md)
+before any deployment or restart. Fixed infrastructure charges can continue.
+
 ## Build and Verify
 
 ```powershell
