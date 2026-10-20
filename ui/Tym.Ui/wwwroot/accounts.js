@@ -1,6 +1,8 @@
 (function (root) {
   'use strict';
   const e = React.createElement;
+  const I18n = root.TymI18n;
+  const t = I18n.t;
   let googleScript;
   function loadGoogle() {
     if (root.google?.accounts?.id) return Promise.resolve();
@@ -29,9 +31,8 @@
       let data = null;
       if (response.status !== 204) { try { data = await response.json(); } catch {} }
       if (!response.ok) {
-        const error = new Error(response.status === 429 ? 'Too many sign-in requests. Please retry later.'
-          : data?.error || (response.status === 401 ? 'Sign-in failed. Check your credentials and email confirmation.'
-            : Object.values(data?.errors || {}).flat().join(' ') || `Request failed (HTTP ${response.status}).`));
+        const error = response.status === 429 ? I18n.error('Too many sign-in requests. Please retry later.')
+          : I18n.apiError(data, response.status);
         error.status = response.status; throw error;
       }
       return data;
@@ -67,7 +68,7 @@
       snapshot: () => state,
       async initialize(signal) {
         try { const config = await request('/v1/account/config', undefined, null, signal); if (!signal.aborted) update({ config, loading: false }); }
-        catch (error) { if (!signal.aborted) update({ error: error.message, loading: false }); }
+        catch (error) { if (!signal.aborted) update({ error: I18n.describe(error), loading: false }); }
       },
       async login(email, password) { const expected = ++version; await accept(await request('/v1/account/login', { email, password }), expected); },
       register: (email, password) => request('/v1/account/register', { email, password }),
@@ -108,6 +109,7 @@
   }
 
   function GoogleButton({ client, clientId, onSuccess, onError }) {
+    const { locale } = I18n.useLocale();
     const target = React.useRef(null);
     const [attempt, setAttempt] = React.useState(0);
     React.useEffect(() => {
@@ -119,18 +121,19 @@
           root.google.accounts.id.initialize({ client_id: clientId, nonce: challenge.nonce,
             callback: async result => {
               try { await client.google(result.credential, challenge.nonce); if (active) onSuccess(); }
-              catch (error) { if (active) { onError(error.message); setAttempt(value => value + 1); } }
+              catch (error) { if (active) { onError(I18n.describe(error)); setAttempt(value => value + 1); } }
             } });
           target.current.replaceChildren();
-          root.google.accounts.id.renderButton(target.current, { theme: 'outline', size: 'large', text: 'continue_with', width: 260 });
-        } catch (error) { if (active) onError(error.message); }
+          root.google.accounts.id.renderButton(target.current, { theme: 'outline', size: 'large', text: 'continue_with', width: 260, locale });
+        } catch (error) { if (active) onError(I18n.describe(error)); }
       })();
       return () => { active = false; root.google?.accounts?.id?.cancel(); };
-    }, [client, clientId, attempt]);
+    }, [client, clientId, attempt, locale]);
     return e('div', { className: 'google-sign-in', ref: target });
   }
 
   function AccountDialog({ account, onClose }) {
+    I18n.useLocale();
     const ref = React.useRef(null);
     const reset = React.useMemo(() => new URLSearchParams(root.location.hash.slice(1)), []);
     const [mode, setMode] = React.useState(reset.has('resetCode') ? 'reset' : 'login');
@@ -165,46 +168,47 @@
             ? 'If a message was needed, it was saved to local test mail. No email was sent.'
             : mode === 'forgot' ? 'If that account exists, a password-reset email has been sent.' : 'If confirmation is needed, an email has been sent.');
         }
-      } catch (failure) { setError(failure.message); }
+      } catch (failure) { setError(I18n.describe(failure)); }
       finally { setBusy(false); setPassword(''); setConfirm(''); }
     }
     const unavailable = !account.config?.enabled;
     const emailUnavailable = unavailable || !account.config?.email_enabled;
     return e('dialog', { className: 'account-dialog', ref, 'aria-labelledby': 'account-title', onCancel: onClose },
-      e('div', { className: 'account-heading' }, e('h2', { id: 'account-title' }, title),
-        e('button', { type: 'button', className: 'tool', title: 'Close', 'aria-label': 'Close sign-in', onClick: onClose },
+      e('div', { className: 'account-heading' }, e('h2', { id: 'account-title' }, t(title)),
+        e('button', { type: 'button', className: 'tool', title: t('Close'), 'aria-label': t('Close sign-in'), onClick: onClose },
           e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, 'aria-hidden': true },
             e('path', { d: 'm18 6-12 12M6 6l12 12' })))),
       mode === 'login' && account.config?.google_client_id ? e(GoogleButton, { client: account.client,
         clientId: account.config.google_client_id, onSuccess: onClose, onError: setError }) : null,
-      account.loading ? e('p', { role: 'status' }, 'Loading sign-in...') : null,
-      unavailable ? e('p', { className: 'message', role: 'status' }, account.error || 'Sign-in is not configured yet.') : null,
-      !unavailable && emailUnavailable && mode !== 'login' ? e('p', { className: 'message', role: 'status' }, 'Email registration is not available yet.') : null,
+      account.loading ? e('p', { role: 'status' }, t('Loading sign-in...')) : null,
+      unavailable ? e('p', { className: 'message', role: 'status' }, t(account.error || 'Sign-in is not configured yet.')) : null,
+      !unavailable && emailUnavailable && mode !== 'login' ? e('p', { className: 'message', role: 'status' }, t('Email registration is not available yet.')) : null,
       account.config?.email_delivery === 'local_test' ? e('p', { className: 'account-message', role: 'status' },
-        'Local test mail only. Messages are saved on this computer, not sent to an inbox.') : null,
+        t('Local test mail only. Messages are saved on this computer, not sent to an inbox.')) : null,
       e('form', { onSubmit: submit, className: 'account-form' },
-        e('div', { className: 'field' }, e('label', { htmlFor: 'account-email' }, 'Email'),
+        e('div', { className: 'field' }, e('label', { htmlFor: 'account-email' }, t('Email')),
           e('input', { id: 'account-email', type: 'email', required: true, autoComplete: 'email', maxLength: 254,
             value: email, onChange: event => setEmail(event.target.value), disabled: busy || unavailable })),
-        ['login', 'register', 'reset'].includes(mode) ? e('div', { className: 'field' }, e('label', { htmlFor: 'account-password' }, 'Password'),
+        ['login', 'register', 'reset'].includes(mode) ? e('div', { className: 'field' }, e('label', { htmlFor: 'account-password' }, t('Password')),
           e('input', { id: 'account-password', type: 'password', required: true, minLength: mode === 'login' ? 1 : 12,
             maxLength: 128, autoComplete: mode === 'login' ? 'current-password' : 'new-password',
             value: password, onChange: event => setPassword(event.target.value), disabled: busy || unavailable })) : null,
-        ['register', 'reset'].includes(mode) ? e('div', { className: 'field' }, e('label', { htmlFor: 'account-confirm' }, 'Confirm Password'),
+        ['register', 'reset'].includes(mode) ? e('div', { className: 'field' }, e('label', { htmlFor: 'account-confirm' }, t('Confirm Password')),
           e('input', { id: 'account-confirm', type: 'password', required: true, minLength: 12, maxLength: 128, autoComplete: 'new-password',
             value: confirm, onChange: event => setConfirm(event.target.value), disabled: busy || emailUnavailable })) : null,
-        error ? e('p', { className: 'message error', role: 'alert' }, error) : null,
-        message ? e('p', { className: 'account-message', role: 'status' }, message) : null,
+        error ? e('p', { className: 'message error', role: 'alert' }, t(error)) : null,
+        message ? e('p', { className: 'account-message', role: 'status' }, t(message)) : null,
         e('button', { className: 'primary', type: 'submit', disabled: busy || unavailable || (mode !== 'login' && emailUnavailable) },
-          busy ? 'Please wait...' : { login: 'Sign In With Email', register: 'Create Account', forgot: 'Send Reset Email', reset: 'Save Password', resend: 'Resend Confirmation' }[mode])),
-      e('nav', { className: 'account-links', 'aria-label': 'Account options' },
+          t(busy ? 'Please wait...' : { login: 'Sign In With Email', register: 'Create Account', forgot: 'Send Reset Email', reset: 'Save Password', resend: 'Resend Confirmation' }[mode]))),
+      e('nav', { className: 'account-links', 'aria-label': t('Account options') },
         (mode === 'login' ? [['register', 'Create account'], ['forgot', 'Forgot password'], ['resend', 'Resend confirmation']]
           : [['login', 'Back to sign in']]).map(([next, label]) => e('button', { key: next, type: 'button', className: 'text-button',
-            disabled: busy, onClick: () => change(next) }, label)))
+            disabled: busy, onClick: () => change(next) }, t(label))))
     );
   }
 
   function SourceReader({ account, book, section, language, onSignIn }) {
+    const { locale } = I18n.useLocale();
     const [source, setSource] = React.useState(null);
     const [error, setError] = React.useState('');
     const [loading, setLoading] = React.useState(false);
@@ -220,17 +224,17 @@
         const read = requiresLogin ? account.client.read : account.client.readPublic;
         read(`/v1/books/${encodeURIComponent(book.id)}/source${query}`, controller.signal)
           .then(data => { if (!controller.signal.aborted) setSource({ key, text: data.text }); })
-          .catch(failure => { if (!controller.signal.aborted) setError(failure.message); })
+          .catch(failure => { if (!controller.signal.aborted) setError(I18n.describe(failure)); })
           .finally(() => { if (!controller.signal.aborted) setLoading(false); });
       }
       return () => controller.abort();
     }, [account.client, reader, key, accessKnown, requiresLogin]);
-    return e('section', { className: 'source-reader', 'aria-label': 'Selected text' },
-      e('div', { className: 'source-reader-heading' }, e('h2', null, section ? window.TymChapters.sectionLabel(section, book.sections.indexOf(section), language) : 'Full Text')),
-      !accessKnown ? e('p', { role: 'status' }, account.error || 'Loading text access...')
-        : requiresLogin && !reader ? e('button', { type: 'button', className: 'secondary', onClick: onSignIn }, 'Sign in to read text')
-        : loading ? e('p', { role: 'status' }, 'Loading text...')
-          : error ? e('p', { role: 'alert', className: 'message error' }, error)
+    return e('section', { className: 'source-reader', 'aria-label': t('Selected text') },
+      e('div', { className: 'source-reader-heading' }, e('h2', null, section ? window.TymChapters.sectionLabel(section, book.sections.indexOf(section), locale, { useHeadingLanguage: false }) : t('Full Text'))),
+      !accessKnown ? e('p', { role: 'status' }, t(account.error || 'Loading text access...'))
+        : requiresLogin && !reader ? e('button', { type: 'button', className: 'secondary', onClick: onSignIn }, t('Sign in to read text'))
+        : loading ? e('p', { role: 'status' }, t('Loading text...'))
+          : error ? e('p', { role: 'alert', className: 'message error' }, t(error))
             : source?.key === key ? e('pre', { className: 'source-prose', lang: language, tabIndex: 0 }, source.text) : null);
   }
 

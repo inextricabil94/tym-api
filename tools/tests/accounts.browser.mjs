@@ -104,7 +104,7 @@ try {
     enabled: true, email_enabled: true, email_delivery: 'local_test', text_requires_login: requiresLogin }) }));
   await page.goto(process.env.TYM_UI_URL || 'http://127.0.0.1:8780/');
   await page.locator('#hosted-book').selectOption('fixture');
-  assert.deepEqual(await page.locator('#chapter option').allTextContents(), ['Capitolul 1', 'Capitolul 2']);
+  assert.deepEqual(await page.locator('#chapter option').allTextContents(), ['Chapter 1', 'Chapter 2']);
   if (requiresLogin) {
     assert.equal(await page.locator('.source-prose').count(), 0);
     await page.getByRole('button', { name: 'Sign in to read text', exact: true }).click();

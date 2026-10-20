@@ -337,11 +337,12 @@ public sealed record ErrorResponse(string Error);
 
 public sealed record EntityRecognitionRequest(string Text, string Language = "en");
 public sealed record RecognizedEntity(string Name, string Label, int MentionCount, int SpanStart, int SpanEnd,
-    int ResolvedMentionCount = 0, IReadOnlyList<string>? ReferenceForms = null, IReadOnlyList<string>? PartsOfSpeech = null);
+    int ResolvedMentionCount = 0, IReadOnlyList<string>? ReferenceForms = null, IReadOnlyList<string>? PartsOfSpeech = null,
+    string RecognitionSource = "proper_name_rule", string? ModelLabel = null);
 public sealed record EntityReference(string Text, string Label, int SpanStart, int SpanEnd,
     IReadOnlyList<string> Antecedents, string Resolution, string? PartOfSpeech = null);
 public sealed record EntityRecognitionResponse(string Language, string Method, IReadOnlyList<RecognizedEntity> Entities,
-    IReadOnlyList<EntityReference>? References = null, PosFilterInfo? PosFilter = null);
+    IReadOnlyList<EntityReference>? References = null, PosFilterInfo? PosFilter = null, NerInfo? Ner = null);
 
 public sealed record RateLimitErrorResponse(
     string Error,
@@ -1023,7 +1024,11 @@ internal static partial class TymAnalyzer
     public static EntityRecognitionResponse RecognizeEntities(string text, string language)
     {
         language = NormalizeLanguageCode(language);
-        var pos = TymPosTagger.Tag(text, language);
+        return RecognizeTaggedEntities(text, language, TymPosTagger.Tag(text, language));
+    }
+
+    internal static EntityRecognitionResponse RecognizeTaggedEntities(string text, string language, PosTaggedText pos)
+    {
         var entities = new Dictionary<string, RecognizedEntity>(StringComparer.OrdinalIgnoreCase);
         var pattern = IsRomanian(language) ? RomanianEntityPattern() : EntityPattern();
         var stopwords = IsRomanian(language) ? RomanianEntityStopwords : EntityStopwords;
@@ -1031,10 +1036,28 @@ internal static partial class TymAnalyzer
         var sentenceIndex = 0;
         foreach (Match sentence in SentenceWithOffsetPattern().Matches(text))
         {
+            foreach (var span in pos.EntitiesOverlapping(sentence.Index, sentence.Index + sentence.Length)
+                .Where(span => span.SpanStart >= sentence.Index))
+            {
+                var label = span.Label switch
+                {
+                    "PERSON" or "PER" => "PERSON",
+                    "GPE" or "LOC" or "FAC" or "FACILITY" => "LOCATION",
+                    "ORG" or "ORGANIZATION" => "ORGANIZATION",
+                    _ => null
+                };
+                var parts = pos.Overlapping(span.SpanStart, span.SpanEnd).Select(token => token.Pos).Distinct().ToArray();
+                if (label is null || !parts.Any(part => part is "PROPN" or "NOUN")) continue;
+                var name = text[span.SpanStart..span.SpanEnd];
+                mentions.Add(new NamedMention(name, label, span.SpanStart, span.SpanEnd, sentenceIndex,
+                    "trained_ner", span.Label, parts));
+            }
             var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (Match match in pattern.Matches(sentence.Value))
             foreach (var part in ProperNameParts(text, sentence.Index + match.Index, sentence.Index + match.Index + match.Length, pos))
             {
+                // Never turn a fragment of a model span (including dates/numbers) into a fallback person.
+                if (pos.EntitiesOverlapping(part.Start, part.Start + part.Name.Length).Any()) continue;
                 var name = part.Name;
                 if (name.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(stopwords.Contains)
                     || LooksLikeTemporalEntity(name, language) || AnaphoraResolution.IsReference(name, language)) continue;
@@ -1044,13 +1067,18 @@ internal static partial class TymAnalyzer
                     labels[name] = label;
                 }
                 var start = part.Start;
-                var key = $"{label}:{name}";
                 mentions.Add(new NamedMention(name, label, start, start + name.Length, sentenceIndex));
-                entities[key] = entities.TryGetValue(key, out var existing)
-                    ? existing with { MentionCount = existing.MentionCount + 1 }
-                    : new RecognizedEntity(name, label, 1, start, start + name.Length, PartsOfSpeech: ["PROPN"]);
             }
             sentenceIndex++;
+        }
+        mentions.Sort((left, right) => left.Start.CompareTo(right.Start));
+        foreach (var mention in mentions)
+        {
+            var key = $"{mention.Label}:{mention.Name}";
+            entities[key] = entities.TryGetValue(key, out var existing)
+                ? existing with { MentionCount = existing.MentionCount + 1 }
+                : new RecognizedEntity(mention.Name, mention.Label, 1, mention.Start, mention.End,
+                    PartsOfSpeech: mention.PartsOfSpeech ?? ["PROPN"], RecognitionSource: mention.Source, ModelLabel: mention.ModelLabel);
         }
         return AnaphoraResolution.Resolve(text, language, mentions, entities.Values.ToList(), pos);
     }

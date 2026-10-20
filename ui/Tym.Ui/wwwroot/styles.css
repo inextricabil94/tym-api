@@ -90,7 +90,16 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   gap: 20px;
+  flex-wrap: wrap;
 }
+
+.locale-control { display: grid; gap: 4px; width: 150px; flex: 0 0 150px; }
+.locale-control label { color: var(--muted); font-size: 12px; }
+.locale-control .language-select { width: 100%; min-height: 36px; padding: 6px 10px; }
+.brand { min-width: 0; }
+.brand strong, .brand > span { overflow-wrap: anywhere; }
+.account-tools .secondary { white-space: normal; }
+.panel-header { flex-wrap: wrap; }
 
 .account-tools { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .account-email { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; }
@@ -458,7 +467,7 @@ textarea:focus-visible {
 
 .density-cache-control {
   flex: 1 1 180px;
-  max-width: 230px;
+  max-width: 270px;
   min-width: 0;
 }
 
@@ -482,6 +491,8 @@ textarea:focus-visible {
   background: var(--bg-deep);
   font: 500 12px var(--mono);
 }
+
+.zoom-tools .tool { min-width: max-content; }
 
 .theme-toggle { display: grid; place-items: center; width: 44px; height: 44px; }
 .track-paging .tool { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; }

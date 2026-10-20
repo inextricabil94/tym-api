@@ -2,7 +2,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-internal sealed record NamedMention(string Name, string Label, int Start, int End, int Sentence);
+internal sealed record NamedMention(string Name, string Label, int Start, int End, int Sentence,
+    string Source = "proper_name_rule", string? ModelLabel = null, IReadOnlyList<string>? PartsOfSpeech = null);
 internal readonly record struct HighlightSpan(int Start, int End);
 
 internal static partial class AnaphoraResolution
@@ -90,7 +91,8 @@ internal static partial class AnaphoraResolution
                 var key = named.Label + ":" + named.Name;
                 var gender = state.GetValueOrDefault(key)?.Gender ?? "";
                 state[key] = new Antecedent(named.Name, named.Label, named.Sentence, named.Start, gender);
-                references.Add(new EntityReference(named.Name, named.Label, named.Start, named.End, [named.Name], "explicit_name", "PROPN"));
+                references.Add(new EntityReference(named.Name, named.Label, named.Start, named.End, [named.Name], "explicit_name",
+                    string.Join("+", named.PartsOfSpeech ?? ["PROPN"])));
                 continue;
             }
             var profile = profiles[Fold(token.Text)];
@@ -149,13 +151,16 @@ internal static partial class AnaphoraResolution
         entities.AddRange(references.Where(reference => reference.Antecedents.Count == 0 && reference.PartOfSpeech == "PRON"
                 && !pos.Overlapping(reference.SpanStart, reference.SpanEnd).Any(token => token.Possessive))
             .GroupBy(reference => reference.Text, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new RecognizedEntity(group.First().Text, "REFERENCE", group.Count(), group.First().SpanStart, group.First().SpanEnd, PartsOfSpeech: ["PRON"])));
-        var excluded = pos.Tokens.Where(token => token.Pos is not ("PROPN" or "PRON") || token.Tag == "EX")
+            .Select(group => new RecognizedEntity(group.First().Text, "REFERENCE", group.Count(), group.First().SpanStart, group.First().SpanEnd,
+                PartsOfSpeech: ["PRON"], RecognitionSource: "unresolved_reference")));
+        var excluded = pos.Tokens.Where(token => token.Pos is not ("PROPN" or "NOUN" or "PRON") || token.Tag == "EX")
             .GroupBy(token => token.Tag == "EX" ? "EXPLETIVE" : token.Pos)
             .ToDictionary(group => group.Key, group => group.Count());
-        return new EntityRecognitionResponse(language, "spacy-pos+rule-ner-anaphora-en-ro-v3", entities.OrderBy(entity => entity.Label)
+        return new EntityRecognitionResponse(language, "spacy-trained-ner+pos+rule-anaphora-en-ro-v4", entities.OrderBy(entity => entity.Label)
             .ThenBy(entity => entity.Name, StringComparer.OrdinalIgnoreCase).ToList(), references,
-            new PosFilterInfo(pos.Provider, pos.Model, ["PROPN", "PRON"], excluded));
+            new PosFilterInfo(pos.Provider, pos.Model, ["PROPN", "NOUN", "PRON"], excluded),
+            new NerInfo(pos.Provider, pos.Model, pos.PipelineComponents,
+                pos.Entities.GroupBy(span => span.Label).ToDictionary(group => group.Key, group => group.Count())));
     }
 
     private static string Fold(string text) => string.Concat(text.Normalize(NormalizationForm.FormD)

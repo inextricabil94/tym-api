@@ -264,7 +264,7 @@ paths:
     post:
       operationId: recognizeEntities
       summary: Recognize entities and resolve references for highlight selection
-      description: Local English/Romanian spaCy POS tagging filters rule-based NER and conservative two-sentence anaphora resolution. Selectable names require PROPN; standalone references require nonpossessive PRON. Other POS classes are excluded from standalone options, but resolved possessives/place adverbs can remain linked evidence. Ambiguous, unsupported and quoted references stay unresolved. No LLM or trained coreference model. Separate limit of 30 requests per minute per IP; does not consume the diagram quota. Missing Python/runtime/models return 503 without an unfiltered fallback.
+      description: Local trained English/Romanian spaCy NER supplies complete person, place and organization spans with at least one NOUN or PROPN; internal function words are preserved. Proper-name rules fill uncovered PROPN candidates with explicit provenance, never fragments of any model span. Standalone references require nonpossessive PRON. Conservative two-sentence anaphora remains rule-based; ambiguous, unsupported and quoted references stay unresolved. No LLM. Separate limit of 30 requests per minute per IP; does not consume the diagram quota. Missing Python/runtime/models or a missing NER component returns 503 without an unfiltered fallback. Event, temporal and TimeML extraction are unchanged.
       requestBody:
         required: true
         content:
@@ -289,13 +289,27 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [language, method, entities, references, pos_filter]
+                required: [language, method, entities, references, pos_filter, ner]
                 properties:
                   language:
                     type: string
                   method:
                     type: string
-                    const: spacy-pos+rule-ner-anaphora-en-ro-v3
+                    const: spacy-trained-ner+pos+rule-anaphora-en-ro-v4
+                  ner:
+                    type: object
+                    required: [provider, model, pipeline_components, raw_entity_counts]
+                    properties:
+                      provider: { type: string, const: spaCy }
+                      model: { type: string }
+                      pipeline_components:
+                        type: array
+                        items: { type: string }
+                        description: Active model components; includes ner.
+                      raw_entity_counts:
+                        type: object
+                        additionalProperties: { type: integer, minimum: 0 }
+                        description: All predicted model spans by original label, including classes not offered in the picker. Not accuracy or calibrated confidence.
                   pos_filter:
                     type: object
                     required: [provider, model, allowed_pos, excluded_token_counts]
@@ -310,8 +324,8 @@ paths:
                         type: array
                         items:
                           type: string
-                          enum: [PROPN, PRON]
-                        description: Eligible standalone POS classes; candidate and reference rules further restrict options.
+                          enum: [PROPN, NOUN, PRON]
+                        description: NOUN is eligible only within a trained entity span, not as an arbitrary standalone common noun. Rules require PROPN; unresolved references require PRON.
                       excluded_token_counts:
                         type: object
                         additionalProperties:
@@ -322,13 +336,20 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [name, label, mention_count, span_start, span_end, parts_of_speech]
+                      required: [name, label, mention_count, span_start, span_end, parts_of_speech, recognition_source]
                       properties:
                         name:
                           type: string
                         label:
                           type: string
-                          enum: [PERSON, LOCATION, REFERENCE]
+                          enum: [PERSON, LOCATION, ORGANIZATION, REFERENCE]
+                        recognition_source:
+                          type: string
+                          enum: [trained_ner, proper_name_rule, unresolved_reference]
+                          description: Provenance of the first explicit/selectable occurrence. Not a per-entity confidence score.
+                        model_label:
+                          type: [string, "null"]
+                          description: Original trained label for the first occurrence, such as ORG or ORGANIZATION; null for rule/reference candidates.
                         mention_count:
                           type: integer
                           minimum: 1
@@ -345,8 +366,7 @@ paths:
                           minItems: 1
                           items:
                             type: string
-                            enum: [PROPN, PRON]
-                          description: PROPN for named entities; PRON for unresolved reference options.
+                          description: Distinct actual POS classes in the first name span. Trained spans can contain internal ADP, DET or ADJ; rule names require PROPN and unresolved references PRON.
                         span_start:
                           type: integer
                           description: First explicit name/reference start in UTF-16 code units.
@@ -362,7 +382,7 @@ paths:
                           type: string
                         label:
                           type: string
-                          enum: [PERSON, LOCATION, PRONOUN, DEICTIC]
+                          enum: [PERSON, LOCATION, ORGANIZATION, PRONOUN, DEICTIC]
                         span_start:
                           type: integer
                         span_end:

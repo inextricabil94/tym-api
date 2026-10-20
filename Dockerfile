@@ -17,7 +17,7 @@ RUN apt-get update \
 COPY tools/requirements-pos.txt /tmp/requirements-pos.txt
 RUN python3 -m venv /opt/tym-pos \
     && /opt/tym-pos/bin/pip install --no-cache-dir -r /tmp/requirements-pos.txt \
-    && /opt/tym-pos/bin/python -c "import spacy; [spacy.load(name, exclude=['parser', 'ner', 'lemmatizer', 'senter'])('Adam arrived.') for name in ['en_core_web_sm', 'ro_core_news_sm']]" \
+    && /opt/tym-pos/bin/python -c "import spacy; models = [spacy.load(name, exclude=['parser', 'lemmatizer', 'senter']) for name in ['en_core_web_sm', 'ro_core_news_sm']]; assert all('ner' in n.pipe_names for n in models); [n('Adam arrived.') for n in models]" \
     && rm /tmp/requirements-pos.txt
 
 ENV ASPNETCORE_URLS=http://+:8080 \

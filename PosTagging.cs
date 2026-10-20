@@ -6,11 +6,28 @@ using System.Text.Json;
 public sealed record PosToken(int SpanStart, int SpanEnd, string Pos, string Tag, bool Possessive);
 public sealed record PosFilterInfo(string Provider, string Model, IReadOnlyList<string> AllowedPos,
     IReadOnlyDictionary<string, int> ExcludedTokenCounts);
+public sealed record NerInfo(string Provider, string Model, IReadOnlyList<string> PipelineComponents,
+    IReadOnlyDictionary<string, int> RawEntityCounts);
+internal sealed record NerSpan(int SpanStart, int SpanEnd, string Label);
 
 internal sealed class PosTaggingUnavailableException : Exception { }
 
-internal sealed record PosTaggedText(string Provider, string Model, int CharacterCount, IReadOnlyList<PosToken> Tokens)
+internal sealed record PosTaggedText(string Provider, string Model, int CharacterCount, IReadOnlyList<PosToken> Tokens,
+    IReadOnlyList<NerSpan> Entities, IReadOnlyList<string> PipelineComponents)
 {
+    public IEnumerable<NerSpan> EntitiesOverlapping(int start, int end)
+    {
+        var low = 0;
+        var high = Entities.Count;
+        while (low < high)
+        {
+            var middle = (low + high) / 2;
+            if (Entities[middle].SpanEnd <= start) low = middle + 1;
+            else high = middle;
+        }
+        for (var index = low; index < Entities.Count && Entities[index].SpanStart < end; index++) yield return Entities[index];
+    }
+
     public IEnumerable<PosToken> Overlapping(int start, int end)
     {
         var low = 0;
@@ -47,18 +64,29 @@ internal static class TymPosTagger
                 if (worker is null || worker.HasExited) StartWorker();
                 worker!.StandardInput.WriteLine(JsonSerializer.Serialize(new { text, language }, Json));
                 worker.StandardInput.Flush();
-                var line = worker.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(60)).GetAwaiter().GetResult();
+                // Trained NER on complete books needs a bounded budget above short interactive lookups.
+                var budget = TimeSpan.FromSeconds(text.Length > 100_000 ? 180 : 60);
+                var line = worker.StandardOutput.ReadLineAsync().WaitAsync(budget).GetAwaiter().GetResult();
                 if (line is null) throw new PosTaggingUnavailableException();
                 using var response = JsonDocument.Parse(line);
                 if (response.RootElement.TryGetProperty("error", out _)) throw new PosTaggingUnavailableException();
                 var tagged = JsonSerializer.Deserialize<PosTaggedText>(line, Json)!;
-                if (tagged.Provider != "spaCy" || tagged.CharacterCount != text.Length) throw new PosTaggingUnavailableException();
+                if (tagged.Provider != "spaCy" || tagged.CharacterCount != text.Length || tagged.Tokens is null
+                    || tagged.Entities is null || tagged.PipelineComponents is null || !tagged.PipelineComponents.Contains("ner"))
+                    throw new PosTaggingUnavailableException();
                 var end = 0;
                 foreach (var token in tagged.Tokens)
                 {
                     if (token.SpanStart < end || token.SpanEnd <= token.SpanStart || token.SpanEnd > text.Length || string.IsNullOrEmpty(token.Pos))
                         throw new PosTaggingUnavailableException();
                     end = token.SpanEnd;
+                }
+                end = 0;
+                foreach (var entity in tagged.Entities)
+                {
+                    if (entity.SpanStart < end || entity.SpanEnd <= entity.SpanStart || entity.SpanEnd > text.Length
+                        || string.IsNullOrWhiteSpace(entity.Label)) throw new PosTaggingUnavailableException();
+                    end = entity.SpanEnd;
                 }
                 Cache[key] = tagged;
                 CacheKeys.Enqueue(key);

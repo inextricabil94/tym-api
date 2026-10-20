@@ -3,6 +3,7 @@ from pathlib import Path
 import re
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 
 spec = importlib.util.spec_from_file_location("tym_pos_worker", Path(__file__).parents[1] / "tym_pos_worker.py")
@@ -12,13 +13,21 @@ spec.loader.exec_module(worker)
 
 class FakeModel:
     meta = {"lang": "en", "name": "test", "version": "1.0"}
+    pipe_names = ["tagger", "ner"]
 
-    def __init__(self, pos="PROPN", tag="NNP"):
-        self.pos, self.tag, self.chunks = pos, tag, []
+    def __init__(self, pos="PROPN", tag="NNP", entity_text=None):
+        self.pos, self.tag, self.chunks, self.entity_text = pos, tag, [], entity_text
 
     def __call__(self, text):
         self.chunks.append(text)
-        return [FakeToken(match.group(), match.start(), self.pos, self.tag) for match in re.finditer(r"\S+", text)]
+        doc = FakeDoc(FakeToken(match.group(), match.start(), self.pos, self.tag) for match in re.finditer(r"\S+", text))
+        doc.ents = [SimpleNamespace(start_char=match.start(), end_char=match.end(), label_="ORG")
+                    for match in re.finditer(re.escape(self.entity_text), text)] if self.entity_text else []
+        return doc
+
+
+class FakeDoc(list):
+    pass
 
 
 class FakeToken(SimpleNamespace):
@@ -58,6 +67,30 @@ class PosWorkerChecks(unittest.TestCase):
     def test_possessive_fine_tag_is_retained(self):
         response = self.annotate("Her", FakeModel(pos="PRON", tag="PRP$"))
         self.assertTrue(response["tokens"][0]["possessive"])
+
+    def test_trained_entity_spans_use_utf16_and_preserve_internal_words(self):
+        response = self.annotate("\U0001f642 Bank of England", FakeModel(entity_text="Bank of England"))
+        self.assertEqual(response["entities"], [{"span_start": 3, "span_end": 18, "label": "ORG"}])
+        self.assertIn("ner", response["pipeline_components"])
+
+    def test_entities_after_chunk_boundaries_keep_global_offsets(self):
+        text = "word " * 4000 + "Bank of England"
+        response = self.annotate(text, FakeModel(entity_text="Bank of England"))
+        self.assertEqual(response["entities"], [{"span_start": 20000, "span_end": len(text), "label": "ORG"}])
+
+    def test_loading_retains_ner(self):
+        worker.models.pop("en", None)
+        with patch.object(worker.spacy, "load", return_value=FakeModel()) as load:
+            worker.annotate("Adam", "en")
+        self.assertNotIn("ner", load.call_args.kwargs["exclude"])
+
+    def test_model_without_ner_is_rejected(self):
+        worker.models.pop("en", None)
+        model = FakeModel()
+        model.pipe_names = ["tagger"]
+        with patch.object(worker.spacy, "load", return_value=model):
+            with self.assertRaisesRegex(ValueError, "trained NER"):
+                worker.annotate("Adam", "en")
 
 
 if __name__ == "__main__":

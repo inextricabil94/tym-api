@@ -119,9 +119,9 @@
     return sections.map((section, index) => ({ ...section, end: sections[index + 1]?.start ?? text.length }));
   }
 
-  function sectionLabel(section, index, language = 'en') {
+  function sectionLabel(section, index, language = 'en', { useHeadingLanguage = true } = {}) {
     const original = section.label || '';
-    const ro = language === 'ro' || /^capitol(?:ul)?\b/i.test(original);
+    const ro = language === 'ro' || (useHeadingLanguage && /^capitol(?:ul)?\b/i.test(original));
     const part = original.match(/\s*\/\s*Part\s+(\d+)\s*$/i);
     const heading = original.replace(/\s*\/\s*Part\s+\d+\s*$/i, '')
       .replace(/^(?:capitolul|capitol|chapter)\s+/i, '');

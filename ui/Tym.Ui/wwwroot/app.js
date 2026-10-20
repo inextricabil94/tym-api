@@ -1,4 +1,6 @@
 const e = React.createElement;
+const I18n = window.TymI18n;
+const t = I18n.t;
 
 const apiDefault = (window.TYM_CONFIG && window.TYM_CONFIG.apiBaseUrl)
   || 'https://tym-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io';
@@ -77,7 +79,7 @@ function count(value) {
 function metric(label, value) {
   return e('div', { className: 'metric', key: label },
     e('b', null, value),
-    e('span', null, label)
+    e('span', null, t(label))
   );
 }
 
@@ -129,7 +131,7 @@ function renderTrackPage(parsed, tracks) {
   const height = Math.ceil(y + 24);
   root.setAttribute('height', String(height));
   root.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  root.setAttribute('aria-label', `TYM time tracks ${tracks.map(track => track.id).join(', ')}`);
+  root.setAttribute('aria-label', t('TYM time tracks {ids}', { ids: tracks.map(track => track.id).join(', ') }));
   return new XMLSerializer().serializeToString(root);
 }
 
@@ -139,7 +141,7 @@ function formatJson(value) {
 
 function score(value) {
   const number = Number(value);
-  return Number.isFinite(number) && number > 0 ? `${Math.round(number * 100)}%` : 'n/a';
+  return Number.isFinite(number) && number > 0 ? `${Math.round(number * 100)}%` : t('n/a');
 }
 
 function analysisValue(analysis, snakeName, camelName, fallback) {
@@ -182,6 +184,7 @@ function timeMlSummary(timeMl) {
 }
 
 function App() {
+  const { locale, setLocale } = I18n.useLocale();
   const [theme, setTheme] = React.useState(document.documentElement.dataset.theme);
   const [selectedExample, setSelectedExample] = React.useState(examples[0].id);
   const [sourceText, setSourceText] = React.useState(examples[0].text);
@@ -268,7 +271,7 @@ function App() {
     setLibrary([]); setSelectedBookId(''); setLibraryError(''); setLoadingLibrary(true);
     fetch(`${apiBaseUrl.trim().replace(/\/+$/, '')}/v1/books`, { signal: request.signal, cache: 'no-store' })
       .then(async response => {
-        if (!response.ok) throw new Error(`Book catalog unavailable (HTTP ${response.status}).`);
+        if (!response.ok) throw I18n.error('Book catalog unavailable (HTTP {status}).', { status: response.status });
         const data = await response.json();
         if (!Array.isArray(data.books) || data.books.some(book => typeof book.id !== 'string'
           || typeof book.label !== 'string' || !['en', 'ro'].includes(book.language) || !Array.isArray(book.sections)))
@@ -276,7 +279,7 @@ function App() {
         if (!request.signal.aborted) {
           setLibrary(data.books);
         }
-      }).catch(error => { if (!request.signal.aborted) setLibraryError(error.message); })
+      }).catch(error => { if (!request.signal.aborted) setLibraryError(I18n.describe(error)); })
       .finally(() => { if (!request.signal.aborted) setLoadingLibrary(false); });
     return () => request.abort();
   }, [apiBaseUrl, libraryRefresh]);
@@ -304,23 +307,26 @@ function App() {
         if (!response.ok) {
           let details = null;
           try { details = await response.json(); } catch {}
-          throw new Error(response.status === 429 ? 'Entity lookup limit reached. Retry in a minute.'
-            : `Entity lookup failed (HTTP ${response.status}).${details?.error ? ` ${details.error}` : ''}`);
+          throw response.status === 429 ? I18n.error('Entity lookup limit reached. Retry in a minute.')
+            : details?.error ? I18n.apiError(details, response.status)
+              : I18n.error('Entity lookup failed (HTTP {status}).', { status: response.status });
         }
         const data = await response.json();
         if (!Array.isArray(data.entities)) throw new Error('The API returned an invalid entity list.');
         if (!data.pos_filter || data.pos_filter.provider !== 'spaCy') throw new Error('The API did not return model-backed POS filtering.');
         const recognized = data.entities.filter(entity => entity && typeof entity.name === 'string'
-          && entity.name.trim() && ['PERSON', 'LOCATION', 'REFERENCE'].includes(entity.label)
+          && entity.name.trim() && ['PERSON', 'LOCATION', 'ORGANIZATION', 'REFERENCE'].includes(entity.label)
           && Array.isArray(entity.parts_of_speech) && entity.parts_of_speech.length > 0
-          && entity.parts_of_speech.every(pos => pos === (entity.label === 'REFERENCE' ? 'PRON' : 'PROPN')));
+          && (entity.recognition_source === 'trained_ner'
+            ? entity.parts_of_speech.some(pos => pos === 'PROPN' || pos === 'NOUN')
+            : entity.parts_of_speech.every(pos => pos === (entity.label === 'REFERENCE' ? 'PRON' : 'PROPN'))));
         if (active) {
           setEntityOptions(recognized);
           setHighlightEntity(value => recognized.some(entity => entity.name === value) ? value : '');
         }
       } catch (error) {
         if (active && error.name !== 'AbortError') {
-          setEntityError(error instanceof Error ? error.message : 'Entity lookup failed.');
+          setEntityError(error instanceof Error ? I18n.describe(error) : 'Entity lookup failed.');
           setHighlightEntity('');
         }
       } finally {
@@ -348,7 +354,7 @@ function App() {
       try {
         for (const density of pending) {
           if (request.signal.aborted || generationVersion.current !== version) return;
-          setCacheStatus(`Caching density ${density}...`);
+          setCacheStatus(I18n.message('Caching density {density}...', { density }));
           const response = await fetch(`${apiBaseUrl.trim().replace(/\/+$/, '')}/v1/density-sessions/${encodeURIComponent(densitySession)}/${density}`,
             { signal: request.signal, cache: 'no-store' });
           if (!response.ok) throw new Error('Background cache paused. Current diagram remains available.');
@@ -358,11 +364,12 @@ function App() {
             ? window.TymDensityCache.append(current, density, data.view) : current);
         }
         setCacheStatus('10 densities cached');
-      } catch (error) { if (!request.signal.aborted) setCacheStatus(error.message); }
+      } catch (error) { if (!request.signal.aborted) setCacheStatus(I18n.describe(error)); }
     })();
     return () => request.abort();
   }, [densitySession, resolution.key, apiBaseUrl]);
   const svg = result?.render?.svg || result?.renderings?.svg || '';
+  const localizedSvg = React.useMemo(() => I18n.localizeSvg(svg, locale), [svg, locale]);
   const diagram = result && result.diagram ? result.diagram : {};
   const analysis = result && result.analysis ? result.analysis : null;
   const warnings = result && Array.isArray(result.warnings) ? result.warnings : [];
@@ -372,7 +379,7 @@ function App() {
   const selectedPreview = textScope === 'excerpt' ? selectedExampleItem?.preview_svg : null;
   const hasChapters = selectedBook ? sections.length > 0 : chapterCount > 0;
   const timeMl = diagram.time_ml || {};
-  const parsedTrackSvg = React.useMemo(() => parseTrackSvg(svg), [svg]);
+  const parsedTrackSvg = React.useMemo(() => parseTrackSvg(localizedSvg), [localizedSvg]);
   const trackActors = React.useMemo(() => {
     const actors = new Map();
     for (const segment of diagram.segments || []) {
@@ -399,7 +406,8 @@ function App() {
   const currentTrackPage = Math.min(trackPage, trackPageCount - 1);
   const currentGroup = displayGroups[currentTrackPage];
   const visibleTracks = React.useMemo(() => currentGroup?.tracks || [], [currentGroup]);
-  const displaySvg = React.useMemo(() => parsedTrackSvg ? renderTrackPage(parsedTrackSvg, visibleTracks) : svg, [parsedTrackSvg, visibleTracks, svg]);
+  const displaySvg = React.useMemo(() => parsedTrackSvg ? renderTrackPage(parsedTrackSvg, visibleTracks) : localizedSvg,
+    [parsedTrackSvg, visibleTracks, localizedSvg, locale]);
   const svgSize = parseSvgSize(displaySvg);
   const displayZoom = fitToWidth ? viewportWidth / svgSize.width : zoom;
 
@@ -496,7 +504,7 @@ function App() {
       let completeText = fullTextCache.current?.id === example.id ? fullTextCache.current.text : null;
       if (completeText === null) {
         const response = await fetch(example.full_text_url, { signal: request.signal, cache: 'no-store' });
-        if (!response.ok) throw new Error(`Full text could not be loaded (HTTP ${response.status}).`);
+        if (!response.ok) throw I18n.error('Full text could not be loaded (HTTP {status}).', { status: response.status });
         completeText = await response.text();
       }
       if (completeText.length !== example.full_text_characters) {
@@ -511,7 +519,7 @@ function App() {
         setChapterIndex(Math.max(0, parts.findIndex(section => section.kind === 'chapter')));
       }
     } catch (error) {
-      if (textRequest.current === request && error.name !== 'AbortError') setMessage(error.message);
+      if (textRequest.current === request && error.name !== 'AbortError') setMessage(I18n.describe(error));
     } finally {
       if (textRequest.current === request) setLoadingText(false);
     }
@@ -583,12 +591,12 @@ function App() {
           const retryHours = Number.isFinite(retrySeconds)
             ? Math.max(1, Math.ceil(retrySeconds / 3600))
             : null;
-          throw new Error(retryHours
-            ? `Daily limit reached. Try again in about ${retryHours} hour${retryHours === 1 ? '' : 's'}.`
-            : 'Daily limit reached. Try again later.');
+          throw retryHours ? I18n.error('Daily limit reached. Try again in about {count} hours.', { count: retryHours })
+            : I18n.error('Daily limit reached. Try again later.');
         }
 
-        throw new Error((apiError && apiError.error) || `API returned HTTP ${response.status}`);
+        throw apiError?.error ? I18n.apiError(apiError, response.status)
+          : I18n.error('API returned HTTP {status}', { status: response.status });
       }
 
       const data = await response.json();
@@ -612,7 +620,7 @@ function App() {
     } catch (error) {
       if (generationVersion.current !== version) return;
       setBaseResult(null);
-      setMessage(error instanceof Error ? error.message : 'Diagram generation failed.');
+      setMessage(error instanceof Error ? I18n.describe(error) : 'Diagram generation failed.');
     } finally {
       setBusy(false);
     }
@@ -623,7 +631,7 @@ function App() {
       return;
     }
 
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const blob = new Blob([localizedSvg], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -651,12 +659,12 @@ function App() {
       className: `tab ${activeTab === id ? 'active' : ''}`,
       onClick: () => setActiveTab(id),
       type: 'button'
-    }, label);
+    }, t(label));
   }
 
   function analysisCard(label, value) {
     return e('div', { className: 'analysis-card', key: label },
-      e('span', null, label),
+      e('span', null, t(label)),
       e('b', null, value)
     );
   }
@@ -664,49 +672,61 @@ function App() {
   function countBlock(title, value) {
     const entries = countEntries(value);
     return e('section', { className: 'analysis-block', key: title },
-      e('h3', null, title),
+      e('h3', null, t(title)),
       entries.length
         ? e('div', { className: 'count-grid' },
             entries.map(([label, countValue]) => e('span', { className: 'count-chip', key: label },
               e('b', null, countValue),
-              label
+              t(label)
             ))
           )
-        : e('p', { className: 'muted-line' }, 'No values.')
+        : e('p', { className: 'muted-line' }, t('No values.'))
     );
   }
 
   function sourceBlock() {
     const sources = analysisValue(analysis, 'extraction_sources', 'extractionSources', []);
     return e('section', { className: 'analysis-block' },
-      e('h3', null, 'Extraction sources'),
+      e('h3', null, t('Extraction sources')),
       sources.length
         ? e('div', { className: 'source-list' }, sources.map(source => e('code', { key: source }, source)))
-        : e('p', { className: 'muted-line' }, 'No sources.')
+        : e('p', { className: 'muted-line' }, t('No sources.'))
     );
   }
 
   function issueBlock() {
     const issues = analysisValue(analysis, 'issues', 'issues', []);
+    function issueText(issue) {
+      const counted = {
+        EVENTS_WITHOUT_ACTORS: I18n.message('Events without an explicit or carried actor: {count}.',
+          { count: (diagram.events || []).filter(event => !event.actors?.length).length }),
+        SEGMENTS_WITHOUT_TIMEX: I18n.message('Segments without an explicit temporal anchor: {count}.',
+          { count: (diagram.segments || []).filter(segment => !segment.temporal_anchor).length })
+      };
+      return t(counted[issue.code] || issue.message || '');
+    }
     const rows = issues.length
       ? issues.map(issue => e('li', { className: `issue ${issue.severity || ''}`, key: issue.code || issue.message },
           e('b', null, issue.code || 'ISSUE'),
-          e('span', null, issue.message || ''),
-          issue.evidence ? e('small', null, issue.evidence) : null
+          e('span', null, issueText(issue)),
+          issue.evidence ? e('small', null, t(issue.evidence)) : null
         ))
       : [e('li', { className: 'issue info', key: 'ok' },
           e('b', null, 'NO_ANALYSIS_ISSUES'),
-          e('span', null, 'No analysis issues were reported.'),
+          e('span', null, t('No analysis issues were reported.')),
           null
         )];
 
     return e('section', { className: 'analysis-block' },
-      e('h3', null, 'Analysis issues'),
+      e('h3', null, t('Analysis issues')),
       e('ul', { className: 'issue-list' }, rows),
       warnings.length
         ? e('div', { className: 'warnings' },
-            e('h3', null, 'Warnings'),
-            warnings.map(item => e('p', { key: item }, item))
+            e('h3', null, t('Warnings')),
+            warnings.map(item => {
+              const issue = issues.find(value => item === `${value.code}: ${value.message}`);
+              return e('p', { key: item }, issue ? `${issue.code}: ${issueText(issue)}` : t(item));
+            })
           )
         : null
     );
@@ -714,12 +734,12 @@ function App() {
 
   function dataTable(title, headers, rows, emptyText) {
     return e('section', { className: 'analysis-block wide', key: title },
-      e('h3', null, title),
+      e('h3', null, t(title)),
       rows.length
         ? e('div', { className: 'table-scroll' },
             e('table', { className: 'data-table' },
               e('thead', null,
-                e('tr', null, headers.map(header => e('th', { key: header }, header)))
+                e('tr', null, headers.map(header => e('th', { key: header }, t(header))))
               ),
               e('tbody', null,
                 rows.map((row, rowIndex) => e('tr', { key: `${title}-${rowIndex}` },
@@ -728,7 +748,7 @@ function App() {
               )
             )
           )
-        : e('p', { className: 'muted-line' }, emptyText)
+        : e('p', { className: 'muted-line' }, t(emptyText))
     );
   }
 
@@ -736,16 +756,16 @@ function App() {
     if (!analysis) {
       return e('div', { className: 'empty' },
         e('div', null,
-          e('strong', null, 'No analysis yet'),
-          e('span', null, 'Generate a diagram to inspect extractor statistics.')
+          e('strong', null, t('No analysis yet')),
+          e('span', null, t('Generate a diagram to inspect extractor statistics.'))
         )
       );
     }
 
     const eventRows = (diagram.events || []).map(item => [
       item.id,
-      item.temporal_category,
-      item.relation_to_previous,
+      t(item.temporal_category),
+      t(item.relation_to_previous),
       item.relation_cue || '-',
       score(item.confidence),
       item.text
@@ -784,15 +804,15 @@ function App() {
 
   function renderResultBody() {
     if (activeTab === 'json') {
-      return e('pre', { className: 'code-view' }, jsonText || 'No JSON result yet.');
+      return e('pre', { className: 'code-view' }, jsonText || t('No JSON result yet.'));
     }
 
     if (activeTab === 'xml') {
-      return e('pre', { className: 'code-view' }, xmlText || 'No XML result yet.');
+      return e('pre', { className: 'code-view' }, xmlText || t('No XML result yet.'));
     }
 
     if (activeTab === 'timeml') {
-      return e('pre', { className: 'code-view' }, timeMlText || 'No TimeML result yet.');
+      return e('pre', { className: 'code-view' }, timeMlText || t('No TimeML result yet.'));
     }
 
     if (activeTab === 'analysis') {
@@ -802,13 +822,13 @@ function App() {
     return e('div', { className: 'diagram-view' },
       parsedTrackSvg ? e('div', { className: 'track-toolbar' },
         e('input', {
-          type: 'search', className: 'api-input track-search', 'aria-label': 'Filter time tracks',
-          placeholder: 'Track ID or character', value: trackQuery,
+          type: 'search', className: 'api-input track-search', 'aria-label': t('Filter time tracks'),
+          placeholder: t('Track ID or character'), value: trackQuery,
           onChange: event => { setTrackQuery(event.target.value); setTrackPage(0); }
         }),
         e('div', { className: 'track-group-controls' },
           e('div', { className: 'field' },
-            e('label', { htmlFor: 'track-groups' }, 'Display groups'),
+            e('label', { htmlFor: 'track-groups' }, t('Display groups')),
             e('select', { id: 'track-groups', className: 'language-select', value: effectiveGroupCount,
               onChange: event => { setTrackGroupCount(Number(event.target.value)); setTrackPage(0); diagramArea.current?.scrollTo(0, 0); } },
               Array.from({ length: 11 }, (_, groups) => {
@@ -816,12 +836,12 @@ function App() {
                 const high = groups ? Math.ceil(totalTracks / groups) : 0;
                 const size = low === high ? String(low) : `${low}-${high}`;
                 return e('option', { key: groups, value: groups, disabled: groups > totalTracks },
-                  groups === 0 ? '0 - Paged (12 tracks)' : `${groups} - ${size} tracks/group`);
+                  groups === 0 ? t('0 - Paged (12 tracks)') : t('{groups} - {size} tracks/group', { groups, size }));
               })
             )
           ),
           effectiveGroupCount ? e('div', { className: 'field' },
-            e('label', { htmlFor: 'track-group' }, 'Group'),
+            e('label', { htmlFor: 'track-group' }, t('Group')),
             e('select', { id: 'track-group', className: 'language-select', disabled: !currentGroup,
               value: currentGroup?.index ?? '', onChange: event => {
                 setTrackPage(displayGroups.findIndex(group => group.index === Number(event.target.value)));
@@ -829,18 +849,18 @@ function App() {
               } }, currentGroup
                 ? displayGroups.map(group => e('option', { key: group.index, value: group.index },
                   `${group.index + 1}: ${diagram.tracks[group.start].id}-${diagram.tracks[group.end - 1].id} (${group.tracks.length})`))
-                : e('option', { value: '' }, 'No matching groups'))
+                : e('option', { value: '' }, t('No matching groups')))
           ) : null
         ),
         e('div', { className: 'track-paging' },
           e('span', { className: 'track-range', 'aria-live': 'polite' }, currentGroup
             ? effectiveGroupCount
-              ? `Group ${currentGroup.index + 1} of ${trackGroups.length} | Tracks ${currentGroup.start + 1}-${currentGroup.end} of ${totalTracks}${trackQuery.trim() ? ` | ${currentGroup.tracks.length} matching` : ''}`
-              : `Tracks ${currentGroup.start + 1}-${currentGroup.end} of ${filteredTracks.length}`
-            : 'No matching tracks'),
-          e('button', { type: 'button', className: 'tool', title: 'Previous tracks', 'aria-label': 'Previous tracks',
+              ? `${t('Group {index} of {total}', { index: currentGroup.index + 1, total: trackGroups.length })} | ${t('Tracks {start}-{end} of {total}', { start: currentGroup.start + 1, end: currentGroup.end, total: totalTracks })}${trackQuery.trim() ? ` | ${t('{count} matching', { count: currentGroup.tracks.length })}` : ''}`
+              : t('Tracks {start}-{end} of {total}', { start: currentGroup.start + 1, end: currentGroup.end, total: filteredTracks.length })
+            : t('No matching tracks')),
+          e('button', { type: 'button', className: 'tool', title: t('Previous tracks'), 'aria-label': t('Previous tracks'),
             disabled: currentTrackPage === 0, onClick: () => { setTrackPage(currentTrackPage - 1); diagramArea.current?.scrollTo(0, 0); } }, chapterArrow(false)),
-          e('button', { type: 'button', className: 'tool', title: 'Next tracks', 'aria-label': 'Next tracks',
+          e('button', { type: 'button', className: 'tool', title: t('Next tracks'), 'aria-label': t('Next tracks'),
             disabled: currentTrackPage >= trackPageCount - 1, onClick: () => { setTrackPage(currentTrackPage + 1); diagramArea.current?.scrollTo(0, 0); } }, chapterArrow(true))
         )
       ) : null,
@@ -856,12 +876,12 @@ function App() {
             e('div', {
               className: 'diagram-scale',
               style: fitToWidth ? null : { transform: `scale(${zoom})` },
-              dangerouslySetInnerHTML: { __html: displaySvg }
+              lang: language, dangerouslySetInnerHTML: { __html: displaySvg }
             })
           )
         : e('div', { className: 'empty' },
             e('div', null,
-              e('strong', null, svg ? 'No matching tracks' : 'No diagram yet')
+              e('strong', null, t(svg ? 'No matching tracks' : 'No diagram yet'))
             )
           )
     ));
@@ -870,58 +890,63 @@ function App() {
   return e('main', { className: 'shell' },
     e('header', { className: 'topbar' },
       e('div', { className: 'brand' },
-        e('strong', null, e('span', { className: 'brand-accent' }, 'TYM'), ' Diagram UI'),
-        e('span', null, 'Natural-language text to temporal-segment diagram')
+        e('strong', null, e('span', { className: 'brand-accent' }, 'TYM'), t(' Diagram UI')),
+        e('span', null, t('Natural-language text to temporal-segment diagram'))
       ),
       e('div', { className: 'header-tools' },
+      e('div', { className: 'locale-control' },
+        e('label', { htmlFor: 'interface-language' }, t('Interface language')),
+        e('select', { id: 'interface-language', className: 'language-select', value: locale,
+          onChange: event => setLocale(event.target.value) },
+          Object.entries(I18n.names).map(([value, name]) => e('option', { key: value, value, lang: value }, name)))),
       e('div', { className: 'account-tools' },
         account.user ? e('span', { className: 'account-email', title: account.user.email }, account.user.email) : null,
         e('button', { className: 'secondary', type: 'button', onClick: () => account.user ? account.client.logout() : setShowAccount(true) },
-          account.user ? 'Sign Out' : 'Sign In')),
+          t(account.user ? 'Sign Out' : 'Sign In'))),
       e('div', { className: 'status' },
         e('span', { className: `status-dot ${statusClass}` }),
-        e('span', null, statusText)
+        e('span', null, t(statusText))
       ),
-      e('button', { className: 'tool theme-toggle', type: 'button', title: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`,
-        'aria-label': `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`, 'aria-pressed': theme === 'light',
+      e('button', { className: 'tool theme-toggle', type: 'button', title: t(theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'),
+        'aria-label': t(theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'), 'aria-pressed': theme === 'light',
         onClick: () => setTheme(theme === 'dark' ? 'light' : 'dark') }, themeIcon(theme === 'dark')))
     ),
     showAccount ? e(window.TymAccounts.AccountDialog, { key: `${apiBaseUrl}:${accountDialogVersion}`, account, onClose: () => setShowAccount(false) }) : null,
-    account.error ? e('p', { className: 'account-banner', role: 'status' }, account.error) : null,
+    account.error ? e('p', { className: 'account-banner', role: 'status' }, t(account.error)) : null,
     e('section', { className: 'workspace' },
       e('section', { className: 'panel input-panel' },
         e('div', { className: 'panel-header' },
-          e('h1', { className: 'panel-title' }, 'Input'),
-          e('div', { className: 'tabs', role: 'tablist', 'aria-label': 'Examples' },
+          e('h1', { className: 'panel-title' }, t('Input')),
+          e('div', { className: 'tabs', role: 'tablist', 'aria-label': t('Examples') },
             examples.filter(example => !example.is_private).map(example => e('button', {
               key: example.id,
               className: `tab ${selectedExample === example.id ? 'active' : ''}`,
-              title: example.source || example.label,
+              title: example.source || t(example.label),
               disabled: busy,
               onClick: () => loadExample(example),
               type: 'button'
-            }, example.label))
+            }, t(example.label)))
           )
         ),
         e('div', { className: 'fields' },
           e('div', { className: 'field' },
-            e('label', { htmlFor: 'hosted-book' }, 'Book library'),
+            e('label', { htmlFor: 'hosted-book' }, t('Book library')),
             e('div', { className: 'entity-controls' },
               e('select', { id: 'hosted-book', className: 'language-select', value: selectedBookId,
                 disabled: busy || loadingLibrary || !library.length,
                 onChange: event => { const book = library.find(item => item.id === event.target.value); if (book) loadBook(book); } },
-                e('option', { value: '', disabled: true }, loadingLibrary ? 'Loading library...' : 'Select a book'),
+                e('option', { value: '', disabled: true }, t(loadingLibrary ? 'Loading library...' : 'Select a book')),
                 library.map(book => e('option', { key: book.id, value: book.id }, book.label))),
-              e('button', { className: 'tool entity-refresh', type: 'button', title: 'Refresh book library', 'aria-label': 'Refresh book library',
+              e('button', { className: 'tool entity-refresh', type: 'button', title: t('Refresh book library'), 'aria-label': t('Refresh book library'),
                 disabled: busy || loadingLibrary, onClick: () => setLibraryRefresh(value => value + 1) },
                 e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2,
                   strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
                   e('path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.02 6.74 2.74L21 8M21 3v5h-5' })))),
             e('small', { className: `entity-status${libraryError ? ' error' : ''}`, role: 'status' },
-              libraryError || (loadingLibrary ? 'Loading...' : `${library.length} complete books`))
+              libraryError ? t(libraryError) : loadingLibrary ? t('Loading...') : t('{count} complete books', { count: library.length }))
           ),
           bookExamples.length && !library.length ? e('div', { className: 'field' },
-            e('label', { htmlFor: 'book-example' }, 'Book example'),
+            e('label', { htmlFor: 'book-example' }, t('Book example')),
             e('select', {
               id: 'book-example',
               className: 'language-select',
@@ -932,18 +957,18 @@ function App() {
                 if (example) loadExample(example);
               }
             },
-              e('option', { value: '', disabled: true }, 'Select a book'),
+              e('option', { value: '', disabled: true }, t('Select a book')),
               bookExamples.map(example => e('option', { key: example.id, value: example.id }, example.label))
             )
           ) : null,
           picture ? e('figure', { className: 'example-visual' },
-            e('img', { src: `/assets/examples/${picture.file}`, alt: picture.alt, width: 112, height: 112, decoding: 'async' }),
-            e('figcaption', null, e('strong', null, picture.caption),
+            e('img', { src: `/assets/examples/${picture.file}`, alt: t(picture.alt), width: 112, height: 112, decoding: 'async' }),
+            e('figcaption', null, e('strong', null, t(picture.caption)),
               e('a', { href: picture.source, target: '_blank', rel: 'noopener noreferrer' }, picture.credit),
-              picture.licenseUrl ? e('a', { href: picture.licenseUrl, target: '_blank', rel: 'noopener noreferrer' }, picture.license)
-                : e('span', null, picture.license))) : null,
+              picture.licenseUrl ? e('a', { href: picture.licenseUrl, target: '_blank', rel: 'noopener noreferrer' }, t(picture.license))
+                : e('span', null, t(picture.license)))) : null,
           selectedBook || selectedExampleItem?.full_text_url || chapterCount > 0 ? e('div', { className: 'source-controls' },
-            e('div', { className: 'tabs', role: 'radiogroup', 'aria-label': 'Text scope' },
+            e('div', { className: 'tabs', role: 'radiogroup', 'aria-label': t('Text scope') },
               [['full', 'Full text'], ...(hasChapters ? [['chapters', 'Chapters']] : []),
                 ...(selectedExampleItem?.full_text_url ? [['excerpt', 'Excerpt']] : [])].map(([scope, label]) => e('button', {
                 key: scope,
@@ -952,45 +977,45 @@ function App() {
                 'aria-checked': textScope === scope,
                 className: `tab ${textScope === scope ? 'active' : ''}`,
                 disabled: busy,
-                title: label,
+                title: t(label),
                 onClick: () => selectScope(scope)
-              }, label))
+              }, t(label)))
             ),
             e('span', { className: 'text-count', 'aria-live': 'polite' }, loadingText
-              ? 'Loading...'
+              ? t('Loading...')
               : selectedSection
-                ? `${selectedCharacters.toLocaleString()} / ${(selectedBook?.character_count ?? sourceText.length).toLocaleString()} characters`
-                : `${selectedCharacters.toLocaleString()} characters`)
+                ? t('{selected} / {total} characters', { selected: I18n.number(selectedCharacters), total: I18n.number(selectedBook?.character_count ?? sourceText.length) })
+                : t('{count} characters', { count: selectedCharacters }))
           ) : null,
           selectedSection ? e('div', { className: 'field chapter-field' },
-            e('label', { htmlFor: 'chapter' }, selectedBook ? `Chapter / Section (${sections.length})` : `Chapter (${chapterCount} detected)`),
+            e('label', { htmlFor: 'chapter' }, selectedBook ? t('Chapter / Section ({count})', { count: sections.length }) : t('Chapter ({count} detected)', { count: chapterCount })),
             e('div', { className: 'chapter-controls' },
               e('select', { id: 'chapter', className: 'language-select', value: currentChapterIndex, disabled: busy || loadingText,
                 onChange: event => selectChapter(Number(event.target.value)) },
                 sections.map((section, index) => e('option', { key: index, value: index, title: section.label },
-                  window.TymChapters.sectionLabel(section, index, language)))),
-              e('button', { className: 'tool chapter-step', type: 'button', title: 'Previous chapter', 'aria-label': 'Previous chapter',
+                  window.TymChapters.sectionLabel(section, index, locale, { useHeadingLanguage: false })))),
+              e('button', { className: 'tool chapter-step', type: 'button', title: t('Previous chapter'), 'aria-label': t('Previous chapter'),
                 disabled: busy || loadingText || currentChapterIndex === 0, onClick: () => selectChapter(currentChapterIndex - 1) }, chapterArrow(false)),
-              e('button', { className: 'tool chapter-step', type: 'button', title: 'Next chapter', 'aria-label': 'Next chapter',
+              e('button', { className: 'tool chapter-step', type: 'button', title: t('Next chapter'), 'aria-label': t('Next chapter'),
                 disabled: busy || loadingText || currentChapterIndex === sections.length - 1, onClick: () => selectChapter(currentChapterIndex + 1) }, chapterArrow(true))
             ),
             e('small', { className: 'chapter-range', 'aria-live': 'polite' },
-              `Section ${currentChapterIndex + 1} of ${sections.length} | UTF-16 [${selectedSection.start}, ${selectedSection.end})`)
+              t('Section {index} of {total} | UTF-16 [{start}, {end})', { index: currentChapterIndex + 1, total: sections.length, start: selectedSection.start, end: selectedSection.end }))
           ) : null,
           selectedBook ? e(window.TymAccounts.SourceReader, { account, book: selectedBook, section: selectedSection, language,
             onSignIn: () => setShowAccount(true) }) : null,
           !selectedBook ? e('div', { className: 'field' },
-            e('label', { htmlFor: 'chapter-detection' }, 'Chapter detection'),
+            e('label', { htmlFor: 'chapter-detection' }, t('Chapter detection')),
             e('select', { id: 'chapter-detection', className: 'language-select', value: chapterDetection,
               disabled: busy || loadingText, onChange: event => {
                 setChapterDetection(event.target.value); setChapterIndex(0); clearResult();
               } },
-              e('option', { value: 'auto' }, 'Auto'),
-              e('option', { value: 'off' }, 'Prefixed headings only'),
-              e('option', { value: 'always' }, 'Include short numbered sections'))
+              e('option', { value: 'auto' }, t('Auto')),
+              e('option', { value: 'off' }, t('Prefixed headings only')),
+              e('option', { value: 'always' }, t('Include short numbered sections')))
           ) : null,
           e('div', { className: 'field' },
-            e('label', { htmlFor: 'api-url' }, 'API URL'),
+            e('label', { htmlFor: 'api-url' }, t('API URL')),
             e('input', {
               id: 'api-url',
               className: 'api-input',
@@ -1000,7 +1025,7 @@ function App() {
             })
           ),
           e('div', { className: 'field' },
-            e('label', { htmlFor: 'language' }, 'Language'),
+            e('label', { htmlFor: 'language' }, t('Text language')),
             e('select', {
               id: 'language',
               className: 'language-select',
@@ -1008,13 +1033,13 @@ function App() {
               disabled: Boolean(selectedBook),
               onChange: event => setLanguage(event.target.value)
             },
-              e('option', { value: 'en' }, 'English'),
-              e('option', { value: 'ro' }, 'Romanian')
+              e('option', { value: 'en' }, t('English')),
+              e('option', { value: 'ro' }, t('Romanian'))
             )
           ),
           e('div', { className: 'field-grid' },
             e('div', { className: 'field' },
-              e('label', { htmlFor: 'highlight' }, 'Highlight entity'),
+              e('label', { htmlFor: 'highlight' }, t('Highlight entity')),
               e('div', { className: 'entity-controls' },
               e('select', {
                 id: 'highlight',
@@ -1024,15 +1049,16 @@ function App() {
                 'aria-describedby': 'entity-status',
                 onChange: event => setHighlightEntity(event.target.value)
               },
-                e('option', { value: '' }, 'No highlight'),
-                ['PERSON', 'LOCATION', 'REFERENCE'].map(label => {
+                e('option', { value: '' }, t('No highlight')),
+                ['PERSON', 'LOCATION', 'ORGANIZATION', 'REFERENCE'].map(label => {
                   const items = entityOptions.filter(entity => entity.label === label);
-                  return items.length ? e('optgroup', { label: label === 'PERSON' ? 'People' : label === 'LOCATION' ? 'Places' : 'Unresolved references', key: label },
+                  return items.length ? e('optgroup', { label: t(label === 'PERSON' ? 'People' : label === 'LOCATION' ? 'Places'
+                    : label === 'ORGANIZATION' ? 'Organizations' : 'Unresolved references'), key: label },
                     items.map(entity => e('option', { key: `${label}:${entity.name}`, value: entity.name },
                       `${entity.name} (${entity.mention_count})${entity.reference_forms?.length ? ` - ${entity.reference_forms.join(', ')}` : ''}`))) : null;
                 })
               ),
-              e('button', { className: 'tool entity-refresh', type: 'button', title: 'Refresh entities', 'aria-label': 'Refresh entities',
+              e('button', { className: 'tool entity-refresh', type: 'button', title: t('Refresh entities'), 'aria-label': t('Refresh entities'),
                 disabled: busy || loadingText || loadingEntities || (!selectedBook && !text.trim()),
                 onClick: () => { setBookEntityRequest(bookSelectionKey); setEntityRefresh(value => value + 1); } },
                 e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2,
@@ -1041,17 +1067,17 @@ function App() {
                   e('path', { d: 'M21 3v5h-5' })))
               ),
               e('small', { id: 'entity-status', className: `entity-status${entityError ? ' error' : ''}`, role: 'status' },
-                loadingEntities ? 'Recognizing entities...' : entityError
-                  || (selectedBook && bookEntityRequest !== bookSelectionKey ? 'Not requested for this section' : `${entityOptions.length} entities detected`))
+                loadingEntities ? t('Recognizing entities...') : entityError ? t(entityError)
+                  : selectedBook && bookEntityRequest !== bookSelectionKey ? t('Not requested for this section') : t('{count} entities detected', { count: entityOptions.length }))
             ),
             e('div', { className: 'field' },
-              e('label', { htmlFor: 'width' }, 'Diagram width'),
+              e('label', { htmlFor: 'width' }, t('Diagram width')),
               e('output', { id: 'width', className: 'resolution-output' }, `${diagramWidth}px`),
-              e('small', { className: 'entity-status', 'data-testid': 'window-resolution' }, `Window ${resolution.width} x ${resolution.height}`)
+              e('small', { className: 'entity-status', 'data-testid': 'window-resolution' }, t('Window {width} x {height}', { width: resolution.width, height: resolution.height }))
             )
           ),
           e('div', { className: 'field' },
-            e('label', { htmlFor: 'track-density' }, `TT density ${trackDensity}`),
+            e('label', { htmlFor: 'track-density' }, t('TT density {density}', { density: trackDensity })),
             e('input', { id: 'track-density', className: 'range-input', type: 'range', min: '10', max: '100', step: '10',
               value: trackDensity, disabled: busy,
               onChange: event => {
@@ -1060,12 +1086,12 @@ function App() {
                 if (densityChoices.some(choice => choice.density === density)) selectDensity(density);
               } }),
             e('div', { className: 'density-scale', 'aria-hidden': true },
-              e('span', null, '10 - Overview'), e('span', null, '100 - Detailed'))
+              e('span', null, t('10 - Overview')), e('span', null, t('100 - Detailed')))
           ),
           !protectedSource ? e('div', { className: 'field' },
-            e('label', { htmlFor: 'text' }, 'Text'),
+            e('label', { htmlFor: 'text' }, t('Text')),
             e('textarea', {
-              id: 'text',
+              id: 'text', lang: language,
               className: 'text-input',
               disabled: loadingText || busy,
               value: text,
@@ -1073,44 +1099,44 @@ function App() {
             }),
             selectedSource ? e('small', { className: 'example-source' }, selectedSource) : null,
             selectedPreview && !protectedSource ? e('details', { className: 'example-preview' },
-              e('summary', null, 'Excerpt diagram preview'),
+              e('summary', null, t('Excerpt diagram preview')),
               e('img', {
                 src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(selectedPreview)}`,
-                alt: `Generated TYM diagram for ${selectedExampleItem.label}`,
+                alt: t('Generated TYM diagram for {title}', { title: t(selectedExampleItem.label) }),
                 loading: 'lazy'
               })
             ) : null
           ) : null,
           e('div', { className: 'actions' },
-            e('button', { className: 'primary', type: 'button', onClick: generate, disabled: busy || loadingText || loadingEntities }, busy ? 'Generating...' : 'Generate diagram'),
+            e('button', { className: 'primary', type: 'button', onClick: generate, disabled: busy || loadingText || loadingEntities }, t(busy ? 'Generating...' : 'Generate diagram')),
             e('div', { className: 'download-actions' },
               e('button', { className: 'secondary', type: 'button', onClick: downloadSvg, disabled: !svg }, 'SVG'),
               !protectedSource ? e('button', { className: 'secondary', type: 'button', onClick: () => downloadText('tym-diagram.json', jsonText, 'application/json'), disabled: !result }, 'JSON') : null,
               !protectedSource ? e('button', { className: 'secondary', type: 'button', onClick: () => downloadText('tym-diagram.xml', xmlText, 'application/xml'), disabled: !xmlText }, 'XML') : null
             )
           ),
-          e('div', { className: 'message', role: 'status' }, message)
+          e('div', { className: 'message', role: 'status' }, t(message))
         )
       ),
       e('section', { className: 'panel result-panel' },
         e('div', { className: 'panel-header' },
-          e('h2', { className: 'panel-title' }, 'Diagram'),
+          e('h2', { className: 'panel-title' }, t('Diagram')),
           result ? e('span', { className: 'status' }, result.model_version || '') : null
         ),
         e('div', { className: 'result-toolbar' },
           e('div', { className: 'field density-cache-control' },
-            e('label', { htmlFor: 'cached-density' }, 'Cached TT density'),
+            e('label', { htmlFor: 'cached-density' }, t('Cached TT density')),
             e('select', { id: 'cached-density', className: 'language-select', value: result ? viewerDensity : '',
               disabled: busy || densityChoices.length < 2, onChange: event => selectDensity(Number(event.target.value)) },
               densityChoices.length ? Array.from({ length: 10 }, (_, index) => (index + 1) * 10).map(density => {
                 const choice = densityChoices.find(option => option.density === density);
                 return e('option', { key: density, value: density, disabled: !choice }, choice
-                  ? `${density} - ${choice.track_count} track${choice.track_count === 1 ? '' : 's'}` : `${density} - Pending`);
+                  ? `${density} - ${t('{count} tracks', { count: choice.track_count })}` : t('{density} - Pending', { density }));
               })
-                : e('option', { value: '' }, 'No cached diagrams'))
-            , e('small', { className: 'entity-status', role: 'status' }, cacheStatus)
+                : e('option', { value: '' }, t('No cached diagrams')))
+            , e('small', { className: 'entity-status', role: 'status' }, t(cacheStatus))
           ),
-          e('div', { className: 'tabs', role: 'tablist', 'aria-label': 'Result views' },
+          e('div', { className: 'tabs', role: 'tablist', 'aria-label': t('Result views') },
             resultTab('diagram', 'SVG'),
             resultTab('analysis', 'Analysis'),
             resultTab('timeml', 'TimeML'),
@@ -1118,10 +1144,10 @@ function App() {
             !protectedSource ? resultTab('xml', 'XML') : null
           ),
           e('div', { className: 'zoom-tools' },
-            e('button', { className: `tool ${fitToWidth ? 'active' : ''}`, type: 'button', title: 'Fit diagram to viewport width', 'aria-pressed': fitToWidth, onClick: () => setFitToWidth(!fitToWidth), disabled: !svg }, 'Fit'),
-            e('button', { className: 'tool', type: 'button', title: 'Zoom out', 'aria-label': 'Zoom out', onClick: () => { setFitToWidth(false); setZoom(Math.max(0.5, Number((displayZoom - 0.25).toFixed(2)))); }, disabled: !svg }, '-'),
-            e('button', { className: 'tool zoom-value', type: 'button', title: 'Actual size (100%)', 'aria-label': 'Actual size (100%)', onClick: () => { setFitToWidth(false); setZoom(1); }, disabled: !svg }, `${Math.round(displayZoom * 100)}%`),
-            e('button', { className: 'tool', type: 'button', title: 'Zoom in', 'aria-label': 'Zoom in', onClick: () => { setFitToWidth(false); setZoom(Math.min(3, Number((displayZoom + 0.25).toFixed(2)))); }, disabled: !svg }, '+')
+            e('button', { className: `tool ${fitToWidth ? 'active' : ''}`, type: 'button', title: t('Fit diagram to viewport width'), 'aria-pressed': fitToWidth, onClick: () => setFitToWidth(!fitToWidth), disabled: !svg }, t('Fit')),
+            e('button', { className: 'tool', type: 'button', title: t('Zoom out'), 'aria-label': t('Zoom out'), onClick: () => { setFitToWidth(false); setZoom(Math.max(0.5, Number((displayZoom - 0.25).toFixed(2)))); }, disabled: !svg }, '-'),
+            e('button', { className: 'tool zoom-value', type: 'button', title: t('Actual size (100%)'), 'aria-label': t('Actual size (100%)'), onClick: () => { setFitToWidth(false); setZoom(1); }, disabled: !svg }, `${Math.round(displayZoom * 100)}%`),
+            e('button', { className: 'tool', type: 'button', title: t('Zoom in'), 'aria-label': t('Zoom in'), onClick: () => { setFitToWidth(false); setZoom(Math.min(3, Number((displayZoom + 0.25).toFixed(2)))); }, disabled: !svg }, '+')
           )
         ),
         e('div', { className: 'metrics' },

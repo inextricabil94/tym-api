@@ -81,7 +81,8 @@ foreach (var fixture in new[]
     var response = (EntityRecognitionResponse)recognize.Invoke(null, [fixture.Text, fixture.Language])!;
     Check(response.PosFilter is { Provider: "spaCy" }, "Missing model-backed POS metadata");
     Check(response.PosFilter!.Model.StartsWith(fixture.Language + "_"), "Wrong POS language/model");
-    Check(response.PosFilter.AllowedPos.SequenceEqual(new[] { "PROPN", "PRON" }), "Unexpected selectable POS classes");
+    Check(response.PosFilter.AllowedPos.SequenceEqual(new[] { "PROPN", "NOUN", "PRON" }), "Unexpected selectable POS classes");
+    Check(response.Ner is { Provider: "spaCy" } && response.Ner.PipelineComponents.Contains("ner"), "Trained NER was not active");
     Check(response.PosFilter.ExcludedTokenCounts.ContainsKey("VERB") && response.PosFilter.ExcludedTokenCounts.ContainsKey("ADV")
         && response.PosFilter.ExcludedTokenCounts.ContainsKey("DET"), "Missing excluded POS counts");
     Check(fixture.Keep.All(name => response.Entities.Any(entity => entity.Name == name)), "POS filter lost an expected name");
@@ -89,7 +90,9 @@ foreach (var fixture in new[]
     Check(response.Entities.Any(entity => entity.Label == "REFERENCE"), "POS filter lost unresolved pronoun options");
     foreach (var entity in response.Entities)
     {
-        Check(entity.PartsOfSpeech!.SequenceEqual(new[] { entity.Label == "REFERENCE" ? "PRON" : "PROPN" }), "Invalid entity POS evidence");
+        Check(entity.RecognitionSource == "trained_ner"
+            ? entity.PartsOfSpeech!.Any(pos => pos is "PROPN" or "NOUN")
+            : entity.PartsOfSpeech!.SequenceEqual(new[] { entity.Label == "REFERENCE" ? "PRON" : "PROPN" }), "Invalid entity POS evidence");
         Check(fixture.Text[entity.SpanStart..entity.SpanEnd] == entity.Name, "POS-filtered span incorrect");
     }
     posChecks++;
@@ -118,7 +121,8 @@ foreach (var fixture in new[]
     (Language: "ro", Text: "\u0218tefan a plecat. El a revenit.", Word: "El", Names: new[] { "\u0218tefan" }),
     (Language: "ro", Text: "Ana a plecat. Ea a revenit.", Word: "Ea", Names: new[] { "Ana" }),
     (Language: "ro", Text: "Ana a plecat. \u0218tefan a g\u0103sit-o.", Word: "o", Names: new[] { "Ana" }),
-    (Language: "ro", Text: "Adam \u0219i Johan au plecat. Ei au revenit.", Word: "Ei", Names: new[] { "Adam", "Johan" }),
+    // The Romanian news NER predicts Johan as LOC here; do not invent a person/coreference correction.
+    (Language: "ro", Text: "Adam \u0219i Johan au plecat. Ei au revenit.", Word: "Ei", Names: Array.Empty<string>()),
     (Language: "ro", Text: "Adam a plecat. El \u00ee\u0219i amintea.", Word: "\u00ee\u0219i", Names: new[] { "Adam" }),
     (Language: "ro", Text: "Ana a mers la Ia\u0219i. Ea a locuit acolo.", Word: "acolo", Names: new[] { "Ia\u0219i" })
 })
@@ -135,6 +139,60 @@ foreach (var fixture in new[]
         && entity.Name.Equals(fixture.Word, StringComparison.OrdinalIgnoreCase)), "Unresolved reference missing from picker");
     anaphoraChecks++;
 }
+foreach (var fixture in new[]
+{
+    (Text: "John Smith works at the Bank of England in London.", Language: "en", Name: "John Smith", Label: "PERSON"),
+    (Text: "Ion Popescu lucreaz\u0103 la Banca Na\u021bional\u0103 a Rom\u00e2niei din Bucure\u0219ti.", Language: "ro", Name: "Ion Popescu", Label: "PERSON")
+})
+{
+    var response = (EntityRecognitionResponse)recognize.Invoke(null, [fixture.Text, fixture.Language])!;
+    Check(response.Entities.Any(entity => entity.Name == fixture.Name && entity.Label == fixture.Label
+        && entity.RecognitionSource == "trained_ner" && entity.ModelLabel is not null), "Missing actual trained NER person span");
+    Check(response.Entities.Any(entity => entity.Label == "ORGANIZATION" && entity.RecognitionSource == "trained_ner"),
+        "Missing actual trained NER organization");
+    foreach (var entity in response.Entities)
+        Check(fixture.Text[entity.SpanStart..entity.SpanEnd] == entity.Name, "Trained NER changed source offsets");
+}
+// A deterministic adapter check isolates span preservation/mapping from model quality.
+var annotatedText = "\U0001f642 Bank of England met Xeno on Monday.";
+var assembly = typeof(DiagramOptions).Assembly;
+var taggedType = assembly.GetType("PosTaggedText", true)!;
+var tagged = JsonSerializer.Deserialize(JsonSerializer.Serialize(new
+{
+    Provider = "spaCy", Model = "authored-adapter-fixture", CharacterCount = annotatedText.Length,
+    Tokens = new[]
+    {
+        new PosToken(0, 2, "SYM", "", false), new PosToken(3, 7, "NOUN", "", false),
+        new PosToken(8, 10, "ADP", "", false), new PosToken(11, 18, "PROPN", "", false),
+        new PosToken(19, 22, "VERB", "", false), new PosToken(23, 27, "PROPN", "", false),
+        new PosToken(28, 30, "ADP", "", false), new PosToken(31, 37, "PROPN", "", false)
+    },
+    Entities = new[] { new { SpanStart = 3, SpanEnd = 18, Label = "ORG" }, new { SpanStart = 31, SpanEnd = 37, Label = "DATE" } },
+    PipelineComponents = new[] { "tagger", "ner" }
+}), taggedType)!;
+var projected = (EntityRecognitionResponse)assembly.GetType("TymAnalyzer", true)!
+    .GetMethod("RecognizeTaggedEntities", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [annotatedText, "en", tagged])!;
+var bank = projected.Entities.Single(entity => entity.Name == "Bank of England");
+Check(bank.Label == "ORGANIZATION" && bank.RecognitionSource == "trained_ner" && bank.ModelLabel == "ORG"
+    && bank.PartsOfSpeech!.SequenceEqual(new[] { "NOUN", "ADP", "PROPN" }), "Trained entity span/POS/provenance lost");
+Check(projected.Entities.Any(entity => entity.Name == "Xeno" && entity.RecognitionSource == "proper_name_rule"), "Explicit fallback missing");
+Check(!projected.Entities.Any(entity => entity.Name is "England" or "Monday"), "Model span became a fallback fragment");
+Check(projected.References!.Any(reference => reference.Text == bank.Name && reference.Label == "ORGANIZATION"), "Organization highlight evidence missing");
+var coordinatedText = "Adam \u0219i Johan au plecat. Ei au revenit.";
+var coordinatedTagged = JsonSerializer.Deserialize(JsonSerializer.Serialize(new
+{
+    Provider = "spaCy", Model = "authored-coreference-fixture", CharacterCount = coordinatedText.Length,
+    Tokens = new[] { new PosToken(0, 4, "PROPN", "", false), new PosToken(5, 7, "CCONJ", "", false),
+        new PosToken(8, 13, "PROPN", "", false), new PosToken(25, 27, "PRON", "", false) },
+    Entities = new[] { new { SpanStart = 0, SpanEnd = 4, Label = "PERSON" }, new { SpanStart = 8, SpanEnd = 13, Label = "PERSON" } },
+    PipelineComponents = new[] { "tagger", "ner" }
+}), taggedType)!;
+var coordinated = (EntityRecognitionResponse)assembly.GetType("TymAnalyzer", true)!
+    .GetMethod("RecognizeTaggedEntities", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [coordinatedText, "ro", coordinatedTagged])!;
+Check(coordinated.References!.Any(reference => reference.Text == "Ei" && reference.Antecedents.Order().SequenceEqual(new[] { "Adam", "Johan" })),
+    "Coordinated reference failed when supplied correct person annotations");
+Console.WriteLine($"Trained NER (EN/RO), adapter, {posChecks} POS and {anaphoraChecks} reference fixtures passed. Not an accuracy benchmark.");
+if (args.Contains("--entities-only")) return;
 var placeResponse = (DiagramResponse)analyze.Invoke(null,
     ["Margaret remembered her mother in Jakarta.", new DiagramOptions(HighlightEntities: ["Jakarta"])])!;
 Check(XDocument.Parse(placeResponse.Render.Svg).Descendants().Any(element => element.Name.LocalName == "line"

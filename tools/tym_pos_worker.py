@@ -1,4 +1,4 @@
-"""Local JSON-lines POS worker. No text is sent to a network service."""
+"""Local JSON-lines POS and trained NER worker. No text leaves this process."""
 import json
 import os
 import sys
@@ -13,9 +13,13 @@ models = {}
 def annotate(text, language):
     if language not in models:
         model = os.environ.get("TYM_POS_RO_MODEL", "ro_core_news_sm") if language == "ro" else os.environ.get("TYM_POS_EN_MODEL", "en_core_web_sm")
-        models[language] = spacy.load(model, exclude=["parser", "ner", "lemmatizer", "senter"])
+        nlp = spacy.load(model, exclude=["parser", "lemmatizer", "senter"])
+        if "ner" not in nlp.pipe_names:
+            raise ValueError("Configured model must include trained NER")
+        models[language] = nlp
     nlp = models[language]
     tokens = []
+    entities = []
     offset = 0
     start = 0
     # Bounded chunks retain contextual tagging without constructing a book-sized spaCy Doc.
@@ -29,7 +33,11 @@ def annotate(text, language):
         utf16 = [0]
         for character in chunk:
             utf16.append(utf16[-1] + (2 if ord(character) > 0xFFFF else 1))
-        for token in nlp(chunk):
+        doc = nlp(chunk)
+        for entity in doc.ents:
+            entities.append({"span_start": offset + utf16[entity.start_char],
+                             "span_end": offset + utf16[entity.end_char], "label": entity.label_})
+        for token in doc:
             if token.is_space:
                 continue
             tokens.append({"span_start": offset + utf16[token.idx], "span_end": offset + utf16[token.idx + len(token)],
@@ -37,7 +45,8 @@ def annotate(text, language):
         offset += utf16[-1]
         start = end
     return {"provider": "spaCy", "model": nlp.meta["lang"] + "_" + nlp.meta["name"] + "/" + nlp.meta["version"],
-            "character_count": offset, "tokens": tokens}
+            "character_count": offset, "tokens": tokens, "entities": entities,
+            "pipeline_components": list(nlp.pipe_names)}
 
 
 def main():
