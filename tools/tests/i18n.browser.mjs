@@ -60,13 +60,13 @@ const page = await context.newPage();
 page.on('pageerror', error => errors.push(error.message));
 await routes(page);
 const selectLocale = async value => {
-  await page.locator('#interface-language').selectOption(value);
+  await page.locator(`#interface-language [data-locale="${value}"]`).click();
   await page.waitForFunction(locale => document.documentElement.lang === locale, value);
 };
 try {
   await page.goto(site);
   await page.getByRole('heading', { name: 'Date de intrare', exact: true }).waitFor();
-  assert.equal(await page.locator('#interface-language').inputValue(), 'ro', 'Browser locale should initialize the UI');
+  assert.equal(await page.locator('#interface-language [aria-pressed="true"]').getAttribute('data-locale'), 'ro', 'Browser locale should initialize the UI');
   assert.equal(await page.locator('#language').inputValue(), 'en', 'Interface locale must not change the analysis language');
   const initialText = await page.locator('#text').inputValue();
   await page.waitForFunction(() => !document.querySelector('.actions .primary').disabled);
@@ -114,7 +114,7 @@ try {
   assert.equal(requests.filter(request => request.path.endsWith('/source')).length, sourceReads, 'Locale switching must not refetch source text');
   await page.reload();
   await page.getByRole('heading', { name: 'Input', exact: true }).waitFor();
-  assert.equal(await page.locator('#interface-language').inputValue(), 'en', 'Saved preference overrides the Romanian browser locale');
+  assert.equal(await page.locator('#interface-language [aria-pressed="true"]').getAttribute('data-locale'), 'en', 'Saved preference overrides the Romanian browser locale');
   await selectLocale('ro');
   await page.getByRole('button', { name: 'Autentificare', exact: true }).click();
   await page.getByRole('button', { name: 'Creați un cont', exact: true }).click();

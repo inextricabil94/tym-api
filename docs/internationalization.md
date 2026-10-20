@@ -1,10 +1,12 @@
 # English and Romanian Interface
 
-The header's **Interface language / Limba interfeței** menu switches between English and Romanian. The preference is stored in `tym-ui-locale`; on first visit, the first supported browser language is used, with English as the fallback. Storage restrictions do not prevent changing language in memory. Changes synchronize between open tabs.
+The header's **Interface language / Limba interfeței** group has flag buttons labeled **English** and **Română**, with an explicit pressed/active state. There is no interface-language select menu. Native button keyboard behavior works with Tab, Enter and Space; flag images are decorative and language names remain visible and accessible. The self-hosted GB/RO icons do not infer a user's nationality. The preference is stored in `tym-ui-locale`; on first visit, the first supported browser language is used, with English as the fallback. Storage restrictions do not prevent changing language in memory. Changes synchronize between open tabs.
 
 This is independent of **Text language / Limba textului**, which controls NLP. Interface changes preserve text, selected chapter, entity selection and cached diagrams. They neither repeat analysis nor refetch the current chapter. Source prose retains its own `lang` attribute, spelling, UTF-16 offsets and original headings. Numeric chapter labels follow the interface language; original headings remain available in option titles.
 
 Translated presentation includes workbench controls, analysis tables, standard diagnostics, statuses, account forms/messages, image descriptions, accessibility labels, document title and SVG legend/tooltips. Downloaded SVG legends follow the current interface language; narrative excerpts and IDs remain unchanged. Raw JSON/XML/TimeML, model identifiers, technical annotation codes, proper names, book titles, sources and license identifiers are not translated. Previously unknown API diagnostic messages retain their original text as a fallback. This does not translate server-sent emails or change account-provider configuration.
+
+The SVG viewer separates **Time segments (TS)** and **Time tracks (TT)** into named sections with independent keyboard-focusable scrolling areas. TT filtering, groups, paging, fit and zoom leave the TS overview intact. The full downloaded SVG still contains both parts. These changes are presentation-only and do not repeat NLP or change cached diagram semantics.
 
 ## Maintenance
 
@@ -23,3 +25,5 @@ Plural forms use `Intl.PluralRules`, including Romanian one/few/other categories
 Run unit tests with `node --test tools/tests/*.test.cjs`. With the UI preview running, run `node tools/tests/i18n.browser.mjs`; set `TYM_UI_URL`, `TYM_PLAYWRIGHT_MODULE` and `TYM_CHROMIUM` if required by the local runtime. Full-page screenshots can temporarily resize the browser, invalidating viewport-keyed diagrams, so localization screenshots use a stable viewport and scroll instead.
 
 These changes were published to the static website and container UI on 20 October 2026, alongside the trained entity picker. Live asset hashes match this checkout; both UI hosts passed actual API/browser smoke checks and the static site passed the ten-case bilingual responsive fixture suite. See [release verification](verification/i18n-ner-20261020.md). The local preview remains at `http://127.0.0.1:8780/`.
+
+The subsequent [split-viewer and flag-button release](verification/viewer-20261020.md) replaces the selector menu with labeled native buttons and adds the independently scrollable TS overview. Its additional 20-case checks cover both themes and languages at five widths.

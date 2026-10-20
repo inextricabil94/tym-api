@@ -108,9 +108,7 @@ function renderTrackPage(parsed, tracks) {
   for (const child of parsed.root.children) {
     if (['rect', 'style', 'defs', 'metadata'].includes(child.localName)) root.appendChild(child.cloneNode(true));
   }
-  const overview = parsed.root.querySelector('g[data-section="text-order"]');
-  if (overview) root.appendChild(overview.cloneNode(true));
-  let y = overview ? Number(overview.getAttribute('data-height')) : 24;
+  let y = 24;
   for (const track of tracks) {
     const original = parsed.tracks.get(track.id);
     if (!original) continue;
@@ -132,6 +130,22 @@ function renderTrackPage(parsed, tracks) {
   root.setAttribute('height', String(height));
   root.setAttribute('viewBox', `0 0 ${width} ${height}`);
   root.setAttribute('aria-label', t('TYM time tracks {ids}', { ids: tracks.map(track => track.id).join(', ') }));
+  return new XMLSerializer().serializeToString(root);
+}
+
+function renderSegmentOverview(parsed) {
+  const overview = parsed?.root.querySelector('g[data-section="text-order"]');
+  if (!overview) return '';
+  const root = parsed.root.cloneNode(false);
+  for (const child of parsed.root.children) {
+    if (['rect', 'style', 'defs', 'metadata'].includes(child.localName)) root.appendChild(child.cloneNode(true));
+  }
+  root.appendChild(overview.cloneNode(true));
+  const width = Number(root.getAttribute('width'));
+  const height = Number(overview.getAttribute('data-height')) || 158;
+  root.setAttribute('height', String(height));
+  root.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  root.setAttribute('aria-label', t('Time segments (TS)'));
   return new XMLSerializer().serializeToString(root);
 }
 
@@ -380,6 +394,7 @@ function App() {
   const hasChapters = selectedBook ? sections.length > 0 : chapterCount > 0;
   const timeMl = diagram.time_ml || {};
   const parsedTrackSvg = React.useMemo(() => parseTrackSvg(localizedSvg), [localizedSvg]);
+  const segmentOverviewSvg = React.useMemo(() => renderSegmentOverview(parsedTrackSvg), [parsedTrackSvg, locale]);
   const trackActors = React.useMemo(() => {
     const actors = new Map();
     for (const segment of diagram.segments || []) {
@@ -820,6 +835,15 @@ function App() {
     }
 
     return e('div', { className: 'diagram-view' },
+      segmentOverviewSvg ? e('section', { className: 'segment-overview', 'aria-labelledby': 'segment-overview-title' },
+        e('div', { className: 'diagram-section-header' },
+          e('h3', { id: 'segment-overview-title' }, t('Time segments (TS)'))),
+        e('div', { className: 'segment-overview-area', role: 'region', tabIndex: 0, 'aria-label': t('Time segments (TS)') },
+          e('div', { className: 'diagram-frame segment-overview-frame', lang: language,
+            dangerouslySetInnerHTML: { __html: segmentOverviewSvg } }))) : null,
+      e('section', { className: 'time-tracks-view', 'aria-labelledby': 'time-tracks-title' },
+      e('div', { className: 'diagram-section-header' },
+        e('h3', { id: 'time-tracks-title' }, t('Time tracks (TT)'))),
       parsedTrackSvg ? e('div', { className: 'track-toolbar' },
         e('input', {
           type: 'search', className: 'api-input track-search', 'aria-label': t('Filter time tracks'),
@@ -864,7 +888,7 @@ function App() {
             disabled: currentTrackPage >= trackPageCount - 1, onClick: () => { setTrackPage(currentTrackPage + 1); diagramArea.current?.scrollTo(0, 0); } }, chapterArrow(true))
         )
       ) : null,
-      e('div', { className: 'diagram-area', ref: diagramArea },
+      e('div', { className: 'diagram-area', ref: diagramArea, role: 'region', tabIndex: 0, 'aria-label': t('Time tracks (TT)') },
       svg && (!parsedTrackSvg || visibleTracks.length > 0)
         ? e('div', {
             className: `diagram-frame ${fitToWidth ? 'fit' : ''}`,
@@ -884,7 +908,7 @@ function App() {
               e('strong', null, t(svg ? 'No matching tracks' : 'No diagram yet'))
             )
           )
-    ));
+    )));
   }
 
   return e('main', { className: 'shell' },
@@ -895,10 +919,14 @@ function App() {
       ),
       e('div', { className: 'header-tools' },
       e('div', { className: 'locale-control' },
-        e('label', { htmlFor: 'interface-language' }, t('Interface language')),
-        e('select', { id: 'interface-language', className: 'language-select', value: locale,
-          onChange: event => setLocale(event.target.value) },
-          Object.entries(I18n.names).map(([value, name]) => e('option', { key: value, value, lang: value }, name)))),
+        e('span', { id: 'interface-language-label' }, t('Interface language')),
+        e('div', { id: 'interface-language', className: 'locale-switch', role: 'group', 'aria-labelledby': 'interface-language-label' },
+          Object.entries(I18n.names).map(([value, name]) => e('button', {
+            key: value, type: 'button', className: 'locale-button', lang: value, 'data-locale': value,
+            'aria-pressed': locale === value, title: t(value === 'en' ? 'English' : 'Romanian'),
+            onClick: () => setLocale(value)
+          }, e('img', { src: `/assets/flags/${value === 'en' ? 'gb' : 'ro'}.svg`, alt: '', width: 24, height: 18 }),
+          e('span', null, name))))),
       e('div', { className: 'account-tools' },
         account.user ? e('span', { className: 'account-email', title: account.user.email }, account.user.email) : null,
         e('button', { className: 'secondary', type: 'button', onClick: () => account.user ? account.client.logout() : setShowAccount(true) },

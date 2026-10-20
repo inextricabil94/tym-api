@@ -7,6 +7,7 @@
     'Natural-language text to temporal-segment diagram': 'Din text în limbaj natural în diagramă temporală',
     'Interface language': 'Limba interfeței', 'English': 'Engleză', 'Romanian': 'Română',
     'Input': 'Date de intrare', 'Diagram': 'Diagramă', 'Examples': 'Exemple',
+    'Time segments (TS)': 'Segmente temporale (TS)', 'Time tracks (TT)': 'Piste temporale (TT)',
     'Book library': 'Bibliotecă', 'Loading library...': 'Se încarcă biblioteca...',
     'Select a book': 'Selectați o carte', 'Refresh book library': 'Reîncărcați biblioteca',
     'Loading...': 'Se încarcă...', 'Book example': 'Exemplu dintr-o carte',

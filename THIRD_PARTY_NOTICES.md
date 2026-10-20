@@ -24,6 +24,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 The UI reuses the self-hosted Space Grotesk, Inter, and IBM Plex Mono font files supplied in the user's DataSpace project. Fonts are distributed under the SIL Open Font License 1.1. Unmodified copyright and license notices accompany the binaries in `ui/Tym.Ui/wwwroot/assets/fonts/OFL-spacegrotesk.txt`, `OFL-inter.txt`, and `OFL-ibmplexmono.txt`. Both Latin and Latin Extended subsets are included for Romanian text.
 
+# Language Flags
+
+The unmodified GB and Romanian 4:3 SVG flags are from [flag-icons v7.5.0](https://github.com/lipis/flag-icons/tree/v7.5.0/flags/4x3), copyright (c) 2013 Panayiotis Lipiridis, MIT license. The complete original license accompanies the self-hosted assets at `ui/Tym.Ui/wwwroot/assets/flags/LICENSE.txt`. These flags are paired with explicit language names; no language is inferred from nationality.
+
 # Workbench Example Images
 
 Downloaded from Wikimedia Commons on 19 October 2026. Images are unmodified Commons originals/thumbnails, self-hosted under `ui/Tym.Ui/wwwroot/assets/examples/`, and displayed without cropping. These pictures illustrate a place, author, or historic edition; they do not represent the exact Romanian edition supplied by the user.

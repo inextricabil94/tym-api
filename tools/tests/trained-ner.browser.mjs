@@ -34,7 +34,7 @@ try {
     { language: 'en', locale: 'en', text: 'John Smith arrived at the Bank of England in London. He waited there.', org: 'Bank of England', group: 'Organizations' },
     { language: 'ro', locale: 'ro', text: 'Ion Popescu a mers la Banca Națională a României din București. El a plecat.', org: 'Banca Națională a României', group: 'Organizații' }
   ]) {
-    await page.locator('#interface-language').selectOption(fixture.locale);
+    await page.locator(`#interface-language [data-locale="${fixture.locale}"]`).click();
     await page.locator('#language').selectOption(fixture.language);
     await page.locator('#text').fill(fixture.text);
     await page.waitForFunction(name => [...document.querySelectorAll('#highlight option')].some(option => option.value.includes(name)), fixture.org);
@@ -57,6 +57,8 @@ try {
     assert.ok(diagram.render.svg.includes('stroke-width="5"'), `Missing organization highlight in ${fixture.language} API SVG: ${value}`);
     await page.locator('.diagram-area svg').waitFor();
     await page.waitForFunction(() => document.querySelector('.diagram-area svg line[stroke-width="5"]'));
+    assert.equal(await page.locator('.segment-overview [data-section="text-order"]').count(), 1);
+    assert.equal(await page.locator('.diagram-area [data-section="text-order"]').count(), 0);
   }
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ passed: true, languages: 2, actual_trained_ner: true, whole_organization_spans: true,
