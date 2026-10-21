@@ -63,6 +63,23 @@ const selectLocale = async value => {
   await page.locator(`#interface-language [data-locale="${value}"]`).click();
   await page.waitForFunction(locale => document.documentElement.lang === locale, value);
 };
+async function assertHeaderAlignment() {
+  const geometry = await page.evaluate(() => {
+    const controls = ['#interface-language', '.account-tools > button', '.theme-toggle'].map(selector => {
+      const box = document.querySelector(selector).getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, left: box.left, right: box.right, height: box.height };
+    });
+    return { controls, width: innerWidth, overflow: document.documentElement.scrollWidth > innerWidth + 1 };
+  });
+  assert.equal(geometry.overflow, false, 'Header must not cause page overflow');
+  for (const control of geometry.controls) {
+    assert.ok(Math.abs(control.top - geometry.controls[0].top) <= 1, `Language, account and theme buttons must align vertically: ${JSON.stringify(geometry)}`);
+    assert.ok(Math.abs(control.height - 44) <= 1, 'Header controls must have a stable 44px height');
+  }
+  for (let index = 1; index < geometry.controls.length; index++) {
+    assert.ok(geometry.controls[index - 1].right <= geometry.controls[index].left, 'Header controls must not overlap');
+  }
+}
 try {
   await page.goto(site);
   await page.getByRole('heading', { name: 'Date de intrare', exact: true }).waitFor();
@@ -129,6 +146,15 @@ try {
   await page.locator('#account-password').fill('Authored-Password-2026!');
   await page.getByRole('button', { name: 'Autentificare prin e-mail', exact: true }).click();
   await page.getByRole('button', { name: 'Deconectare', exact: true }).waitFor();
+  for (const locale of ['en', 'ro']) {
+    await selectLocale(locale);
+    for (const width of [320, 390, 768, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 1050 });
+      await page.evaluate(() => document.fonts.ready);
+      await assertHeaderAlignment();
+    }
+  }
+  await selectLocale('ro');
   await page.getByRole('button', { name: 'Deconectare', exact: true }).click();
   await page.getByRole('button', { name: 'Autentificare', exact: true }).waitFor();
   // A storage event updates another open tab without losing the current work.
@@ -148,6 +174,7 @@ try {
       await page.waitForFunction(() => document.querySelector('.diagram-area svg') && document.querySelector('.status-dot.ready'));
       await page.evaluate(() => document.fonts.ready);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${locale}: page overflow at ${width}`);
+      await assertHeaderAlignment();
       assert.ok(await page.locator('.zoom-tools .tool').evaluateAll(buttons => buttons.every(button => button.scrollWidth <= button.clientWidth + 1)), `${locale}: clipped zoom label at ${width}`);
       // Full-page capture can temporarily resize the window and invalidate resolution-keyed diagrams.
       await page.evaluate(() => scrollTo(0, 0));
@@ -171,7 +198,7 @@ try {
   await selectLocale('en');
   await page.getByText('Book catalog unavailable (HTTP 503).', { exact: true }).waitFor();
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ passed: true, locales: 2, responsive_cases: 10, browser_locale_detected: true,
+  console.log(JSON.stringify({ passed: true, locales: 2, responsive_cases: 10, header_alignment_cases: 20, browser_locale_detected: true,
     saved_locale_and_cross_tab_sync: true, source_and_analysis_language_preserved: true, cached_diagram_preserved: true,
     no_nlp_on_locale_change: true, localized_legend_without_source_changes: true, account_messages_and_errors: true,
     real_mail_sent: false, screenshots: output }, null, 2));

@@ -212,6 +212,10 @@ function App() {
   const diagramWidth = resolution.diagramWidth;
   const resolutionKey = React.useRef(resolution.key);
   const [trackDensity, setTrackDensity] = React.useState(50);
+  const [segmentationAlgorithm, setSegmentationAlgorithm] = React.useState('article_rules');
+  const [segmentPage, setSegmentPage] = React.useState(0);
+  const [selectedSegmentId, setSelectedSegmentId] = React.useState('');
+  const [bookSource, setBookSource] = React.useState(null);
   const [apiBaseUrl, setApiBaseUrl] = React.useState(apiDefault);
   const account = window.TymAccounts.useAccount(apiBaseUrl);
   const [showAccount, setShowAccount] = React.useState(() => new URLSearchParams(window.location.hash.slice(1)).has('resetCode'));
@@ -351,7 +355,8 @@ function App() {
   }, [text, language, apiBaseUrl, loadingText, entityRefresh, selectedBook, bookEntityRequest, bookSelectionKey]);
   const selectedHighlight = entityOptions.some(entity => entity.name === highlightEntity) ? highlightEntity : '';
 
-  React.useEffect(() => { generationVersion.current++; setBaseResult(null); }, [text, language, diagramWidth, apiBaseUrl, selectedHighlight, bookSelectionKey]);
+  React.useEffect(() => { generationVersion.current++; setBaseResult(null); setSegmentPage(0); setSelectedSegmentId(''); },
+    [text, language, diagramWidth, apiBaseUrl, selectedHighlight, bookSelectionKey, segmentationAlgorithm]);
   const currentResult = cacheResolution === resolution.key ? baseResult : null;
   const densityChoices = React.useMemo(() => window.TymDensityCache.choices(currentResult), [currentResult]);
   const result = React.useMemo(() => window.TymDensityCache.select(currentResult, viewerDensity), [currentResult, viewerDensity]);
@@ -387,6 +392,12 @@ function App() {
   const diagram = result && result.diagram ? result.diagram : {};
   const analysis = result && result.analysis ? result.analysis : null;
   const warnings = result && Array.isArray(result.warnings) ? result.warnings : [];
+  const segmentation = result?.segmentation;
+  const canReadBookSource = account.config?.text_requires_login === false || Boolean(account.user);
+  const markedSource = selectedBook
+    ? canReadBookSource && bookSource?.key === bookSelectionKey ? bookSource.text : null : text;
+  const markedPage = React.useMemo(() => window.TymSegmentation.sourcePage(markedSource, diagram.segments || [], segmentPage),
+    [markedSource, diagram.segments, segmentPage]);
   const selectedSource = selectedBook ? selectedBook.source : selectedSection && selectedExampleItem
     ? `${selectedExampleItem.label}; ${selectedSection.label}; unlabeled local chapter`
     : sourceScope === 'excerpt' ? selectedExampleItem?.source : selectedExampleItem?.full_source;
@@ -567,6 +578,7 @@ function App() {
         layout: 'both',
         width: diagramWidth,
         track_density: trackDensity,
+        segmentation_algorithm: segmentationAlgorithm,
         cache_track_densities: true,
         progressive_density_cache: true,
         highlight_entities: selectedHighlight ? [selectedHighlight] : [],
@@ -617,6 +629,8 @@ function App() {
       const data = await response.json();
       if (generationVersion.current !== version
         || window.TymViewport.measure(window.innerWidth, window.innerHeight).key !== requestedResolution) return;
+      if (segmentationAlgorithm !== 'article_rules' && data.segmentation?.algorithm !== segmentationAlgorithm)
+        throw I18n.error('The API did not apply the selected segmentation algorithm.');
       const returnedSvg = (data.render && data.render.svg) || (data.renderings && data.renderings.svg) || '';
 
       setBaseResult(data);
@@ -625,6 +639,7 @@ function App() {
       setActiveTab('diagram');
       setTrackQuery('');
       setTrackPage(0);
+      setSegmentPage(0); setSelectedSegmentId('');
       setTrackGroupCount(value => Math.min(value, count(data.diagram?.tracks)));
       setFitToWidth(false);
       setZoom(1);
@@ -817,7 +832,60 @@ function App() {
     );
   }
 
+  function renderSegmentation() {
+    const segments = diagram.segments || [];
+    if (!result || !segments.length) return e('div', { className: 'empty' }, t('No segments detected.'));
+    if (!markedPage) return e('div', { className: 'empty' }, t('Source text is unavailable or its offsets do not match.'));
+    const selected = markedPage.segments.find(segment => segment.id === selectedSegmentId) || markedPage.segments[0];
+    const boundary = segmentation?.decisions?.find(decision => decision.segment_id === selected?.id && decision.is_boundary);
+    const scoreKind = segmentation?.score_kind;
+    const modelScore = boundary?.score == null ? t('n/a') : scoreKind === 'margin'
+      ? Number(boundary.score).toFixed(3) : `${(Number(boundary.score) * 100).toFixed(1)}%`;
+    const algorithm = window.TymSegmentation.algorithms.find(item => item.id === (segmentation?.algorithm || 'article_rules'));
+    function showTrack() {
+      setTrackQuery('');
+      const groups = partitionTracks(diagram.tracks || [], effectiveGroupCount, pageSize);
+      setTrackPage(Math.max(0, groups.findIndex(group => group.tracks.some(track => track.id === selected.track_id))));
+      setActiveTab('diagram');
+    }
+    return e('section', { className: 'segmentation-view', 'aria-label': t('Marked segmentation') },
+      e('div', { className: 'segmentation-heading' },
+        e('div', null, e('h3', null, t(algorithm?.label || 'Article-guided rules')),
+          e('span', { className: 'muted-line' }, segmentation?.training_examples
+            ? t('Seed examples: {count} | Not corpus validated', { count: segmentation.training_examples })
+            : t('Rule-based boundaries'))),
+        e('div', { className: 'track-paging' },
+          e('span', { className: 'track-range', 'aria-live': 'polite' }, t('Segments {start}-{end} of {total}',
+            { start: markedPage.startIndex + 1, end: markedPage.startIndex + markedPage.segments.length, total: segments.length })),
+          e('button', { className: 'tool', type: 'button', title: t('Previous segments'), 'aria-label': t('Previous segments'),
+            disabled: markedPage.index === 0, onClick: () => setSegmentPage(markedPage.index - 1) }, chapterArrow(false)),
+          e('button', { className: 'tool', type: 'button', title: t('Next segments'), 'aria-label': t('Next segments'),
+            disabled: markedPage.index === markedPage.pages - 1, onClick: () => setSegmentPage(markedPage.index + 1) }, chapterArrow(true)))),
+      e('div', { className: 'segment-type-legend', 'aria-label': t('Segment types') },
+        ['NAR', 'REM', 'SUP', 'GEN', 'FIC'].map(type => e('span', { key: type, 'data-type': type }, type))),
+      selected ? e('section', { className: 'segment-inspector', 'aria-label': t('Selected segment') },
+        e('div', { className: 'segmentation-heading' }, e('strong', null, `${selected.id} / ${selected.type}`),
+          e('button', { className: 'secondary segment-track-link', type: 'button', onClick: showTrack, title: t('Show time track') },
+            selected.track_id, chapterArrow(true))),
+        e('dl', { className: 'segment-properties' },
+          e('div', null, e('dt', null, 'UTF-16'), e('dd', null, `[${selected.span_start}, ${selected.span_end})`)),
+          e('div', null, e('dt', null, t('Events')), e('dd', null, (selected.event_ids || []).join(', ') || '-')),
+          e('div', null, e('dt', null, t(scoreKind === 'margin' ? 'Decision margin' : scoreKind === 'uncalibrated_probability' ? 'Model probability (uncalibrated)' : 'Boundary score')),
+            e('dd', { 'data-testid': 'boundary-score' }, modelScore)),
+          e('div', null, e('dt', null, t('Boundary evidence')), e('dd', null, (boundary?.evidence || [])
+            .map(item => locale === 'en' ? item.replaceAll('_', ' ') : t(item)).join(', ') || '-')))) : null,
+      e('div', { className: 'segmented-source', lang: language, tabIndex: 0, 'aria-label': t('Marked source text') },
+        markedPage.parts.map((part, index) => part.kind === 'gap' ? e('span', { key: `gap-${index}`, className: 'source-gap' }, part.text)
+          : e(React.Fragment, { key: part.segment.id },
+            e('button', { type: 'button', className: 'segment-marker', 'aria-pressed': selected?.id === part.segment.id,
+              title: t('Inspect {id}', { id: part.segment.id }), onClick: () => setSelectedSegmentId(part.segment.id) }, part.segment.id),
+            e('mark', { className: `source-segment${selected?.id === part.segment.id ? ' selected' : ''}`,
+              'data-segment-id': part.segment.id, 'data-type': part.segment.type }, part.text))))
+    );
+  }
+
   function renderResultBody() {
+    if (activeTab === 'segmentation') return renderSegmentation();
     if (activeTab === 'json') {
       return e('pre', { className: 'code-view' }, jsonText || t('No JSON result yet.'));
     }
@@ -837,7 +905,8 @@ function App() {
     return e('div', { className: 'diagram-view' },
       segmentOverviewSvg ? e('section', { className: 'segment-overview', 'aria-labelledby': 'segment-overview-title' },
         e('div', { className: 'diagram-section-header' },
-          e('h3', { id: 'segment-overview-title' }, t('Time segments (TS)'))),
+          e('h3', { id: 'segment-overview-title' }, t('Time segments (TS)')),
+          e('button', { type: 'button', className: 'secondary', onClick: () => setActiveTab('segmentation') }, t('Inspect segments'))),
         e('div', { className: 'segment-overview-area', role: 'region', tabIndex: 0, 'aria-label': t('Time segments (TS)') },
           e('div', { className: 'diagram-frame segment-overview-frame', lang: language,
             dangerouslySetInnerHTML: { __html: segmentOverviewSvg } }))) : null,
@@ -919,14 +988,14 @@ function App() {
       ),
       e('div', { className: 'header-tools' },
       e('div', { className: 'locale-control' },
-        e('span', { id: 'interface-language-label' }, t('Interface language')),
-        e('div', { id: 'interface-language', className: 'locale-switch', role: 'group', 'aria-labelledby': 'interface-language-label' },
+        e('div', { id: 'interface-language', className: 'locale-switch', role: 'group', 'aria-label': t('Interface language') },
           Object.entries(I18n.names).map(([value, name]) => e('button', {
             key: value, type: 'button', className: 'locale-button', lang: value, 'data-locale': value,
             'aria-pressed': locale === value, title: t(value === 'en' ? 'English' : 'Romanian'),
+            'aria-label': t(value === 'en' ? 'English' : 'Romanian'),
             onClick: () => setLocale(value)
           }, e('img', { src: `/assets/flags/${value === 'en' ? 'gb' : 'ro'}.svg`, alt: '', width: 24, height: 18 }),
-          e('span', null, name))))),
+          e('span', { className: 'locale-name' }, name))))),
       e('div', { className: 'account-tools' },
         account.user ? e('span', { className: 'account-email', title: account.user.email }, account.user.email) : null,
         e('button', { className: 'secondary', type: 'button', onClick: () => account.user ? account.client.logout() : setShowAccount(true) },
@@ -1030,7 +1099,7 @@ function App() {
             e('small', { className: 'chapter-range', 'aria-live': 'polite' },
               t('Section {index} of {total} | UTF-16 [{start}, {end})', { index: currentChapterIndex + 1, total: sections.length, start: selectedSection.start, end: selectedSection.end }))
           ) : null,
-          selectedBook ? e(window.TymAccounts.SourceReader, { account, book: selectedBook, section: selectedSection, language,
+          selectedBook ? e(window.TymAccounts.SourceReader, { account, book: selectedBook, section: selectedSection, language, onSource: setBookSource,
             onSignIn: () => setShowAccount(true) }) : null,
           !selectedBook ? e('div', { className: 'field' },
             e('label', { htmlFor: 'chapter-detection' }, t('Chapter detection')),
@@ -1064,6 +1133,12 @@ function App() {
               e('option', { value: 'en' }, t('English')),
               e('option', { value: 'ro' }, t('Romanian'))
             )
+          ),
+          e('div', { className: 'field' },
+            e('label', { htmlFor: 'segmentation-algorithm' }, t('Segmentation algorithm')),
+            e('select', { id: 'segmentation-algorithm', className: 'language-select', value: segmentationAlgorithm, disabled: busy,
+              onChange: event => setSegmentationAlgorithm(event.target.value) },
+              window.TymSegmentation.algorithms.map(algorithm => e('option', { key: algorithm.id, value: algorithm.id }, t(algorithm.label))))
           ),
           e('div', { className: 'field-grid' },
             e('div', { className: 'field' },
@@ -1166,6 +1241,7 @@ function App() {
           ),
           e('div', { className: 'tabs', role: 'tablist', 'aria-label': t('Result views') },
             resultTab('diagram', 'SVG'),
+            resultTab('segmentation', 'Segmentation'),
             resultTab('analysis', 'Analysis'),
             resultTab('timeml', 'TimeML'),
             !protectedSource ? resultTab('json', 'JSON') : null,

@@ -302,6 +302,9 @@ static string? Validate(DiagramRequest? request)
         return "'options.track_density' must be an integer between 0 and 100.";
     }
 
+    if (!TymSegmentation.IsSupported(request.Options?.SegmentationAlgorithm ?? TymSegmentation.Rules))
+        return "'options.segmentation_algorithm' must be one of: article_rules, mlnet_logistic, mlnet_perceptron.";
+
     return null;
 }
 
@@ -327,7 +330,8 @@ public sealed record DiagramOptions(
     string Language = "en",
     int TrackDensity = 50,
     bool CacheTrackDensities = false,
-    bool ProgressiveDensityCache = false)
+    bool ProgressiveDensityCache = false,
+    string SegmentationAlgorithm = "article_rules")
 {
     internal IReadOnlyList<HighlightSpan>? HighlightSpans { get; init; }
     internal bool OmitXmlExports { get; init; }
@@ -430,7 +434,8 @@ public sealed record DiagramResponse(
     string Xml,
     IReadOnlyList<string> Warnings,
     TrackGenerationInfo TrackGeneration,
-    DensityCacheInfo? DensityCache = null);
+    DensityCacheInfo? DensityCache = null,
+    SegmentationInfo? Segmentation = null);
 
 public sealed record TrackGenerationInfo(int Density, string TitleMethod);
 public sealed record DensityCacheInfo(IReadOnlyList<DensityCacheOption> Options,
@@ -621,7 +626,7 @@ public sealed record RenderResult(
 
 internal static class TymConstants
 {
-    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.7";
+    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.8";
 }
 
 internal sealed class MutableTrack
@@ -1118,7 +1123,9 @@ internal static partial class TymAnalyzer
                 .Select(reference => new HighlightSpan(reference.SpanStart, reference.SpanEnd)).ToList() };
         }
         var events = ExtractEvents(text, language);
-        var candidates = BuildTimeSegmentCandidates(events);
+        var algorithm = options.SegmentationAlgorithm ?? TymSegmentation.Rules;
+        if (!TymSegmentation.IsSupported(algorithm)) throw new ArgumentException("Unknown segmentation algorithm.");
+        var candidates = BuildTimeSegmentCandidates(text, events, algorithm, out var segmentation);
         var plans = candidates.Select(candidate =>
         {
             var classification = ClassifySegment(candidate.Text, HeuristicClassifySegment(candidate.Text, language), language);
@@ -1355,6 +1362,8 @@ internal static partial class TymAnalyzer
             {
                 warnings.Add("No text segments were detected.");
             }
+            if (algorithm != TymSegmentation.Rules)
+                warnings.Add("Boundary classifiers use small authored feature-pattern seeds, not an annotated narrative corpus. Model probabilities are not empirically calibrated; perceptron margins are not probabilities. Event extraction and TS type classification are unchanged.");
 
             foreach (var issue in analysis.Issues.Where(issue => issue.Severity != "info"))
             {
@@ -1362,7 +1371,7 @@ internal static partial class TymAnalyzer
             }
 
             return new DiagramResponse(HashId(text), TymConstants.Version, diagram, analysis, render, xml, warnings,
-                new TrackGenerationInfo(density, "extractive-event-summary-v1"));
+                new TrackGenerationInfo(density, "extractive-event-summary-v1"), Segmentation: segmentation);
         }
 
         var assignments = TymTrackGranularity.Assign(descriptors, options.TrackDensity);
@@ -1848,21 +1857,27 @@ internal static partial class TymAnalyzer
         return spans.Count > 0 ? spans : [new ClauseSpan(sentence, sentenceStart, sentenceStart + sentence.Length)];
     }
 
-    private static List<TimeSegmentCandidate> BuildTimeSegmentCandidates(IReadOnlyList<MutableNarrativeEvent> events)
+    private static List<TimeSegmentCandidate> BuildTimeSegmentCandidates(string source,
+        IReadOnlyList<MutableNarrativeEvent> events, string algorithm, out SegmentationInfo segmentation)
     {
         var candidates = new List<TimeSegmentCandidate>();
         var current = new List<MutableNarrativeEvent>();
+        var decisions = new List<SegmentationDecision>();
+        MutableNarrativeEvent? previousEvent = null;
 
         foreach (var currentEvent in events)
         {
+            var decision = TymSegmentation.Decide(source, previousEvent, currentEvent,
+                previousEvent is null || !ShouldMergeIntoCurrentSegment(previousEvent, currentEvent), algorithm);
+            decisions.Add(decision);
+            previousEvent = currentEvent;
             if (current.Count == 0)
             {
                 current.Add(currentEvent);
                 continue;
             }
 
-            var previous = current[^1];
-            if (ShouldMergeIntoCurrentSegment(previous, currentEvent))
+            if (!decision.IsBoundary)
             {
                 current.Add(currentEvent);
                 continue;
@@ -1877,6 +1892,9 @@ internal static partial class TymAnalyzer
             candidates.Add(CreateCandidate(current));
         }
 
+        var segmentIds = candidates.SelectMany((candidate, index) => candidate.Events.Select(ev => (ev.Id, SegmentId: $"TS{index + 1}")))
+            .ToDictionary(item => item.Id, item => item.SegmentId);
+        segmentation = TymSegmentation.Describe(algorithm, decisions.Select(decision => decision with { SegmentId = segmentIds[decision.EventId] }).ToArray());
         return candidates;
     }
 

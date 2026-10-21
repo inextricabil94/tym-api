@@ -207,7 +207,7 @@
     );
   }
 
-  function SourceReader({ account, book, section, language, onSignIn }) {
+  function SourceReader({ account, book, section, language, onSignIn, onSource }) {
     const { locale } = I18n.useLocale();
     const [source, setSource] = React.useState(null);
     const [error, setError] = React.useState('');
@@ -229,6 +229,10 @@
       }
       return () => controller.abort();
     }, [account.client, reader, key, accessKnown, requiresLogin]);
+    React.useEffect(() => {
+      onSource?.(source?.key === key ? source : null);
+      return () => onSource?.(null);
+    }, [source, key, onSource]);
     return e('section', { className: 'source-reader', 'aria-label': t('Selected text') },
       e('div', { className: 'source-reader-heading' }, e('h2', null, section ? window.TymChapters.sectionLabel(section, book.sections.indexOf(section), locale, { useHeadingLanguage: false }) : t('Full Text'))),
       !accessKnown ? e('p', { role: 'status' }, t(account.error || 'Loading text access...'))

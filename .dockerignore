@@ -13,6 +13,7 @@
 !sample_input.json
 !sample_input_ro.json
 !THIRD_PARTY_NOTICES.md
+!Segmentation.cs
 !tools/
 tools/**
 !tools/requirements-pos.txt

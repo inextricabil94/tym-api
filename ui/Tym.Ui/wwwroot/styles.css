@@ -50,6 +50,30 @@
   letter-spacing: 0;
 }
 
+.segmentation-view { flex: 1; min-height: 0; min-width: 0; padding: 16px; overflow: auto; }
+.segmentation-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.segmentation-heading h3 { margin: 0 0 5px; font-size: 14px; }
+.segmentation-heading .muted-line { font-size: 12px; }
+.segment-type-legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 16px 0; font: 12px var(--mono); }
+.segment-type-legend span { display: inline-flex; align-items: center; gap: 6px; }
+[data-type="NAR"] { --segment-color: #39b89b; }
+[data-type="REM"] { --segment-color: #4c9fe6; }
+[data-type="SUP"] { --segment-color: #d9a433; }
+[data-type="GEN"] { --segment-color: #b388d4; }
+[data-type="FIC"] { --segment-color: #e57f9e; }
+.segment-type-legend span::before { content: ''; width: 12px; height: 12px; background: var(--segment-color); border-radius: 2px; }
+.segment-inspector { border-block: 1px solid var(--line-strong); padding: 12px 0; margin-bottom: 20px; }
+.segment-track-link { display: inline-flex; align-items: center; gap: 6px; }
+.segment-properties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 12px 0 0; }
+.segment-properties div { min-width: 0; }
+.segment-properties dt { color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+.segment-properties dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.segmented-source { white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/2.2 var(--body); padding: 4px; }
+.source-segment { background: color-mix(in srgb, var(--segment-color, #39b89b) 17%, transparent); color: var(--ink); border-bottom: 2px solid var(--segment-color, #39b89b); }
+.source-segment.selected { background: color-mix(in srgb, var(--segment-color, #39b89b) 32%, transparent); }
+.segment-marker { display: inline-block; padding: 2px 5px; margin: 0 5px 0 2px; border-radius: 2px; font: 11px/1.4 var(--mono); background: var(--panel-raised); color: var(--ink); border: 1px solid var(--line-strong); vertical-align: baseline; }
+.segment-marker[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
 body {
   margin: 0;
   min-width: 320px;
@@ -93,9 +117,8 @@ textarea:focus-visible {
   flex-wrap: wrap;
 }
 
-.locale-control { display: grid; gap: 4px; min-width: 0; max-width: 100%; flex: 0 0 auto; }
-.locale-control > span { color: var(--muted); font-size: 12px; }
-.locale-switch { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg-deep); }
+.locale-control { display: flex; align-items: center; min-width: 0; max-width: 100%; flex: 0 0 auto; }
+.locale-switch { display: inline-flex; height: 44px; gap: 4px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg-deep); }
 .locale-button { display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 6px 9px; border-radius: 3px; background: transparent; color: var(--muted); font: 500 12px var(--body); }
 .locale-button:hover { background: var(--panel-raised); color: var(--ink); }
 .locale-button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
@@ -124,9 +147,13 @@ textarea:focus-visible {
 .source-reader-heading h2 { margin: 0 0 12px; font: 600 15px var(--heading); }
 .source-prose { margin: 0; padding-right: 10px; max-height: 420px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.75 var(--body); }
 .source-reader p { overflow-wrap: anywhere; }
-@media (max-width: 760px) {
+@media (max-width: 1200px) {
   .topbar { flex-wrap: wrap; }
   .header-tools { width: 100%; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .header-tools > .status { order: 1; flex-basis: 100%; }
+}
+
+@media (max-width: 760px) {
   .account-email { max-width: 140px; }
   .account-dialog { padding: 18px; }
 }
@@ -905,6 +932,10 @@ textarea:focus-visible {
   }
 
   .header-tools { width: 100%; justify-content: space-between; }
+
+  .header-tools > .status { order: 1; flex-basis: 100%; }
+  .locale-name, .header-tools .account-email { display: none; }
+  .locale-button { justify-content: center; width: 42px; padding: 6px; }
 
   .panel-header,
   .actions {

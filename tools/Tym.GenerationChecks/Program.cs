@@ -49,6 +49,72 @@ if (args.Contains("--library-only")) return;
 
 var analyze = typeof(DiagramOptions).Assembly.GetType("TymAnalyzer", true)!.GetMethod("Analyze", BindingFlags.Public | BindingFlags.Static)!;
 var json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, WriteIndented = true };
+if (args.Contains("--segmentation-only"))
+{
+    var checks = 0;
+    foreach (var fixture in new[]
+    {
+        (Language: "en", Text: "\U0001f642 Adam waited in Jakarta. Adam searched in Jakarta.\n\nAdam waited in London. Years earlier, Adam had traveled to Jakarta. Meanwhile, Margaret searched for Adam."),
+        (Language: "ro", Text: "\U0001f642 Ana a asteptat in Bucuresti. Ana a cautat in Bucuresti.\n\nAna a asteptat in Iasi. Cu ani in urma, Ana a calatorit la Bucuresti. Intre timp, Stefan a cautat-o pe Ana.")
+    })
+    {
+        foreach (var algorithm in new[] { "article_rules", "mlnet_logistic", "mlnet_perceptron" })
+        {
+            DiagramResponse Run(int density) => (DiagramResponse)analyze.Invoke(null,
+                [fixture.Text, new DiagramOptions(Language: fixture.Language, TrackDensity: density, SegmentationAlgorithm: algorithm)])!;
+            var response = Run(10);
+            var info = response.Segmentation!;
+            Check(info.Algorithm == algorithm && info.Decisions.Count == response.Diagram.Events.Count, "Missing boundary decisions");
+            Check(info.Decisions.Count > 1 && info.Decisions[0].IsBoundary && info.Decisions[0].Score is null, "Invalid document-start boundary");
+            Check(info.TrainingExamples == (algorithm == "article_rules" ? 0 : 48), "Wrong training provenance");
+            Check(info.ScoreKind == (algorithm == "article_rules" ? "rule" : algorithm == "mlnet_logistic" ? "uncalibrated_probability" : "margin"), "Wrong score semantics");
+            Check(info.Decisions.Count(decision => decision.IsBoundary) == response.Diagram.Segments.Count, "Boundary/segment count mismatch");
+            Check(response.Diagram.Segments.SelectMany(segment => segment.EventIds).SequenceEqual(response.Diagram.Events.Select(ev => ev.Id)), "Events were dropped, duplicated or reordered");
+            var priorEnd = 0;
+            foreach (var segment in response.Diagram.Segments)
+            {
+                Check(segment.SpanStart >= priorEnd && segment.SpanEnd <= fixture.Text.Length, "Overlapping or invalid UTF-16 spans");
+                Check(fixture.Text[segment.SpanStart..segment.SpanEnd].Length > 0, "Empty source slice");
+                Check(info.Decisions.Any(decision => decision.IsBoundary && decision.SegmentId == segment.Id && decision.SpanStart == segment.SpanStart), "Boundary/source marker mismatch");
+                priorEnd = segment.SpanEnd;
+            }
+            foreach (var decision in info.Decisions.Skip(1))
+            {
+                Check(algorithm == "article_rules" ? decision.Score is null : decision.Score.HasValue && double.IsFinite(decision.Score.Value), "Missing or nonfinite score");
+                if (algorithm == "mlnet_logistic") Check(decision.Score is >= 0 and <= 1, "Invalid logistic probability");
+                Check(!decision.Evidence.SequenceEqual(new[] { "continuity_features" }) || !decision.IsBoundary,
+                    "Classifier split the known all-zero continuity seed pattern");
+            }
+            var alternate = Run(100);
+            Check(JsonSerializer.Serialize(info, json) == JsonSerializer.Serialize(alternate.Segmentation, json), "TT density changed boundary decisions");
+            Check(response.Diagram.Segments.Select(segment => (segment.Id, segment.SpanStart, segment.SpanEnd))
+                .SequenceEqual(alternate.Diagram.Segments.Select(segment => (segment.Id, segment.SpanStart, segment.SpanEnd))), "Density changed TS spans");
+            var concurrent = Enumerable.Range(0, 4).Select(_ => Task.Run(() => Run(50))).ToArray();
+            Task.WaitAll(concurrent);
+            Check(concurrent.All(task => JsonSerializer.Serialize(info, json) == JsonSerializer.Serialize(task.Result.Segmentation, json)), "Concurrent model prediction was not deterministic");
+            if (args.Contains("--write-segmentation-fixtures"))
+            {
+                var folder = Path.Combine(Directory.GetCurrentDirectory(), "build_verify", "segmentation-fixtures");
+                Directory.CreateDirectory(folder);
+                var cached = (DiagramResponse)analyze.Invoke(null, [fixture.Text,
+                    new DiagramOptions(Language: fixture.Language, TrackDensity: 50, CacheTrackDensities: true, SegmentationAlgorithm: algorithm)])!;
+                Check(JsonSerializer.Serialize(info, json) == JsonSerializer.Serialize(cached.Segmentation, json), "Cached response changed boundary decisions");
+                File.WriteAllText(Path.Combine(folder, $"{fixture.Language}-{algorithm}.json"),
+                    JsonSerializer.Serialize(new { text = fixture.Text, response = cached }, json));
+            }
+            Console.WriteLine($"{fixture.Language}/{algorithm}: {response.Diagram.Events.Count} events, {response.Diagram.Segments.Count} segments, {info.ScoreKind}");
+            checks++;
+        }
+    }
+    var defaultResult = (DiagramResponse)analyze.Invoke(null, ["Adam waited. Adam searched.", new DiagramOptions()])!;
+    Check(defaultResult.Segmentation!.Algorithm == "article_rules", "Legacy default changed");
+    var rejected = false;
+    try { _ = analyze.Invoke(null, ["Adam waited.", new DiagramOptions(SegmentationAlgorithm: "unknown")]); }
+    catch (TargetInvocationException error) when (error.InnerException is ArgumentException) { rejected = true; }
+    Check(rejected, "Unknown segmentation algorithm silently accepted");
+    Console.WriteLine($"Segmentation: {checks} bilingual algorithm cases, UTF-16, event coverage, score semantics, density invariance and concurrent prediction checks passed.");
+    return;
+}
 var samples = new[]
 {
     (Language: "en", Text: "Adam searched for Margaret after the storm. Karl traveled across the island. Adam waited at the doorway. Margaret found Adam at dawn. Years earlier, Karl had carried Adam through the rain. Meanwhile, Johan searched for Karl. Adam searched for Margaret after the storm. Karl traveled across the island. Adam waited at the doorway."),

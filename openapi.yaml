@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TYM Diagram API
-  version: 0.7.0
+  version: 0.8.0
   description: API for generating paper-guided Time Yards Model diagrams and TimeML-style temporal annotations from English or Romanian narrative text.
 servers:
   - url: http://127.0.0.1:8765
@@ -618,6 +618,11 @@ components:
               maximum: 100
               default: 50
               description: Track granularity. 0 groups natural tracks by narrative mode and temporal category; 50 preserves actor/perspective grouping; 100 creates one track per temporal segment. Events and segments are retained at every density.
+            segmentation_algorithm:
+              type: string
+              enum: [article_rules, mlnet_logistic, mlnet_perceptron]
+              default: article_rules
+              description: Event-to-segment boundary algorithm, independent of TT density. The ML.NET classifiers learn from 48 authored feature-pattern seed rows, not an annotated narrative corpus. Event extraction and TS type classification are unchanged. Applies to English and Romanian.
             cache_track_densities:
               type: boolean
               default: false
@@ -648,6 +653,8 @@ components:
           type: string
         model_version:
           type: string
+        segmentation:
+          $ref: "#/components/schemas/SegmentationInfo"
         density_cache:
           $ref: "#/components/schemas/DensityCacheInfo"
         track_generation:
@@ -1377,6 +1384,35 @@ components:
             - "null"
         origin:
           type: string
+    SegmentationInfo:
+      type: object
+      required: [algorithm, model_version, score_kind, training_examples, training_source, decisions]
+      properties:
+        algorithm:
+          type: string
+          enum: [article_rules, mlnet_logistic, mlnet_perceptron]
+        model_version: { type: string }
+        score_kind:
+          type: string
+          enum: [rule, uncalibrated_probability, margin]
+        training_examples: { type: integer, minimum: 0 }
+        training_source: { type: string }
+        decisions:
+          type: array
+          description: One decision per extracted event, before density layout. Scores are null for document start and rules. Margins are not probabilities; logistic probabilities are not corpus-calibrated. Evidence contains observed features, not causal model attribution. UTF-16 offsets are relative to the analyzed input or selected chapter.
+          items:
+            type: object
+            required: [event_id, previous_event_id, segment_id, span_start, is_boundary, score, evidence]
+            properties:
+              event_id: { type: string }
+              previous_event_id: { type: [string, "null"] }
+              segment_id: { type: string }
+              span_start: { type: integer, minimum: 0 }
+              is_boundary: { type: boolean }
+              score: { type: [number, "null"] }
+              evidence:
+                type: array
+                items: { type: string }
     ErrorResponse:
       type: object
       required:

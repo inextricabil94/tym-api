@@ -33,6 +33,16 @@ Verify both public UI URLs, API health, actual English/Romanian POS lookup, a ge
 
 Rollback uses the previous known-good image with `az containerapp update --image <previous-image>`. Keep the static site's prior public files available in a local deployment backup if rollback is required. Do not expose private sources to make cloud/local catalogs identical.
 
+## Latest Release: 21 October 2026
+
+The API and both UI hosts now serve selectable rule/logistic/perceptron
+segmentation, marked source ranges and aligned language/account/theme controls.
+Final API/UI tags are `release-20261021-segmentation`; ready revisions end in
+`r20261021seg`. The existing server-only library, resource limits, public reading,
+disabled accounts and enabled EUR 20 cost guard are unchanged. See the
+[release verification](verification/segmentation-20261021.md) for build IDs,
+live checks and seed-model limitations. The dated releases below are historical.
+
 ## Release: 19 October 2026
 
 - API image: `ca0e9fe87ad1acr.azurecr.io/tym-api-serban:release-20261019-density2`; revision `tym-api-serban--r20261019density2`.
