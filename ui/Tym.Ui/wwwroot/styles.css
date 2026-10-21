@@ -112,10 +112,13 @@ textarea:focus-visible {
 
 .header-tools {
   display: flex;
-  align-items: center;
-  gap: 20px;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px 20px;
   flex-wrap: wrap;
 }
+
+.header-tools > .status { order: -1; flex-basis: 100%; justify-content: flex-end; }
 
 .locale-control { display: flex; align-items: center; min-width: 0; max-width: 100%; flex: 0 0 auto; }
 .locale-switch { display: inline-flex; height: 44px; gap: 4px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg-deep); }
@@ -150,7 +153,6 @@ textarea:focus-visible {
 @media (max-width: 1200px) {
   .topbar { flex-wrap: wrap; }
   .header-tools { width: 100%; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-  .header-tools > .status { order: 1; flex-basis: 100%; }
 }
 
 @media (max-width: 760px) {
@@ -166,7 +168,7 @@ textarea:focus-visible {
 
 .topbar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   padding: 18px clamp(16px, 4vw, 42px);
@@ -933,7 +935,6 @@ textarea:focus-visible {
 
   .header-tools { width: 100%; justify-content: space-between; }
 
-  .header-tools > .status { order: 1; flex-basis: 100%; }
   .locale-name, .header-tools .account-email { display: none; }
   .locale-button { justify-content: center; width: 42px; padding: 6px; }
 

@@ -37,8 +37,11 @@ Rollback uses the previous known-good image with `az containerapp update --image
 
 The API and both UI hosts now serve selectable rule/logistic/perceptron
 segmentation, marked source ranges and aligned language/account/theme controls.
-Final API/UI tags are `release-20261021-segmentation`; ready revisions end in
-`r20261021seg`. The existing server-only library, resource limits, public reading,
+The API remains on `release-20261021-segmentation`, revision `r20261021seg`.
+The latest UI-only update uses `release-20261021-header`, revision
+`r20261021header`, with bottom-aligned controls and status above the buttons.
+See the [header release checks](verification/header-20261021.md).
+The existing server-only library, resource limits, public reading,
 disabled accounts and enabled EUR 20 cost guard are unchanged. See the
 [release verification](verification/segmentation-20261021.md) for build IDs,
 live checks and seed-model limitations. The dated releases below are historical.

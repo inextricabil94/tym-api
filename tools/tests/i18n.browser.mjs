@@ -69,11 +69,14 @@ async function assertHeaderAlignment() {
       const box = document.querySelector(selector).getBoundingClientRect();
       return { top: box.top, bottom: box.bottom, left: box.left, right: box.right, height: box.height };
     });
-    return { controls, width: innerWidth, overflow: document.documentElement.scrollWidth > innerWidth + 1 };
+    return { controls, statusBottom: document.querySelector('.header-tools > .status').getBoundingClientRect().bottom,
+      bottom: document.querySelector('.header-tools').getBoundingClientRect().bottom,
+      width: innerWidth, overflow: document.documentElement.scrollWidth > innerWidth + 1 };
   });
   assert.equal(geometry.overflow, false, 'Header must not cause page overflow');
+  assert.ok(geometry.statusBottom <= Math.min(...geometry.controls.map(control => control.top)), 'Status label must sit above the header buttons');
   for (const control of geometry.controls) {
-    assert.ok(Math.abs(control.top - geometry.controls[0].top) <= 1, `Language, account and theme buttons must align vertically: ${JSON.stringify(geometry)}`);
+    assert.ok(Math.abs(control.bottom - geometry.bottom) <= 1, `Language, account and theme buttons must align to the header's bottom edge: ${JSON.stringify(geometry)}`);
     assert.ok(Math.abs(control.height - 44) <= 1, 'Header controls must have a stable 44px height');
   }
   for (let index = 1; index < geometry.controls.length; index++) {
@@ -198,7 +201,7 @@ try {
   await selectLocale('en');
   await page.getByText('Book catalog unavailable (HTTP 503).', { exact: true }).waitFor();
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ passed: true, locales: 2, responsive_cases: 10, header_alignment_cases: 20, browser_locale_detected: true,
+  console.log(JSON.stringify({ passed: true, locales: 2, responsive_cases: 10, header_alignment_cases: 20, status_above_controls: true, browser_locale_detected: true,
     saved_locale_and_cross_tab_sync: true, source_and_analysis_language_preserved: true, cached_diagram_preserved: true,
     no_nlp_on_locale_change: true, localized_legend_without_source_changes: true, account_messages_and_errors: true,
     real_mail_sent: false, screenshots: output }, null, 2));
