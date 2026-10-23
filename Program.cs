@@ -510,7 +510,8 @@ public sealed record Diagram(
     IReadOnlyList<Endpoint> Endpoints,
     IReadOnlyList<TimeRelation> Relations,
     IReadOnlyList<SegmentBoundary> Boundaries,
-    TimeMlDocument TimeMl);
+    TimeMlDocument TimeMl,
+    TemporalOrderingInfo? TemporalOrdering = null);
 
 public sealed record TimeActor(
     string Id,
@@ -655,7 +656,7 @@ public sealed record RenderResult(
 
 internal static class TymConstants
 {
-    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.9";
+    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.10";
 }
 
 internal sealed class MutableTrack
@@ -751,9 +752,9 @@ internal sealed class MutableNarrativeEvent
     public required string Location { get; init; }
     public required string Action { get; init; }
     public required string TemporalCategory { get; init; }
-    public required string RelationToPrevious { get; init; }
+    public required string RelationToPrevious { get; set; }
     public required string RelationCue { get; init; }
-    public required string RelationEvidence { get; init; }
+    public required string RelationEvidence { get; set; }
     public required int Order { get; init; }
     public required int SpanStart { get; init; }
     public required int SpanEnd { get; init; }
@@ -1155,6 +1156,8 @@ internal static partial class TymAnalyzer
         var algorithm = options.SegmentationAlgorithm ?? TymSegmentation.Rules;
         if (!TymSegmentation.IsSupported(algorithm)) throw new ArgumentException("Unknown segmentation algorithm.");
         var candidates = BuildTimeSegmentCandidates(text, events, algorithm, out var segmentation);
+        var chronology = TymTemporalOrdering.Build(events, segmentation);
+        var placements = chronology.Info.Placements.ToDictionary(item => item.SegmentId);
         var plans = candidates.Select(candidate =>
         {
             var classification = ClassifySegment(candidate.Text, HeuristicClassifySegment(candidate.Text, language), language);
@@ -1169,17 +1172,16 @@ internal static partial class TymAnalyzer
         var locations = BuildLocations(events, language);
         var entityMentions = BuildEntityMentions(events);
         var eventRecords = events.Select(ev => ev.ToRecord()).ToList();
-        var timeMl = BuildTimeMl(events, language);
+        var timeMl = BuildTimeMl(events, language, chronology.Info.Constraints);
         var locationIdByName = locations.ToDictionary(location => location.Name, location => location.Id, StringComparer.OrdinalIgnoreCase);
 
         DiagramResponse BuildDensityView(int density, int[] trackAssignments)
         {
             var tracks = new List<MutableTrack>();
             var trackByKey = new Dictionary<int, MutableTrack>();
-            var trackStoryCounts = new Dictionary<string, int>(StringComparer.Ordinal);
             var segments = new List<MutableSegment>();
             var endpoints = new List<Endpoint>();
-            var relations = new List<TimeRelation>();
+            var relations = chronology.SegmentRelations;
             var boundaries = new List<SegmentBoundary>();
 
             MutableSegment? previousSegment = null;
@@ -1202,14 +1204,6 @@ internal static partial class TymAnalyzer
                     };
                     trackByKey[key] = track;
                     tracks.Add(track);
-                    trackStoryCounts[track.Id] = 0;
-                }
-
-                trackStoryCounts[track.Id] += 1;
-                var storyOrder = (double)trackStoryCounts[track.Id];
-                if (segmentType == "REM")
-                {
-                    storyOrder -= 0.35;
                 }
 
                 var segment = new MutableSegment
@@ -1220,7 +1214,7 @@ internal static partial class TymAnalyzer
                     Type = segmentType,
                     Perspective = perspective,
                     TextOrder = index + 1,
-                    StoryOrder = storyOrder,
+                    StoryOrder = placements[$"TS{index + 1}"].LayoutOrder,
                     Entities = entities,
                     Actors = candidate.Actors,
                     LocationId = candidate.Location.Length > 0 && locationIdByName.TryGetValue(candidate.Location, out var locationId) ? locationId : "",
@@ -1247,19 +1241,8 @@ internal static partial class TymAnalyzer
 
                 if (previousSegment is not null)
                 {
-                    AddSegmentTemporalRelation(relations, previousSegment, segment, candidate.Events.FirstOrDefault());
                     if (track.Id != previousSegment.TrackId)
                     {
-                        var parallelMatch = ParallelMatch(raw, language);
-                        var rel = parallelMatch.Success ? "SIMULTANEOUS" : "BEFORE";
-                        relations.Add(new TimeRelation(
-                            previousSegment.TrackId,
-                            rel,
-                            track.Id,
-                            parallelMatch.Success ? parallelMatch.Value : "",
-                            parallelMatch.Success
-                                ? "Parallel cue triggered a cross-track relation."
-                                : "Adjacent text segments belong to different time tracks."));
                         boundaries.Add(new SegmentBoundary(
                             $"B{boundaries.Count + 1}",
                             "RUPTURE",
@@ -1370,7 +1353,8 @@ internal static partial class TymAnalyzer
                 endpoints,
                 relations,
                 boundaries,
-                timeMl);
+                timeMl,
+                chronology.Info);
             var analysis = BuildAnalysis(text, diagram);
             var render = TymSvgRenderer.Render(diagram, options with { TrackDensity = density });
             var xml = options.OmitXmlExports ? "" : TymXmlSerializer.Serialize(diagram);
@@ -1446,14 +1430,18 @@ internal static partial class TymAnalyzer
                 "Temporal anchors are optional in TYM; use TIMEX3 annotations when exact time evidence is needed."));
         }
 
-        if (diagram.Segments.Count > 1 && diagram.Relations.Count == 0)
+        if (diagram.TemporalOrdering is { Unresolved.Count: > 0 } ordering)
         {
             issues.Add(new AnalysisIssue(
-                "warning",
-                "NO_SEGMENT_RELATIONS",
-                "Multiple segments were produced without temporal relations.",
-                "The relation layer depends on adjacency and lexical cue detection."));
+                "info",
+                "UNRESOLVED_TEMPORAL_ORDER",
+                $"{ordering.Unresolved.Count} adjacent event pair(s) have unresolved temporal order.",
+                "Text-order tie-breaking is a drawing convention, not BEFORE or SIMULTANEOUS evidence."));
         }
+        if (diagram.TemporalOrdering is { Conflicts.Count: > 0 } conflicting)
+            issues.Add(new AnalysisIssue("warning", "TEMPORAL_CONFLICT",
+                $"{conflicting.Conflicts.Count} conflicting temporal claim(s) were withheld.",
+                "Review temporal_ordering.conflicts; no cyclic order is exported."));
 
         if (averageEventConfidence > 0 && averageEventConfidence < 0.55)
         {
@@ -1564,13 +1552,6 @@ internal static partial class TymAnalyzer
             : EventBoundaryPattern().Split(text);
     }
 
-    private static Match ParallelMatch(string text, string language)
-    {
-        return IsRomanian(language)
-            ? RomanianParallelPattern().Match(text)
-            : ParallelPattern().Match(text);
-    }
-
     private static bool HasParallelCue(string text, string language)
     {
         return IsRomanian(language)
@@ -1578,35 +1559,8 @@ internal static partial class TymAnalyzer
             : ParallelPattern().IsMatch(text);
     }
 
-    private static void AddSegmentTemporalRelation(
-        List<TimeRelation> relations,
-        MutableSegment previousSegment,
-        MutableSegment segment,
-        MutableNarrativeEvent? firstEvent)
-    {
-        var cue = firstEvent?.RelationCue ?? "";
-        var evidence = firstEvent?.RelationEvidence ?? "Adjacent segment in text order.";
-        var relation = firstEvent?.RelationToPrevious ?? "IMMEDIATELY_AFTER";
-
-        switch (relation)
-        {
-            case "BEFORE":
-                relations.Add(new TimeRelation(segment.Id, "BEFORE", previousSegment.Id, cue, evidence));
-                break;
-            case "SIMULTANEOUS":
-                relations.Add(new TimeRelation(previousSegment.Id, "SIMULTANEOUS", segment.Id, cue, evidence));
-                break;
-            case "AFTER":
-                relations.Add(new TimeRelation(previousSegment.Id, "BEFORE", segment.Id, cue, evidence));
-                break;
-            case "IMMEDIATELY_AFTER":
-            default:
-                relations.Add(new TimeRelation(previousSegment.Id, "IMMEDIATELY_BEFORE", segment.Id, cue, evidence));
-                break;
-        }
-    }
-
-    private static TimeMlDocument BuildTimeMl(IReadOnlyList<MutableNarrativeEvent> events, string language)
+    private static TimeMlDocument BuildTimeMl(IReadOnlyList<MutableNarrativeEvent> events, string language,
+        IReadOnlyList<TemporalConstraint> constraints)
     {
         var timeMlEvents = new List<TimeMlEvent>();
         var timexes = new List<TimeMlTimex3>();
@@ -1615,6 +1569,8 @@ internal static partial class TymAnalyzer
         var tlinks = new List<TimeMlTLink>();
         var timexIdByAnchor = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var instanceIdByTymEvent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var signalIdByTymEvent = new Dictionary<string, string>();
+        var eventById = events.ToDictionary(ev => ev.Id);
 
         for (var index = 0; index < events.Count; index++)
         {
@@ -1660,20 +1616,22 @@ internal static partial class TymAnalyzer
                     "event_temporal_anchor"));
             }
 
-            if (index > 0 && instanceIdByTymEvent.TryGetValue(events[index - 1].Id, out var previousEiid))
-            {
-                var signalId = AddSignalIfPresent(ev, signals);
-                var (from, relation, to) = MapTimeMlEventRelation(ev.RelationToPrevious, previousEiid, eiid);
-                tlinks.Add(new TimeMlTLink(
-                    $"l{tlinks.Count + 1}",
-                    relation,
-                    from,
-                    to,
-                    null,
-                    null,
-                    signalId,
-                    signalId is null ? "event_text_order" : "event_relation_signal"));
-            }
+            var signalId = AddSignalIfPresent(ev, signals);
+            if (signalId is not null) signalIdByTymEvent[ev.Id] = signalId;
+        }
+
+        foreach (var constraint in constraints)
+        {
+            // UNKNOWN is internal uncertainty, and OVERLAPS has no exact relation in
+            // our TimeML 1.2.1 profile. Neither is serialized as a fabricated TLINK.
+            var relation = constraint.Rel switch { "BEFORE" => "BEFORE", "IMMEDIATELY_BEFORE" => "IBEFORE", _ => null };
+            if (relation is null) continue;
+            var signalEvent = constraint.Source == "explicit_temporal_cue" && constraint.Cue.Length > 0
+                ? new[] { eventById[constraint.FromId], eventById[constraint.ToId] }
+                    .FirstOrDefault(ev => ev.RelationCue == constraint.Cue) : null;
+            tlinks.Add(new TimeMlTLink($"l{tlinks.Count + 1}", relation,
+                instanceIdByTymEvent[constraint.FromId], instanceIdByTymEvent[constraint.ToId], null, null,
+                signalEvent is null ? null : signalIdByTymEvent.GetValueOrDefault(signalEvent.Id), constraint.Source));
         }
 
         return new TimeMlDocument(timeMlEvents, timexes, signals, makeInstances, tlinks);
@@ -1724,21 +1682,6 @@ internal static partial class TymAnalyzer
         return sid;
     }
 
-    private static (string From, string Relation, string To) MapTimeMlEventRelation(
-        string relationToPrevious,
-        string previousEiid,
-        string currentEiid)
-    {
-        return relationToPrevious switch
-        {
-            "BEFORE" => (currentEiid, "BEFORE", previousEiid),
-            "SIMULTANEOUS" => (previousEiid, "SIMULTANEOUS", currentEiid),
-            "AFTER" => (previousEiid, "BEFORE", currentEiid),
-            "IMMEDIATELY_AFTER" => (previousEiid, "IBEFORE", currentEiid),
-            _ => (previousEiid, "IBEFORE", currentEiid)
-        };
-    }
-
     private static List<string> SplitSegments(string text)
     {
         var cleaned = WhitespacePattern().Replace(text, " ").Trim();
@@ -1758,7 +1701,6 @@ internal static partial class TymAnalyzer
     {
         var events = new List<MutableNarrativeEvent>();
         var previousActors = Array.Empty<string>();
-        var previousTemporalAnchor = "";
         var pendingTemporalHeading = "";
         var pendingTemporalHeadingStart = 0;
 
@@ -1819,16 +1761,12 @@ internal static partial class TymAnalyzer
                 }
 
                 var temporalAnchor = ExtractTemporalAnchor(eventText, language);
-                if (temporalAnchor.Length == 0 && previousTemporalAnchor.Length > 0)
-                {
-                    temporalAnchor = previousTemporalAnchor;
-                }
 
                 var fallbackTemporalCategory = HeuristicTemporalCategory(eventText, language);
                 var temporalClassification = ClassifyEventTemporal(eventText, fallbackTemporalCategory, language);
                 var location = ExtractLocation(eventText, language);
                 var action = ExtractAction(eventText, language);
-                var temporalCue = InferTemporalCue(eventText, events.Count == 0, language);
+                var temporalCue = TymTemporalOrdering.InferCue(eventText, events.Count == 0);
 
                 events.Add(new MutableNarrativeEvent
                 {
@@ -1854,10 +1792,6 @@ internal static partial class TymAnalyzer
                     previousActors = actors.ToArray();
                 }
 
-                if (temporalAnchor.Length > 0)
-                {
-                    previousTemporalAnchor = temporalAnchor;
-                }
             }
             if (events.Count == eventsBeforeSentence && pendingPrefix.Length > 0
                 && (carriedHeading || TemporalDevelopmentContext.IsTemporalHeading(pendingPrefix)))
@@ -1888,9 +1822,12 @@ internal static partial class TymAnalyzer
                 localStart = searchStart;
             }
 
-            var start = sentenceStart + localStart;
-            var end = start + trimmed.Length;
-            spans.Add(new ClauseSpan(trimmed, start, end));
+            var gap = sentence[searchStart..localStart];
+            var connective = Regex.Match(gap, @"\b(?:and then|then|[\u0219s]i apoi|apoi)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            var retainedStart = connective.Success ? searchStart + connective.Index : localStart;
+            var start = sentenceStart + retainedStart;
+            var end = sentenceStart + localStart + trimmed.Length;
+            spans.Add(new ClauseSpan(sentence[retainedStart..(end - sentenceStart)], start, end));
             searchStart = Math.Min(sentence.Length, localStart + trimmed.Length);
         }
 
@@ -2054,40 +1991,6 @@ internal static partial class TymAnalyzer
             ? RomanianTemporalAnchorPattern().Match(text)
             : TemporalAnchorPattern().Match(text);
         return match.Success ? match.Value.Trim() : "";
-    }
-
-    private static TemporalCue InferTemporalCue(string text, bool isFirstEvent, string language)
-    {
-        if (isFirstEvent)
-        {
-            return new TemporalCue("NONE", "", "First event in text order.");
-        }
-
-        var parallel = IsRomanian(language) ? RomanianParallelPattern().Match(text) : ParallelPattern().Match(text);
-        if (parallel.Success)
-        {
-            return new TemporalCue("SIMULTANEOUS", parallel.Value, "Parallel cue places this event alongside the previous event.");
-        }
-
-        var retrospective = IsRomanian(language) ? RomanianRetrospectiveCuePattern().Match(text) : RetrospectiveCuePattern().Match(text);
-        if (retrospective.Success)
-        {
-            return new TemporalCue("BEFORE", retrospective.Value, "Retrospective cue places this event earlier than the previous event.");
-        }
-
-        var sequential = IsRomanian(language) ? RomanianSequentialCuePattern().Match(text) : SequentialCuePattern().Match(text);
-        if (sequential.Success)
-        {
-            return new TemporalCue("IMMEDIATELY_AFTER", sequential.Value, "Sequential cue places this event immediately after the previous event.");
-        }
-
-        var forward = IsRomanian(language) ? RomanianForwardCuePattern().Match(text) : ForwardCuePattern().Match(text);
-        if (forward.Success)
-        {
-            return new TemporalCue("AFTER", forward.Value, "Forward cue places this event after the previous event.");
-        }
-
-        return new TemporalCue("IMMEDIATELY_AFTER", "", "No explicit cue; defaulting to text-order adjacency.");
     }
 
     private static string InferTimeMlEventClass(string text, string action, string language)
@@ -2431,15 +2334,6 @@ internal static partial class TymAnalyzer
     [GeneratedRegex(@"\b(meanwhile|elsewhere|at the same time|simultaneously|in another)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ParallelPattern();
 
-    [GeneratedRegex(@"\b(years earlier|earlier|long ago|back then|previously|formerly|had\s+(?:been\s+)?\w+(?:ed|en)?)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex RetrospectiveCuePattern();
-
-    [GeneratedRegex(@"\b(and then|then|subsequently|next)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex SequentialCuePattern();
-
-    [GeneratedRegex(@"\b(later|afterward|afterwards|eventually|finally|after\s+(?:the\s+)?\w+)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex ForwardCuePattern();
-
     [GeneratedRegex(@"\b(?:had|has|have)\s+(?:been\s+)?\w+(?:ed|en)\b", RegexOptions.IgnoreCase)]
     private static partial Regex PerfectiveAspectPattern();
 
@@ -2527,15 +2421,6 @@ internal static partial class TymAnalyzer
     [GeneratedRegex(@"\b(între\s+timp|intre\s+timp|în\s+altă\s+parte|in\s+alta\s+parte|simultan|în\s+același\s+timp|in\s+acelasi\s+timp)\b", RegexOptions.IgnoreCase)]
     private static partial Regex RomanianParallelPattern();
 
-    [GeneratedRegex(@"\b(cu\s+(?:\d+\s+\w+|ani|mult\s+timp)\s+(?:în\s+urmă|in\s+urma)|mai\s+devreme|odinioară|odinioara|demult|în\s+trecut|in\s+trecut|înainte|inainte)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex RomanianRetrospectiveCuePattern();
-
-    [GeneratedRegex(@"\b(apoi|după\s+aceea|dupa\s+aceea|atunci|pe\s+urmă|pe\s+urma)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex RomanianSequentialCuePattern();
-
-    [GeneratedRegex(@"\b(mai\s+târziu|mai\s+tarziu|după|dupa|în\s+cele\s+din\s+urmă|in\s+cele\s+din\s+urma)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex RomanianForwardCuePattern();
-
     [GeneratedRegex(@"\b(?:a|au|am|ai|ați|ati)\s+\w+(?:at|it|ut)\b", RegexOptions.IgnoreCase)]
     private static partial Regex RomanianPerfectiveAspectPattern();
 
@@ -2603,6 +2488,18 @@ internal static class TymXmlSerializer
                 $"""    <EVENT ID="{X(ev.Id)}" SPANS="{ev.SpanStart}~{ev.SpanEnd}" ACTORS="{X(string.Join(",", actorIds))}" LOCATION="{X(locationId)}" TEMPORAL-ANCHOR="{X(ev.TemporalAnchor)}" TENSE="{X(ev.TemporalCategory)}" ACTION="{X(ev.Action)}" REL-PREV="{X(ev.RelationToPrevious)}" REL-CUE="{X(ev.RelationCue)}" ORDER="{ev.Order}" TEXT="{X(ev.Text)}" />""");
         }
         xml.AppendLine("""  </EVENT-SECTION>""");
+
+        if (diagram.TemporalOrdering is { } ordering)
+        {
+            xml.AppendLine($"""  <TEMPORAL-ORDER METHOD="{X(ordering.Method)}" LAYOUT-BASIS="{X(ordering.LayoutBasis)}">""");
+            foreach (var constraint in ordering.Constraints)
+                xml.AppendLine($"""    <CONSTRAINT FROM="{X(constraint.FromId)}" REL="{X(constraint.Rel)}" TO="{X(constraint.ToId)}" SOURCE="{X(constraint.Source)}" CUE="{X(constraint.Cue)}" EVIDENCE="{X(constraint.Evidence)}" />""");
+            foreach (var unresolved in ordering.Unresolved)
+                xml.AppendLine($"""    <UNRESOLVED FROM="{X(unresolved.FromId)}" TO="{X(unresolved.ToId)}" REASON="{X(unresolved.Reason)}" />""");
+            foreach (var conflict in ordering.Conflicts)
+                xml.AppendLine($"""    <CONFLICT FROM="{X(conflict.Constraint.FromId)}" REL="{X(conflict.Constraint.Rel)}" TO="{X(conflict.Constraint.ToId)}" SOURCE="{X(conflict.Constraint.Source)}" REASON="{X(conflict.Reason)}" />""");
+            xml.AppendLine("""  </TEMPORAL-ORDER>""");
+        }
 
         xml.AppendLine("""  <TIMEML-SECTION>""");
         foreach (var ev in diagram.TimeMl.Events)
@@ -2710,7 +2607,7 @@ internal static class TymSvgRenderer
         var parts = new StringBuilder();
         const int marginLeft = 112;
         const int marginRight = 80;
-        const int legendHeight = 256;
+        const int legendHeight = 288;
         var usable = Math.Max(400, width - marginLeft - marginRight);
 
         var y = 38.0;
@@ -2759,6 +2656,8 @@ internal static class TymSvgRenderer
             var segmentsByTrack = diagram.Segments.ToLookup(segment => segment.TrackId);
             var locationNames = diagram.Locations.ToDictionary(location => location.Id, location => location.Name);
             var endpointById = diagram.Endpoints.ToDictionary(endpoint => endpoint.Id);
+            var uncertain = diagram.TemporalOrdering?.Placements.Where(item => item.HasUnresolvedOrder)
+                .Select(item => item.SegmentId).ToHashSet() ?? [];
             var columns = Math.Max(1, usable / 240);
             var step = (double)usable / columns;
             const int rowGap = 144;
@@ -2786,6 +2685,9 @@ internal static class TymSvgRenderer
                 parts.Append("<g class=\"track-heading\">");
                 parts.Append(SvgText(24, 22, track.Id, 15, anchor: "start", weight: "700"));
                 parts.Append("</g>");
+                if (items.Any(item => uncertain.Contains(item.Id)))
+                    parts.Append("<g class=\"temporal-order-notice\"><title>" + SvgContent("Placement uses a partial order; source order breaks unresolved ties.") + "</title>"
+                        + SvgText(100, 22, "? Order unresolved", 12, anchor: "start") + "</g>");
                 for (var index = 0; index < trackEndpoints.Count; index++)
                 {
                     var endpoint = trackEndpoints[index];
@@ -2804,7 +2706,7 @@ internal static class TymSvgRenderer
                     var x2 = x1 + step;
                     var markerWidth = Math.Max(42, segment.Id.Length * 8 + 16);
                     var dash = segment.Type is "REM" or "SUP" or "GEN" or "FIC" ? "2 6" : "";
-                    parts.Append($"<g class=\"time-segment\" data-segment-id=\"{WebUtility.HtmlEncode(segment.Id)}\"><title>{SvgContent(segment.Id + ": " + segment.Text)}</title>");
+                    parts.Append($"<g class=\"time-segment\" data-segment-id=\"{WebUtility.HtmlEncode(segment.Id)}\" data-order-unresolved=\"{(uncertain.Contains(segment.Id) ? "true" : "false")}\"><title>{SvgContent(segment.Id + ": " + segment.Text)}</title>");
                     parts.Append(Line(x1, trackY, x2, trackY, strokeWidth: strokeWidth, dashArray: dash));
                     parts.Append(Rect(x1 - markerWidth / 2.0, trackY - 14, markerWidth, 28));
                     parts.Append(SvgText(x1, trackY + 4, segment.Id, 12, weight: "700"));
@@ -2938,7 +2840,7 @@ internal static class TymSvgRenderer
         var itemY = y + 48;
 
         parts.Append(FormattableString.Invariant($"""
-            <rect x="{x:F1}" y="{y:F1}" width="{width:F1}" height="256.0" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.2" rx="6"/>
+            <rect x="{x:F1}" y="{y:F1}" width="{width:F1}" height="288.0" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.2" rx="6"/>
             """));
         parts.Append(SvgText(x + 18, y + 25, "Legend", 13, anchor: "start", weight: "700"));
 
@@ -2961,6 +2863,8 @@ internal static class TymSvgRenderer
             parts.Append(TagIcon(tags[index], iconX + 12, iconY - 15));
             parts.Append(SvgText(iconX + 56, iconY, tags[index] + ": " + TagDescription(tags[index]), 12, anchor: "start"));
         }
+        parts.Append(SvgText(leftX, y + 260, "? Unresolved order; source-order tie-break", 11, anchor: "start"));
+        parts.Append(SvgText(rightX, y + 260, "Placement does not assert simultaneity", 11, anchor: "start"));
 
         return parts.ToString();
     }

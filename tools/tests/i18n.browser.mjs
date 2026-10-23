@@ -21,6 +21,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="490" vi
 const result = { model_version: 'authored-i18n-fixture', track_generation: { density: 50 },
   segmentation: { unit: 'temporal_development', algorithm: 'article_rules', decisions: [] },
   diagram: { actors: [{ id: 'A1', name: 'Adam' }], events: [{ id: 'EV1', text: 'Narration', temporal_category: 'Past', relation_to_previous: 'Before', actors: ['Adam'], confidence: 0.9 }],
+    temporal_ordering: { method: 'evidence_partial_order_v1', constraints: [], unresolved: [], conflicts: [], placements: [{ segment_id: 'TS1', layout_order: 1, has_unresolved_order: false }] },
     segments: [{ id: 'TS1', text: 'Narration', track_id: 'TT1', actors: ['Adam'], temporal_anchor: '', event_ids: ['EV1'], type: 'NAR', confidence: 0.9 }],
     tracks: [{ id: 'TT1', name: 'Adam' }], relations: [], time_ml: { events: [{ id: 'e1', text: 'Narration', class: 'OCCURRENCE' }], timex3: [], tlinks: [] } },
   analysis: { character_count: 9, average_event_confidence: 0.9, average_segment_confidence: 0.9, segment_types: { NAR: 1 }, temporal_categories: { Past: 1 },

@@ -141,6 +141,11 @@ The [two-prototype roadmap](docs/plans/README.md) separates the [diagram API pla
 
 ## Minimal React UI
 
+The integrated **Ordering** tab provides Arrange, Replay and Compare using the
+existing TS/TT data. Validated display preferences remain separate from original
+source order and accepted temporal evidence. See the [Ordering Workbench design,
+algorithm catalog decision and verification](docs/ordering-workbench.md).
+
 The workbench supports independent **English / Română flag buttons** for the interface, including analysis views, account dialogs, chapter labels and SVG legends. The labeled buttons show the active language and support keyboard activation; there is no interface-language dropdown. The remembered preference does not change the text's analysis language or invalidate cached diagrams. See [internationalization and verification](docs/internationalization.md). The bilingual interface and trained entity picker were published to both Azure UI hosts on 20 October 2026; the [release record](docs/verification/i18n-ner-20261020.md) separates deployed features, regression checks and account-activation blockers.
 
 Live UI:
@@ -239,11 +244,15 @@ http://127.0.0.1:8765/openapi.yaml
 
 ## Core Data Model
 
+The local v0.10 increment adds [evidence-based temporal ordering](docs/temporal-ordering.md).
+Text adjacency and TT changes no longer imply chronology. Unresolved ordering is
+retained in JSON/XML and marked in the SVG; density changes preserve temporal facts.
+
 `NarrativeEvent` is the event-level unit suggested by the second paper:
 
 - `id`: stable event id, such as `EV1`
 - `actors`: person entities participating in the event, with carry-forward when absent
-- `temporal_anchor`: detected temporal expression or inherited anchor
+- `temporal_anchor`: explicitly detected temporal expression; no fabricated inherited TIMEX mention
 - `location`: lightweight location phrase
 - `action`: detected verb/action cue
 - `temporal_category`: `Past`, `Present`, or `Future`
@@ -257,7 +266,7 @@ http://127.0.0.1:8765/openapi.yaml
 - `type`: `NAR`, `REM`, `SUP`, `GEN`, or `FIC`
 - `perspective`: narrator, character, or unknown
 - `text_order`: source order index
-- `story_order`: layout order inside the track
+- `story_order`: density-independent partial-order layout position; not a timestamp or proof of chronology
 - `actors`: stable character set for the segment
 - `location_id`: associated `TL` location id
 - `temporal_anchor`: associated temporal expression
@@ -284,7 +293,7 @@ For Romanian (`language = "ro"`), event temporal category and segment type are c
 `TimeRelation` captures shallow temporal constraints:
 
 - `from_id`, `to_id`
-- `rel`: `BEFORE`, `IMMEDIATELY_BEFORE`, `AFTER`, `IMMEDIATELY_AFTER`, or `SIMULTANEOUS`
+- `rel`: supported event constraints projected onto TS spans (`BEFORE`, `IMMEDIATELY_BEFORE`, `OVERLAPS`), not universal assertions about whole TS intervals
 - `cue`, `evidence`: the lexical cue and rule explanation, when available
 
 `time_ml` is a TimeML-style annotation layer:
@@ -293,7 +302,7 @@ For Romanian (`language = "ro"`), event temporal category and segment type are c
 - `timex3`: temporal expressions with rough `DATE`, `TIME`, `DURATION`, or `SET` typing and normalized values such as `PAST_REF`
 - `signals`: cue words such as `meanwhile`, `years earlier`, `then`, or `after`
 - `make_instances`: event instances with tense, aspect, polarity, and POS
-- `tlinks`: event-event and event-time temporal links using TimeML-style relation labels such as `IBEFORE`, `BEFORE`, `SIMULTANEOUS`, and `IS_INCLUDED`
+- `tlinks`: accepted event-event constraints (`BEFORE`, explicitly immediate `IBEFORE`) and event-time anchors (`IS_INCLUDED`); unknown/overlapping order is not relabeled as a supported TLINK
 
 ## Production Notes
 

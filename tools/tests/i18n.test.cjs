@@ -69,7 +69,7 @@ test('explicit interface language changes chapter labels, never source metadata'
   assert.equal(JSON.stringify(section), original);
 });
 test('literal UI translation calls have catalog entries', () => {
-  for (const name of ['app.js', 'accounts.js']) {
+  for (const name of ['app.js', 'accounts.js', 'ordering-view.js']) {
     const source = fs.readFileSync(path.join(__dirname, '../../ui/Tym.Ui/wwwroot', name), 'utf8');
     for (const match of source.matchAll(/(?:\bt|I18n\.(?:message|error))\('([^']+)'/g)) {
       // DOM element names are not translation calls.

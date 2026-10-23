@@ -4,7 +4,7 @@
   else root.TymOffline = api;
 })(typeof globalThis === 'object' ? globalThis : this, function (root) {
   'use strict';
-  const epoch = 'tym-v0.9-temporal-1';
+  const epoch = 'tym-v0.10-temporal-order-1';
   const normalizeApi = value => value.trim().replace(/\/+$/, '');
   const copy = value => JSON.parse(JSON.stringify(value));
   function catalog(value) {
@@ -139,6 +139,7 @@
         const safe = savedResponse(response);
         if (!safe) return { saved: false };
         return put({ key, kind: 'diagram', api: normalizeApi(api), resolution, response: safe,
+          orderingKey: typeof metadata.orderingKey === 'string' ? metadata.orderingKey : null,
           label: String(metadata.label || ''), algorithm: response.segmentation?.algorithm || 'article_rules', book: Boolean(metadata.book) }, expectedRevision);
       },
       async diagrams(api, resolution) {

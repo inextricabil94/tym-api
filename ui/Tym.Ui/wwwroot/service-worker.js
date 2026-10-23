@@ -1,8 +1,8 @@
 'use strict';
-const SHELL = 'tym-shell-20261023-temporal-2';
+const SHELL = 'tym-shell-20261023-ordering-workbench-2';
 const ASSETS = ['/index.html', '/app.js', '/offline-cache.js', '/offline-register.js', '/i18n.js', '/styles.css',
   '/fonts.css', '/theme.js', '/accounts.js', '/chapter-splitter.js', '/track-groups.js', '/density-cache.js',
-  '/segmentation.js', '/viewport.js', '/assets/vendor/react.production.min.js', '/assets/vendor/react-dom.production.min.js',
+  '/segmentation.js', '/ordering-core.js', '/ordering-sort.js', '/ordering-replay.js', '/ordering-worker.js', '/ordering-view.js', '/viewport.js', '/assets/vendor/react.production.min.js', '/assets/vendor/react-dom.production.min.js',
   '/assets/flags/gb.svg', '/assets/flags/ro.svg', '/assets/examples/jakarta.jpg', '/assets/examples/jules-verne.jpg',
   '/assets/examples/christmas-carol.jpg', '/assets/examples/leagues-frontispiece.jpg',
   '/assets/fonts/space-grotesk-latin.woff2', '/assets/fonts/space-grotesk-latin-ext.woff2',

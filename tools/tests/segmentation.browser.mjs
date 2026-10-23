@@ -19,7 +19,7 @@ const book = { id: 'authored-book', label: 'Authored chapter fixture', language:
     { id: 'front', label: 'Preface', kind: 'front_matter', start: 0, end: prefix.length, character_count: prefix.length },
     { id: 'chapter', label: 'TWO', kind: 'chapter', start: prefix.length, end: prefix.length + sourceText.length, character_count: sourceText.length }
   ] };
-let requests = [], sourceReads = 0, restricted = false, legacy = false, oldSemantics = false, longFixture = null;
+let requests = [], sourceReads = 0, restricted = false, legacy = false, oldSemantics = false, oldOrdering = false, longFixture = null;
 const browser = await chromium.launch({ headless: true, ...(process.env.TYM_CHROMIUM ? { executablePath: process.env.TYM_CHROMIUM } : {}) });
 const page = await browser.newPage({ serviceWorkers: 'block', viewport: { width: 1440, height: 1050 }, locale: 'en-GB' });
 const errors = [];
@@ -40,6 +40,7 @@ await page.route('**/v1/**', async route => {
     data = longFixture || fixtures[`${payload.options.language}/${payload.options.segmentation_algorithm}`].response;
     if (legacy) data = { ...data, segmentation: undefined };
     if (oldSemantics) data = { ...data, segmentation: { ...data.segmentation, unit: undefined } };
+    if (oldOrdering) data = { ...data, diagram: { ...data.diagram, temporal_ordering: undefined } };
   } else throw new Error(`Unexpected request: ${url.pathname}`);
   await route.fulfill({ contentType: 'application/json', body: JSON.stringify(data) });
 });
@@ -70,6 +71,17 @@ try {
       await generate();
       assert.equal(requests.at(-1).options.segmentation_algorithm, algorithm);
       assert.equal(requests.at(-1).text, fixture.text);
+      const notices = page.locator('.diagram-area .temporal-order-notice text');
+      assert.ok(await notices.count() > 0, 'Temporal uncertainty is not visible');
+      assert.equal(await notices.first().textContent(), language === 'en' ? '? Order unresolved' : '? Ordine nedeterminată');
+      assert.ok(await page.locator('.diagram-area .temporal-order-notice').evaluateAll(elements => elements.every(element => {
+        const label = element.getBBox(), heading = element.parentElement.querySelector('.track-heading').getBBox();
+        return label.x >= heading.x + heading.width + 8 && label.x + label.width <= Number(element.ownerSVGElement.getAttribute('width')) - 24;
+      })), 'Uncertainty marker overlaps the TT heading or SVG edge');
+      if (algorithm === 'article_rules' && width !== 320) {
+        await notices.first().scrollIntoViewIfNeeded();
+        await page.screenshot({ path: path.join(output, `ordering-${language}-${width}.png`) });
+      }
       await inspect(language);
       assert.equal(await markedText(), fixture.text);
       assert.equal(await page.locator('.source-segment').count(), fixture.response.diagram.segments.length);
@@ -148,6 +160,12 @@ try {
   assert.equal(await page.locator('.segment-overview svg').count(), 0);
   oldSemantics = false;
 
+  oldOrdering = true;
+  await page.getByRole('button', { name: 'Regenerate diagram', exact: true }).click();
+  await page.locator('.message').filter({ hasText: 'The API does not provide evidence-based temporal ordering. Update the API.' }).waitFor();
+  assert.equal(await page.locator('.segment-overview svg').count(), 0);
+  oldOrdering = false;
+
   restricted = true;
   await page.reload();
   await page.locator('#hosted-book').selectOption(book.id);
@@ -162,5 +180,12 @@ try {
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ responsiveCases: cases, algorithmCount: 3, languages: ['en', 'ro'], sourcePaging: true,
     chapterOffsets: true, cacheInvalidation: true, legacyApiRejected: true, oldSemanticsRejected: true,
-    temporalContextShown: true, sourceAccessRespected: true, browserErrors: errors.length }));
+    temporalContextShown: true, uncertaintyShownAndLocalized: true, uncertaintyFits: true, oldOrderingRejected: true,
+    sourceAccessRespected: true, browserErrors: errors.length }));
+} catch (error) {
+  await page.screenshot({ path: path.join(output, 'failure.png'), fullPage: true });
+  console.error(JSON.stringify({ language: await page.locator('#language').inputValue(),
+    algorithm: await page.locator('#segmentation-algorithm').inputValue(), viewport: page.viewportSize(),
+    messages: await page.locator('.message').allTextContents(), browserErrors: errors }));
+  throw error;
 } finally { await browser.close(); }

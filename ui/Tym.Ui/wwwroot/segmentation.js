@@ -33,5 +33,11 @@
     return { index, pages, startIndex, segments: visible, parts };
   }
 
-  return { algorithms, sourcePage };
+  function hasTemporalOrdering(response) {
+    const ordering = response?.diagram?.temporal_ordering;
+    return ordering?.method === 'evidence_partial_order_v1'
+      && ['constraints', 'unresolved', 'conflicts', 'placements'].every(key => Array.isArray(ordering[key]));
+  }
+
+  return { algorithms, sourcePage, hasTemporalOrdering };
 });

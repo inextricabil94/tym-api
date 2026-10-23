@@ -263,6 +263,11 @@ function App() {
   const currentChapterIndex = Math.min(chapterIndex, Math.max(0, sections.length - 1));
   const selectedSection = textScope === 'chapters' ? sections[currentChapterIndex] : null;
   const text = selectedSection ? sourceText.slice(selectedSection.start, selectedSection.end) : sourceText;
+  const orderingSourceKey = React.useMemo(() => selectedBookId
+    ? `book:${selectedBookId}:${selectedSection?.id || 'full'}`
+    : `text:${window.TymOrdering.signature(text)}`, [selectedBookId, selectedSection?.id, text]);
+  const orderingDocumentKey = restoredDiagram?.orderingKey || savedIdentity.current?.orderingKey
+    || `${window.TymOffline.normalizeApi(apiBaseUrl)}:${orderingSourceKey}`;
   const chapterCount = sections.filter(section => section.kind === 'chapter').length;
   const selectedCharacters = selectedBook ? selectedSection?.character_count ?? selectedBook.character_count : text.length;
   const bookSelectionKey = selectedBook ? `${selectedBook.id}:${selectedSection?.id || 'full'}` : '';
@@ -656,6 +661,7 @@ function App() {
       const key = await window.TymOffline.identity(trimmedApi, payload, requestedResolution, selectedBook);
       if (generationVersion.current !== version || window.TymViewport.measure(window.innerWidth, window.innerHeight).key !== requestedResolution) return;
       const identity = { key, version, api: trimmedApi, resolution: requestedResolution, book: Boolean(selectedBook || selectedExampleItem?.is_private),
+        orderingKey: `${window.TymOffline.normalizeApi(trimmedApi)}:${orderingSourceKey}`,
         label: selectedBook ? `${selectedBook.label}${selectedSection ? ' / ' + selectedSection.label : ''}` : t(selectedExampleItem?.label || 'Custom text'), revision: offline.revision() };
       const canReuse = force !== true && !(selectedBook && account.config?.text_requires_login === true);
       const previous = savedIdentity.current;
@@ -708,6 +714,8 @@ function App() {
         throw I18n.error('The API did not apply the selected segmentation algorithm.');
       if (data.segmentation?.unit !== 'temporal_development')
         throw I18n.error('The API does not provide temporal-development segmentation. Update the API.');
+      if (!window.TymSegmentation.hasTemporalOrdering(data))
+        throw I18n.error('The API does not provide evidence-based temporal ordering. Update the API.');
       const returnedSvg = (data.render && data.render.svg) || (data.renderings && data.renderings.svg) || '';
 
       if (!live) setBaseResult(data);
@@ -740,8 +748,13 @@ function App() {
     const saved = await offline.getDiagram(key);
     if (generationVersion.current !== version || !saved || saved.resolution !== resolution.key
       || saved.api !== window.TymOffline.normalizeApi(apiBaseUrl) || (saved.book && account.config?.text_requires_login === true)) return;
+    if (!window.TymSegmentation.hasTemporalOrdering(saved.response)) {
+      setBaseResult(null);
+      setMessage(I18n.message('The API does not provide evidence-based temporal ordering. Update the API.'));
+      return;
+    }
     savedIdentity.current = null;
-    setRestoredDiagram({ book: saved.book }); setSavedSelection(key);
+    setRestoredDiagram({ book: saved.book, orderingKey: saved.orderingKey || `${saved.api}:legacy:${saved.key}` }); setSavedSelection(key);
     setBaseResult(saved.response); setCacheResolution(resolution.key);
     setViewerDensity(saved.response.track_generation?.density ?? 50);
     setActiveTab('diagram'); setTrackQuery(''); setTrackPage(0); setSegmentPage(0);
@@ -988,6 +1001,7 @@ function App() {
   }
 
   function renderResultBody() {
+    if (activeTab === 'ordering') return null;
     if (activeTab === 'segmentation') return renderSegmentation();
     if (activeTab === 'json') {
       return e('pre', { className: 'code-view' }, jsonText || t('No JSON result yet.'));
@@ -1083,7 +1097,7 @@ function App() {
     )));
   }
 
-  return e('main', { className: 'shell' },
+  return e('main', { className: `shell ${activeTab === 'ordering' ? 'ordering-active' : ''}` },
     e('header', { className: 'topbar' },
       e('div', { className: 'brand' },
         e('strong', null, e('span', { className: 'brand-accent' }, 'TYM'), t(' Diagram UI')),
@@ -1366,6 +1380,7 @@ function App() {
           e('div', { className: 'tabs', role: 'tablist', 'aria-label': t('Result views') },
             resultTab('diagram', 'SVG'),
             resultTab('segmentation', 'Segmentation'),
+            resultTab('ordering', 'Ordering'),
             resultTab('analysis', 'Analysis'),
             resultTab('timeml', 'TimeML'),
             !protectedSource ? resultTab('json', 'JSON') : null,
@@ -1386,7 +1401,9 @@ function App() {
           metric('Relations', count(diagram.relations)),
           metric('TLINKs', count(timeMl.tlinks))
         ),
-        renderResultBody()
+        renderResultBody(),
+        e('div', { className: 'ordering-host', hidden: activeTab !== 'ordering' },
+          e(window.TymOrderingView, { diagram, documentKey: orderingDocumentKey, active: activeTab === 'ordering', allowText: !protectedSource || canReadBookSource }))
       )
     )
   );

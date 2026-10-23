@@ -692,6 +692,7 @@ components:
             - relations
             - boundaries
             - time_ml
+            - temporal_ordering
           properties:
             actors:
               type: array
@@ -731,6 +732,8 @@ components:
                 $ref: "#/components/schemas/SegmentBoundary"
             time_ml:
               $ref: "#/components/schemas/TimeMlDocument"
+            temporal_ordering:
+              $ref: "#/components/schemas/TemporalOrderingInfo"
         analysis:
           $ref: "#/components/schemas/AnalysisReport"
         render:
@@ -1010,12 +1013,15 @@ components:
             - Future
         relation_to_previous:
           type: string
+          description: Evidence-backed relation to the preceding event; UNKNOWN does not imply BEFORE or SIMULTANEOUS.
           enum:
             - NONE
+            - UNKNOWN
             - BEFORE
             - AFTER
             - IMMEDIATELY_AFTER
             - SIMULTANEOUS
+            - OVERLAPS
         relation_cue:
           type: string
         relation_evidence:
@@ -1089,6 +1095,7 @@ components:
           type: integer
         story_order:
           type: number
+          description: Density-independent topological layout position, not a timestamp. Source order breaks unresolved ties; inspect temporal_ordering for evidence.
         entities:
           type: array
           items:
@@ -1148,6 +1155,7 @@ components:
           type: string
     TimeRelation:
       type: object
+      description: Event constraints projected onto TS source spans, not assertions about every point of whole TS intervals. Track changes alone never create relations.
       required:
         - from_id
         - rel
@@ -1165,12 +1173,81 @@ components:
             - AFTER
             - IMMEDIATELY_AFTER
             - SIMULTANEOUS
+            - OVERLAPS
         to_id:
           type: string
         cue:
           type: string
         evidence:
           type: string
+    TemporalOrderingInfo:
+      type: object
+      required: [method, constraints, unresolved, conflicts, placements, layout_basis]
+      properties:
+        method:
+          type: string
+          enum: [evidence_partial_order_v1]
+        layout_basis:
+          type: string
+          enum: [partial_order_with_text_order_tiebreak]
+        constraints:
+          type: array
+          description: Accepted event-level evidence, computed once before TT density or viewport layout. Not an exhaustive Allen relation network.
+          items:
+            $ref: "#/components/schemas/TemporalConstraint"
+        unresolved:
+          type: array
+          description: Adjacent event pairs without an accepted direct temporal constraint. Not an exhaustive list of all unknown pairs.
+          items:
+            type: object
+            required: [from_id, to_id, reason]
+            properties:
+              from_id:
+                type: string
+              to_id:
+                type: string
+              reason:
+                type: string
+        conflicts:
+          type: array
+          items:
+            type: object
+            required: [constraint, reason]
+            properties:
+              constraint:
+                $ref: "#/components/schemas/TemporalConstraint"
+              reason:
+                type: string
+        placements:
+          type: array
+          items:
+            type: object
+            required: [segment_id, layout_order, has_unresolved_order]
+            properties:
+              segment_id:
+                type: string
+              layout_order:
+                type: integer
+              has_unresolved_order:
+                type: boolean
+    TemporalConstraint:
+      type: object
+      required: [from_id, rel, to_id, cue, evidence, source]
+      properties:
+        from_id:
+          type: string
+        rel:
+          type: string
+          enum: [BEFORE, IMMEDIATELY_BEFORE, OVERLAPS]
+        to_id:
+          type: string
+        cue:
+          type: string
+        evidence:
+          type: string
+        source:
+          type: string
+          enum: [explicit_temporal_cue, explicit_calendar, context_return]
     SegmentBoundary:
       type: object
       required:

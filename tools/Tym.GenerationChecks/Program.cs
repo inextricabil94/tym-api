@@ -57,6 +57,12 @@ if (args.Contains("--cache-only"))
 if (args.Contains("--temporal-only"))
 {
     TemporalSegmentationChecks.Run((text, options) => (DiagramResponse)analyze.Invoke(null, [text, options])!);
+    TemporalOrderingChecks.Run((text, options) => (DiagramResponse)analyze.Invoke(null, [text, options])!);
+    return;
+}
+if (args.Contains("--ordering-only"))
+{
+    TemporalOrderingChecks.Run((text, options) => (DiagramResponse)analyze.Invoke(null, [text, options])!);
     return;
 }
 if (args.Contains("--segmentation-only"))
@@ -270,6 +276,8 @@ Check(coordinated.References!.Any(reference => reference.Text == "Ei" && referen
     "Coordinated reference failed when supplied correct person annotations");
 Console.WriteLine($"Trained NER (EN/RO), adapter, {posChecks} POS and {anaphoraChecks} reference fixtures passed. Not an accuracy benchmark.");
 if (args.Contains("--entities-only")) return;
+TemporalSegmentationChecks.Run((text, options) => (DiagramResponse)analyze.Invoke(null, [text, options])!);
+TemporalOrderingChecks.Run((text, options) => (DiagramResponse)analyze.Invoke(null, [text, options])!);
 var placeResponse = (DiagramResponse)analyze.Invoke(null,
     ["Margaret remembered her mother in Jakarta.", new DiagramOptions(HighlightEntities: ["Jakarta"])])!;
 Check(XDocument.Parse(placeResponse.Render.Svg).Descendants().Any(element => element.Name.LocalName == "line"

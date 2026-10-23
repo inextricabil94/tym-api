@@ -56,3 +56,8 @@ test('oversized diagrams are skipped without breaking generation', async () => {
   const store = cache.create({ indexedDB: null, maxBytes: 10 });
   assert.equal((await store.putDiagram('large', 'https://api', '320x800', response, {})).tooLarge, true);
 });
+test('saved diagrams retain opaque ordering document identity for later reopening', async () => {
+  const store = cache.create({ indexedDB: null });
+  await store.putDiagram('one', 'https://api', '320x800', response, { orderingKey: 'https://api:text:digest' });
+  assert.equal((await store.getDiagram('one')).orderingKey, 'https://api:text:digest');
+});

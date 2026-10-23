@@ -98,6 +98,7 @@ try {
   const shellPaths = await page.evaluate(async () => (await Promise.all((await caches.keys()).filter(key => key.startsWith('tym-shell-')).map(async key =>
     (await (await caches.open(key)).keys()).map(request => new URL(request.url).pathname)))).flat());
   assert.ok(shellPaths.length > 20);
+  for (const asset of ['/ordering-core.js', '/ordering-sort.js', '/ordering-replay.js', '/ordering-worker.js', '/ordering-view.js']) assert.ok(shellPaths.includes(asset), asset);
   assert.ok(!shellPaths.some(value => value.includes('/v1/') || value.includes('/local-examples/')));
   offline = true; await context.setOffline(true); await page.reload();
   await page.locator('#saved-diagram option').nth(1).waitFor({ state: 'attached' });
@@ -106,6 +107,14 @@ try {
   assert.equal(await page.locator('.download-actions').getByRole('button', { name: 'JSON', exact: true }).count(), 0, 'Saved books must retain export restrictions');
   assert.equal(await page.locator('.result-toolbar').getByRole('button', { name: 'JSON', exact: true }).count(), 0);
   await page.locator('#cached-density').selectOption('100');
+  await page.getByRole('button', { name: 'Ordering', exact: true }).click();
+  await page.locator('.ordering-block').first().waitFor();
+  await page.getByRole('button', { name: 'Replay', exact: true }).click();
+  await page.getByLabel('Ordering keys', { exact: true }).selectOption('story_order');
+  await page.getByRole('button', { name: 'Build trace', exact: true }).click();
+  await page.locator('[data-suggestion-result]').filter({ hasText: 'Temporal compatibility: Compatible' }).waitFor();
+  await page.getByRole('button', { name: 'Next operation', exact: true }).click();
+  await page.getByRole('tablist', { name: 'Result views' }).getByRole('button', { name: 'SVG', exact: true }).click();
   assert.equal(generations, 1);
   await page.screenshot({ path: path.join(output, 'offline-desktop.png') });
   await page.setViewportSize({ width: 390, height: 1050 });

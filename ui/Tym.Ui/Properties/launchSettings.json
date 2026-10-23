@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Tym.Ui": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:60776;http://localhost:60777"
+    }
+  }
+}
