@@ -19,7 +19,7 @@ const book = { id: 'authored-book', label: 'Authored chapter fixture', language:
     { id: 'front', label: 'Preface', kind: 'front_matter', start: 0, end: prefix.length, character_count: prefix.length },
     { id: 'chapter', label: 'TWO', kind: 'chapter', start: prefix.length, end: prefix.length + sourceText.length, character_count: sourceText.length }
   ] };
-let requests = [], sourceReads = 0, restricted = false, legacy = false, longFixture = null;
+let requests = [], sourceReads = 0, restricted = false, legacy = false, oldSemantics = false, longFixture = null;
 const browser = await chromium.launch({ headless: true, ...(process.env.TYM_CHROMIUM ? { executablePath: process.env.TYM_CHROMIUM } : {}) });
 const page = await browser.newPage({ serviceWorkers: 'block', viewport: { width: 1440, height: 1050 }, locale: 'en-GB' });
 const errors = [];
@@ -39,6 +39,7 @@ await page.route('**/v1/**', async route => {
     requests.push(payload);
     data = longFixture || fixtures[`${payload.options.language}/${payload.options.segmentation_algorithm}`].response;
     if (legacy) data = { ...data, segmentation: undefined };
+    if (oldSemantics) data = { ...data, segmentation: { ...data.segmentation, unit: undefined } };
   } else throw new Error(`Unexpected request: ${url.pathname}`);
   await route.fulfill({ contentType: 'application/json', body: JSON.stringify(data) });
 });
@@ -72,6 +73,8 @@ try {
       await inspect(language);
       assert.equal(await markedText(), fixture.text);
       assert.equal(await page.locator('.source-segment').count(), fixture.response.diagram.segments.length);
+      assert.equal(fixture.response.segmentation.unit, 'temporal_development');
+      assert.equal(await page.getByTestId('temporal-frame').count(), 1);
       await page.locator('.segment-marker').nth(1).click();
       assert.equal(await page.locator('.segment-marker[aria-pressed="true"]').textContent(), fixture.response.diagram.segments[1].id);
       if (algorithm === 'mlnet_perceptron') assert.ok(!(await page.getByTestId('boundary-score').textContent()).includes('%'));
@@ -139,6 +142,12 @@ try {
   assert.equal(await page.locator('.segment-overview svg').count(), 0);
   legacy = false;
 
+  oldSemantics = true;
+  await page.getByRole('button', { name: 'Regenerate diagram', exact: true }).click();
+  await page.locator('.message').filter({ hasText: 'The API does not provide temporal-development segmentation. Update the API.' }).waitFor();
+  assert.equal(await page.locator('.segment-overview svg').count(), 0);
+  oldSemantics = false;
+
   restricted = true;
   await page.reload();
   await page.locator('#hosted-book').selectOption(book.id);
@@ -152,5 +161,6 @@ try {
   assert.equal(sourceReads, reads, 'Segmentation bypassed source access restrictions');
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ responsiveCases: cases, algorithmCount: 3, languages: ['en', 'ro'], sourcePaging: true,
-    chapterOffsets: true, cacheInvalidation: true, legacyApiRejected: true, sourceAccessRespected: true, browserErrors: errors.length }));
+    chapterOffsets: true, cacheInvalidation: true, legacyApiRejected: true, oldSemanticsRejected: true,
+    temporalContextShown: true, sourceAccessRespected: true, browserErrors: errors.length }));
 } finally { await browser.close(); }

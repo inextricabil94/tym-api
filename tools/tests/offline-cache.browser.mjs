@@ -72,6 +72,18 @@ try {
   assert.equal(records.find(item => item.kind === 'diagram').response.density_cache.session_id, undefined);
   assert.equal(records.find(item => item.kind === 'diagram').book, true);
   assert.equal(records.find(item => item.kind === 'diagram').response.density_cache.options.length, 10, 'Live bundle was not flushed before reuse');
+  const migrated = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => { const r = indexedDB.open('tym-offline-v1'); r.onsuccess = () => resolve(r.result); r.onerror = reject; });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('records', 'readwrite'), store = tx.objectStore('records');
+      const r = store.getAll();
+      r.onsuccess = () => { const old = r.result.find(item => item.kind === 'diagram'); store.put({ ...old, key: 'diagram:old-v08', epoch: 'tym-v0.8-offline-1' }); };
+      tx.oncomplete = resolve; tx.onabort = reject;
+    });
+    db.close();
+    return (await TymOffline.create().diagrams(TYM_CONFIG.apiBaseUrl, '1440x1050')).some(item => item.key === 'diagram:old-v08');
+  });
+  assert.equal(migrated, false, 'Old phrase-like segmentation was advertised by the new temporal cache epoch');
   const concurrent = await page.evaluate(async response => {
     const a = TymOffline.create({ database: 'tym-offline-concurrency-test' });
     const b = TymOffline.create({ database: 'tym-offline-concurrency-test' });
@@ -119,6 +131,6 @@ try {
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ passed: true, indexedDbSurvivesReload: true, offlineShell: true, catalogMetadataOnly: true,
     repeatedGenerationRequests: 0, savedBookExportPolicy: true, sourceRequestsNeverCached: true,
-    exactResolution: true, clearCache: true, concurrentStorage: true, liveBundleBeatsOlderSnapshot: true,
+    exactResolution: true, clearCache: true, concurrentStorage: true, oldSegmentationEpochExcluded: true, liveBundleBeatsOlderSnapshot: true,
     restrictedBooksNotPersisted: true, browserErrors: errors.length }));
 } finally { await context.close(); await browser.close(); }

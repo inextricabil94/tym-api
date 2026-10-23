@@ -4,7 +4,7 @@
   else root.TymOffline = api;
 })(typeof globalThis === 'object' ? globalThis : this, function (root) {
   'use strict';
-  const epoch = 'tym-v0.8-offline-1';
+  const epoch = 'tym-v0.9-temporal-1';
   const normalizeApi = value => value.trim().replace(/\/+$/, '');
   const copy = value => JSON.parse(JSON.stringify(value));
   function catalog(value) {

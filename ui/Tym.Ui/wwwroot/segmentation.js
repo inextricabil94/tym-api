@@ -5,7 +5,7 @@
 })(typeof globalThis === 'object' ? globalThis : this, function () {
   'use strict';
   const algorithms = [
-    { id: 'article_rules', label: 'Article-guided rules' },
+    { id: 'article_rules', label: 'Temporal continuity rules' },
     { id: 'mlnet_logistic', label: 'ML.NET logistic regression (seed)' },
     { id: 'mlnet_perceptron', label: 'ML.NET averaged perceptron (seed)' }
   ];

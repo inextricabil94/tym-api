@@ -35,6 +35,18 @@ Rollback uses the previous known-good image with `az containerapp update --image
 
 ## Latest Release: 23 October 2026
 
+The API and both UI hosts now serve v0.9 temporal-development segmentation,
+replacing entity/syntax-driven boundaries with retained temporal context and
+explicit development evidence. Both image tags are `release-20261023-temporal`;
+ready revisions end in `r20261023temporal`. Cache epochs changed to exclude older
+phrase-like results. The [changes report](research/TYM_Temporal_Segmentation_Changes_20261023.md)
+and its public PDF describe behavior, tests and research limitations. The
+sixteen-book library, public reading, disabled accounts, existing resource limits
+and EUR 20 shutdown policy are preserved. Production SQLite remains disabled.
+See the [temporal release checks](verification/temporal-20261023.md).
+
+## Earlier Release: Offline Cache, 23 October 2026
+
 Both public UI hosts now include the bounded IndexedDB diagram/catalog cache,
 offline application shell, self-hosted React and horizontally aligned Saved
 diagrams / Cached TT density controls. The API image is tagged

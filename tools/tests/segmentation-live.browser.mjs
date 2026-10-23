@@ -27,6 +27,8 @@ try {
   assert.equal(response.status(), 200);
   const result = await response.json();
   assert.equal(result.segmentation.algorithm, 'mlnet_perceptron');
+  assert.equal(result.segmentation.unit, 'temporal_development');
+  assert.equal(result.diagram.segments.length, fixture.response.diagram.segments.length);
   assert.equal(result.segmentation.score_kind, 'margin');
   await page.locator('.segment-overview svg').waitFor();
   await page.waitForFunction(() => document.querySelectorAll('#cached-density option:not(:disabled)').length === 10, null, { timeout: 90000 });

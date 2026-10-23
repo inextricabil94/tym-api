@@ -655,7 +655,7 @@ public sealed record RenderResult(
 
 internal static class TymConstants
 {
-    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.8";
+    public const string Version = "tym-dotnet-paper-guided-nonllm-timeml-ro-v0.9";
 }
 
 internal sealed class MutableTrack
@@ -1759,6 +1759,8 @@ internal static partial class TymAnalyzer
         var events = new List<MutableNarrativeEvent>();
         var previousActors = Array.Empty<string>();
         var previousTemporalAnchor = "";
+        var pendingTemporalHeading = "";
+        var pendingTemporalHeadingStart = 0;
 
         foreach (Match sentenceMatch in SentenceWithOffsetPattern().Matches(text))
         {
@@ -1772,8 +1774,11 @@ internal static partial class TymAnalyzer
             var clauses = VerbMatches(sentence, language).Count > 1
                 ? SplitEventClauses(sentence, sentenceStart, language)
                 : [new ClauseSpan(sentence, sentenceStart, sentenceStart + sentence.Length)];
-            var pendingPrefix = "";
-            var pendingPrefixStart = sentenceStart;
+            var carriedHeading = pendingTemporalHeading.Length > 0;
+            var pendingPrefix = pendingTemporalHeading;
+            var pendingPrefixStart = carriedHeading ? pendingTemporalHeadingStart : sentenceStart;
+            pendingTemporalHeading = "";
+            var eventsBeforeSentence = events.Count;
 
             foreach (var clause in clauses)
             {
@@ -1799,8 +1804,8 @@ internal static partial class TymAnalyzer
                 var eventStart = clause.Start;
                 if (pendingPrefix.Length > 0)
                 {
-                    eventText = $"{pendingPrefix}, {eventText}";
                     eventStart = pendingPrefixStart;
+                    eventText = text[eventStart..clause.End];
                     pendingPrefix = "";
                 }
 
@@ -1854,6 +1859,12 @@ internal static partial class TymAnalyzer
                     previousTemporalAnchor = temporalAnchor;
                 }
             }
+            if (events.Count == eventsBeforeSentence && pendingPrefix.Length > 0
+                && (carriedHeading || TemporalDevelopmentContext.IsTemporalHeading(pendingPrefix)))
+            {
+                pendingTemporalHeading = pendingPrefix;
+                pendingTemporalHeadingStart = pendingPrefixStart;
+            }
         }
 
         return events;
@@ -1892,12 +1903,12 @@ internal static partial class TymAnalyzer
         var candidates = new List<TimeSegmentCandidate>();
         var current = new List<MutableNarrativeEvent>();
         var decisions = new List<SegmentationDecision>();
+        var temporalContext = new TemporalDevelopmentContext();
         MutableNarrativeEvent? previousEvent = null;
 
         foreach (var currentEvent in events)
         {
-            var decision = TymSegmentation.Decide(source, previousEvent, currentEvent,
-                previousEvent is null || !ShouldMergeIntoCurrentSegment(previousEvent, currentEvent), algorithm);
+            var decision = TymSegmentation.Decide(previousEvent, currentEvent, temporalContext, algorithm);
             decisions.Add(decision);
             previousEvent = currentEvent;
             if (current.Count == 0)
@@ -1912,13 +1923,13 @@ internal static partial class TymAnalyzer
                 continue;
             }
 
-            candidates.Add(CreateCandidate(current));
+            candidates.Add(CreateCandidate(source, current));
             current = [currentEvent];
         }
 
         if (current.Count > 0)
         {
-            candidates.Add(CreateCandidate(current));
+            candidates.Add(CreateCandidate(source, current));
         }
 
         var segmentIds = candidates.SelectMany((candidate, index) => candidate.Events.Select(ev => (ev.Id, SegmentId: $"TS{index + 1}")))
@@ -1927,42 +1938,14 @@ internal static partial class TymAnalyzer
         return candidates;
     }
 
-    private static bool ShouldMergeIntoCurrentSegment(MutableNarrativeEvent previous, MutableNarrativeEvent current)
-    {
-        if (previous.TemporalCategory != current.TemporalCategory ||
-            !SameSet(previous.Actors, current.Actors))
-        {
-            return false;
-        }
-
-        if (HasExplicitTemporalSegmentBoundary(current))
-        {
-            return false;
-        }
-
-        return previous.TemporalAnchor.Length == 0 ||
-            current.TemporalAnchor.Length == 0 ||
-            previous.TemporalAnchor.Equals(current.TemporalAnchor, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool HasExplicitTemporalSegmentBoundary(MutableNarrativeEvent current)
-    {
-        if (current.RelationCue.Length == 0)
-        {
-            return false;
-        }
-
-        return current.RelationToPrevious is "BEFORE" or "AFTER" or "SIMULTANEOUS";
-    }
-
-    private static TimeSegmentCandidate CreateCandidate(IReadOnlyList<MutableNarrativeEvent> events)
+    private static TimeSegmentCandidate CreateCandidate(string source, IReadOnlyList<MutableNarrativeEvent> events)
     {
         var actors = events.SelectMany(ev => ev.Actors).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var temporalAnchor = events.Select(ev => ev.TemporalAnchor).FirstOrDefault(anchor => anchor.Length > 0) ?? "";
         var location = events.Select(ev => ev.Location).FirstOrDefault(location => location.Length > 0) ?? "unknown";
         return new TimeSegmentCandidate
         {
-            Text = string.Join(" ", events.Select(ev => ev.Text)),
+            Text = source[events[0].SpanStart..events[^1].SpanEnd],
             Events = events.ToList(),
             Actors = actors,
             TemporalAnchor = temporalAnchor,
@@ -2047,13 +2030,6 @@ internal static partial class TymAnalyzer
         }
 
         mentions.Add(new EntityMention($"EM{mentions.Count + 1}", text, label, source, start, end, ev.Id));
-    }
-
-    private static bool SameSet(IReadOnlyList<string> left, IReadOnlyList<string> right)
-    {
-        return left.Count == right.Count &&
-            left.OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-                .SequenceEqual(right.OrderBy(item => item, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
     }
 
     private static bool LooksLikeTemporalEntity(string entity, string language)
@@ -2494,7 +2470,7 @@ internal static partial class TymAnalyzer
     [GeneratedRegex(@"[,;]\s+|\s+\b(?:și apoi|si apoi|și|si|dar|însă|insa|apoi|atunci|când|cand|în timp ce|in timp ce|pentru că|pentru ca|deoarece)\b\s+", RegexOptions.IgnoreCase)]
     private static partial Regex RomanianEventBoundaryPattern();
 
-    [GeneratedRegex(@"\b(?:este|sunt|era|erau|fost|fi|are|avea|aveau|avut|va|vor|voi|vei|vom|veți|veti|merge|mergea|mers|mersese|pleacă|pleaca|plecat|plecase|caută|cauta|căuta|căutat|cautat|găsește|gaseste|găsit|gasit|își amintește|isi aminteste|își amintea|isi amintea|amintit|trăiește|traieste|locuiește|locuieste|locuia|dispărut|disparut|dispare|spune|spus|vede|văzut|vazut|aude|auzit|întâlnește|intalneste|întâlnit|intalnit|așteaptă|asteapta|așteptat|asteptat|călătorește|calatoreste|călătorit|calatorit|duce|dus|intră|intra|intrat|deschide|deschis|urcă|urca|urcat|urmează|urmeaza|urmărit|urmarit|crește|creste|crescut|gândește|gandeste|gândit|gandit|crede|crezut|\w+(?:at|it|ut|ase|ese|ise|use|ează|eaza|esc|ește|ind|ând|and))\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:este|sunt|era|erau|fost|fi|are|avea|aveau|avut|va|vor|voi|vei|vom|veți|veti|merge|mergea|mers|mersese|pleacă|pleaca|plecat|plecase|caută|cauta|căuta|căutat|cautat|găsește|gaseste|găsit|gasit|își amintește|isi aminteste|își amintea|isi amintea|amintit|trăiește|traieste|locuiește|locuieste|locuia|dispărut|disparut|dispare|spune|spus|vede|văzut|vazut|aude|auzit|întâlnește|intalneste|întâlnit|intalnit|așteaptă|asteapta|așteptat|asteptat|călătorește|calatoreste|călătorit|calatorit|duce|dus|intră|intra|intrat|deschide|deschis|închide|inchide|închis|inchis|urcă|urca|urcat|urmează|urmeaza|urmărit|urmarit|crește|creste|crescut|gândește|gandeste|gândit|gandit|crede|crezut|\w+(?:at|it|ut|ase|ese|ise|use|ează|eaza|esc|ește|ind|ând|and))\b", RegexOptions.IgnoreCase)]
     private static partial Regex RomanianVerbPattern();
 
     [GeneratedRegex(@"\b(?:va|vor|voi|vei|vom|veți|veti|o\s+să|o\s+sa|mâine|maine|mai\s+târziu|mai\s+tarziu|viitor|urmează\s+să|urmeaza\s+sa)\b", RegexOptions.IgnoreCase)]

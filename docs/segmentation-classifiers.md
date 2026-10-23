@@ -2,37 +2,51 @@
 
 ## Scope
 
-Version 0.8 adds selectable **event-to-TS boundary classification**. This is
-different from event detection, the NAR/REM/SUP/GEN/FIC label assigned to a TS, or
-the TT density used to lay out tracks. Those existing stages retain their prior
-behavior. No LLM, cloud inference, subscription, model download, or additional
-NuGet package is required.
+Version 0.9 corrects **temporal-development segmentation**. Sentences/clauses
+remain lower-level event candidates, not TS boundaries. A TS may span many
+sentences and paragraphs in a coherent development. Context is retained until
+supported temporal or development evidence changes it. No LLM, cloud inference,
+subscription, model download or additional NuGet package is required.
 
-The workbench's **Segmentation algorithm** menu and
+This implements a conservative subset of the supplied SYNASC 2016 model, not a
+complete automatic parser for its actor/time/space/type/perspective definition.
+Literal entity-set, location, paragraph and tense-label changes alone no longer
+delimit TSs. A journey can remain one TS; explicit parallel developments,
+communication/separation cues, world-plane or perspective changes can delimit
+developments. The paper supplies the model, not this implementation's classifier.
+See [the dated changes document](research/TYM_Temporal_Segmentation_Changes_20261023.md).
+
+The workbench's **Temporal segmentation algorithm** menu and
 `options.segmentation_algorithm` offer:
 
 | Value | Implementation | Score |
 | --- | --- | --- |
-| `article_rules` | Existing article-guided actor/category/anchor/cue compatibility rules; default | None |
+| `article_rules` | Stateful temporal/development continuity rules; default, compatibility ID retained | None |
 | `mlnet_logistic` | ML.NET SDCA binary logistic regression, 100 iterations, L1=0, L2=0.0001, one training thread, seed 42 | Model probability, not empirically corpus-calibrated |
 | `mlnet_perceptron` | ML.NET averaged perceptron, 100 iterations, seed 42 | Signed decision margin, not a probability |
 
 Both ML algorithms are real trained binary models. They learn from **48 authored
-feature-pattern rows** in [Segmentation.cs](../Segmentation.cs), including
+temporal feature-pattern rows** in [Segmentation.cs](../Segmentation.cs), including
 repeated continuation examples for weighting. These are **not annotated literary
 passages, a pretrained language model, or an evaluation corpus**. The models are
 small experimental baselines, not research-validated segmentation systems. No
 accuracy, F1, calibration, or generalization claim follows from the checks below.
 
-Eight adjacent-event features are used: actor change, temporal-category change,
-explicit before/after/simultaneous cue, conflicting nonempty time anchors,
-changed known location, paragraph break, missing actor evidence, and same-sentence
-continuity. English and Romanian reuse these structural features; upstream
-language-specific extraction can still miss or misclassify the evidence.
+Eight features are used: changed supported time anchor, retrospective entry,
+narrative-time return, explicit forward jump, parallel-development cue,
+development-frame change, weak perfect/future tense candidate and same-time
+reference. Context survives unanchored events. ISO dates use DateOnly validation;
+year/date containment is compatible and a year does not erase a finer date.
+Weekdays, clocks and a bounded English/Romanian relative/deictic cue set are
+supported. Durations alone are not new time frames. Standalone temporal headings
+are attached to the following recognized event, retaining original offsets.
 
 Models initialize lazily once per process and protect the reused ML.NET
 prediction engine with a lock. Choosing ML does not silently fall back to rules
-if model training or prediction fails. The document-start boundary is structural,
+if model training or prediction fails. Explicit context shifts are mandatory;
+no temporal/development evidence vetoes a boundary. ML decides weaker tense
+candidates; it is not used to manufacture semantic shifts from syntax. Raw
+scores need not agree with a forced/vetoed final boundary. The document-start boundary is structural,
 not a model prediction, and has no score. Every extracted event belongs to exactly
 one contiguous TS; its original UTF-16 offsets and order remain unchanged.
 
@@ -57,7 +71,8 @@ ignored. Omitted options retain `article_rules` for backward compatibility.
 Each diagram response adds `segmentation` with algorithm, model version, score
 kind, seed provenance/count, and one decision per extracted event. Decisions
 contain the preceding/current event IDs, assigned TS ID, boundary flag, source
-start offset, optional score, and observed feature names. Feature observations
+start offset, optional raw score, observed features, `basis`, `frame` and
+`time_reference`. `segmentation.unit` is `temporal_development`. Feature observations
 are not causal feature-attribution explanations. Existing `segment.confidence`
 and `segment.classifier` still describe the **TS type**, not boundary prediction.
 
@@ -66,14 +81,18 @@ density views retain the same segmentation metadata, event coverage and TS spans
 only track assignments and related presentation change. Algorithm changes in the
 UI invalidate the current result and density cache, cancel background cache work,
 and reject stale generation responses. A legacy API cannot silently provide a
-rule result when the user selected ML.
+rule result when the user selected ML. The v0.9 UI also rejects responses that do
+not advertise temporal-development semantics. API model and browser cache epochs
+are bumped so v0.8 phrase-like results are not silently reused. Older saved
+diagrams become ineligible; the new epoch does not promise recovery of old data.
 
 ## Marked-Text View
 
 The **Segmentation** result tab and **Inspect segments** button open the source
 view. TS ID buttons select a segment; colored source spans and the type legend
 mark its boundaries. The inspector reports its type, TT, event IDs, exact
-half-open UTF-16 range, boundary score and observed features. The TT arrow opens
+half-open UTF-16 range, context, retained time reference, boundary basis, raw model
+score and observed features. The TT arrow opens
 the corresponding track group in the SVG view.
 
 The view slices original source by offsets, never by `IndexOf` searches or the
@@ -88,7 +107,18 @@ Interface labels are available in English and Romanian. Probabilities and
 perceptron margins have distinct labels; margins are not displayed as confidence
 percentages. The small-model provenance warning is shown next to the algorithm.
 
-## Checks: 21 October 2026
+## Current Checks: 23 October 2026
+
+The release passes 93 temporal-development cases across all three
+algorithms, including a 180-event/60-paragraph single-scene test. Six bilingual
+source/span/score/concurrency cases remain. Exact TS text comes from original
+source ranges; density does not alter TS boundaries. The 21 October counts below
+describe the older implementation and are not the current expected outputs.
+Published on 23 October 2026 as `release-20261023-temporal` on the API and both UI
+hosts. Production SQLite remains disabled. See the
+[publication verification](verification/temporal-20261023.md).
+
+## Historical Checks: 21 October 2026
 
 - Release API/checker and UI builds passed with zero warnings/errors using
   isolated build outputs; the previous preview's locked DLL was not overwritten.

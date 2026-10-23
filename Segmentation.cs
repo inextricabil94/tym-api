@@ -1,85 +1,76 @@
-using System.Text.RegularExpressions;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 
 public sealed record SegmentationDecision(string EventId, string? PreviousEventId, string SegmentId,
-    int SpanStart, bool IsBoundary, double? Score, IReadOnlyList<string> Evidence);
+    int SpanStart, bool IsBoundary, double? Score, IReadOnlyList<string> Evidence,
+    string Basis = "temporal_continuity", string Frame = "narrative", string TimeReference = "");
 
 public sealed record SegmentationInfo(string Algorithm, string ModelVersion, string ScoreKind,
-    int TrainingExamples, string TrainingSource, IReadOnlyList<SegmentationDecision> Decisions);
+    int TrainingExamples, string TrainingSource, IReadOnlyList<SegmentationDecision> Decisions,
+    string Unit = "temporal_development");
 
 internal static class TymSegmentation
 {
     public const string Rules = "article_rules";
     public const string Logistic = "mlnet_logistic";
     public const string Perceptron = "mlnet_perceptron";
-    private const string SeedVersion = "boundary-feature-seed-v1";
-    private static readonly string[] FeatureNames = ["actor_change", "temporal_category_change", "explicit_temporal_cue",
-        "conflicting_time_anchor", "location_change", "paragraph_break", "missing_actors", "same_sentence"];
+    private const string SeedVersion = "temporal-boundary-seed-v2";
+    private static readonly string[] FeatureNames = ["time_anchor_change", "flashback_entry", "narrative_time_return",
+        "forward_time_jump", "parallel_time_frame", "development_frame_change", "tense_frame_change", "same_time_reference"];
     private static readonly Lazy<BoundaryModel> LogisticModel = new(() => BoundaryModel.Train(Logistic));
     private static readonly Lazy<BoundaryModel> PerceptronModel = new(() => BoundaryModel.Train(Perceptron));
 
     public static bool IsSupported(string? algorithm) => algorithm is Rules or Logistic or Perceptron;
 
     public static SegmentationInfo Describe(string algorithm, IReadOnlyList<SegmentationDecision> decisions) => new(
-        algorithm, algorithm == Rules ? "article-boundary-rules-v1" : SeedVersion,
+        algorithm, algorithm == Rules ? "temporal-development-rules-v2" : SeedVersion,
         algorithm == Logistic ? "uncalibrated_probability" : algorithm == Perceptron ? "margin" : "rule",
         algorithm == Rules ? 0 : SeedPatterns.Length,
-        algorithm == Rules ? "article-guided rules" : "authored feature patterns; not a corpus-trained or validated model", decisions);
+        algorithm == Rules ? "SYNASC 2016-inspired temporal/development continuity rules"
+            : "authored temporal feature patterns; not a corpus-trained or validated model", decisions);
 
-    public static SegmentationDecision Decide(string source, MutableNarrativeEvent? previous,
-        MutableNarrativeEvent current, bool ruleBoundary, string algorithm)
+    public static SegmentationDecision Decide(MutableNarrativeEvent? previous,
+        MutableNarrativeEvent current, TemporalDevelopmentContext context, string algorithm)
     {
         if (!IsSupported(algorithm)) throw new ArgumentException("Unknown segmentation algorithm.", nameof(algorithm));
-        if (previous is null) return new(current.Id, null, "", current.SpanStart, true, null, ["document_start"]);
-        var features = Features(source, previous, current);
-        var evidence = FeatureNames.Where((_, index) => features[index] > 0).ToArray();
-        if (evidence.Length == 0) evidence = ["continuity_features"];
+        var features = context.Observe(current);
+        if (previous is null) return new(current.Id, null, "", current.SpanStart, true, null, ["document_start"],
+            "document_start", context.Frame, context.TimeReference);
+        var evidence = FeatureNames.Where((_, index) => features[index] > 0).Concat(context.DevelopmentEvidence).ToArray();
+        if (evidence.Length == 0) evidence = ["temporal_continuity"];
+        var explicitShift = features.Take(6).Any(value => value > 0);
+        var candidate = explicitShift || features[6] > 0 && features[7] == 0;
         var (boundary, score) = algorithm switch
         {
             Logistic => LogisticModel.Value.Predict(features),
             Perceptron => PerceptronModel.Value.Predict(features),
-            _ => (ruleBoundary, (double?)null)
+            _ => (candidate, (double?)null)
         };
-        return new(current.Id, previous.Id, "", current.SpanStart, boundary, score, evidence);
+        // A model cannot manufacture a temporal boundary from punctuation or a name change.
+        boundary = explicitShift || candidate && boundary;
+        return new(current.Id, previous.Id, "", current.SpanStart, boundary, score, evidence,
+            explicitShift ? "explicit_context_shift" : candidate ? "temporal_candidate" : "temporal_continuity",
+            context.Frame, context.TimeReference);
     }
 
-    private static float[] Features(string source, MutableNarrativeEvent previous, MutableNarrativeEvent current)
+    private static readonly (string Bits, bool Boundary)[] SeedPatterns = CreateSeedPatterns();
+
+    private static (string Bits, bool Boundary)[] CreateSeedPatterns()
     {
-        var gap = source[previous.SpanEnd..current.SpanStart];
-        var actorsChanged = !new HashSet<string>(previous.Actors, StringComparer.OrdinalIgnoreCase).SetEquals(current.Actors);
-        static bool KnownPlace(string value) => value.Length > 0 && value is not ("unknown" or "necunoscut");
-        return [
-            actorsChanged ? 1 : 0,
-            previous.TemporalCategory != current.TemporalCategory ? 1 : 0,
-            current.RelationCue.Length > 0 && current.RelationToPrevious is "BEFORE" or "AFTER" or "SIMULTANEOUS" ? 1 : 0,
-            previous.TemporalAnchor.Length > 0 && current.TemporalAnchor.Length > 0
-                && !previous.TemporalAnchor.Equals(current.TemporalAnchor, StringComparison.OrdinalIgnoreCase) ? 1 : 0,
-            KnownPlace(previous.Location) && KnownPlace(current.Location)
-                && !previous.Location.Equals(current.Location, StringComparison.OrdinalIgnoreCase) ? 1 : 0,
-            Regex.IsMatch(gap, @"\r?\n[\t ]*\r?\n", RegexOptions.CultureInvariant) ? 1 : 0,
-            previous.Actors.Count == 0 || current.Actors.Count == 0 ? 1 : 0,
-            !previous.Text.TrimEnd().EndsWith('.') && !previous.Text.TrimEnd().EndsWith('!')
-                && !previous.Text.TrimEnd().EndsWith('?') && !gap.Contains('\n') ? 1 : 0
-        ];
+        // Synthetic temporal patterns with explicit continuation weighting, not corpus annotations.
+        var rows = new List<(string, bool)>();
+        for (var feature = 0; feature < 6; feature++)
+        for (var suffix = 0; suffix < 4; suffix++)
+        {
+            var bits = "00000000".ToCharArray(); bits[feature] = '1';
+            bits[6] = (suffix & 2) == 0 ? '0' : '1'; bits[7] = (suffix & 1) == 0 ? '0' : '1';
+            rows.Add((new string(bits), true));
+        }
+        rows.AddRange(Enumerable.Repeat(("00000010", true), 8));
+        for (var index = 0; index < 4; index++)
+            rows.AddRange(new[] { ("00000000", false), ("00000001", false), ("00000011", false), ("00000000", false) });
+        return rows.ToArray();
     }
-
-    // Explicitly authored boundary/continuation examples over the eight feature columns above.
-    // These seed patterns are not narrative annotations or an evaluation corpus.
-    private static readonly (string Bits, bool Boundary)[] SeedPatterns = [
-        ("00000000", false), ("00000001", false), ("00000010", false), ("00000011", false),
-        ("00001001", false), ("00001011", false), ("00000101", false), ("00000111", false),
-        ("10000001", false), ("10000011", false), ("10001001", false), ("10001011", false),
-        ("00001000", true), ("00001100", true), ("00001110", true), ("00000100", true),
-        ("00000110", true), ("00001010", true), ("10000000", true), ("10000010", true),
-        ("10001000", true), ("10000100", true), ("10001100", true), ("10001110", true),
-        ("01000000", true), ("01000001", true), ("01000010", true), ("01001000", true),
-        ("00100000", true), ("00100001", true), ("00100010", true), ("00101000", true),
-        ("00010000", true), ("00010001", true), ("00010010", true), ("00011000", true),
-        ("11000000", true), ("10100000", true), ("10010000", true), ("01100000", true),
-        ("00000000", false), ("00000001", false), ("00000010", false), ("00000011", false),
-        ("00001001", false), ("00001011", false), ("00000101", false), ("00000111", false)
-    ];
 
     private sealed class BoundaryRow
     {

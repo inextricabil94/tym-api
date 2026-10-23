@@ -20,6 +20,7 @@ parser.add_argument("--output", default="output/pdf/TYM_Research_Improvement_Pro
 parser.add_argument("--date", default="19 October 2026")
 parser.add_argument("--title", default="TYM: Research and Improvement Proposal")
 parser.add_argument("--header", default="TYM  /  RESEARCH AND IMPROVEMENT PROPOSAL")
+parser.add_argument("--footer", default="Evidence audit and proposed work")
 args = parser.parse_args()
 SOURCE = ROOT / args.source
 OUTPUT = ROOT / args.output
@@ -67,7 +68,7 @@ def footer(canvas, doc):
     canvas.setStrokeColor(colors.HexColor("#ccd4ce"))
     canvas.setLineWidth(0.5)
     canvas.line(54, 43, width - 54, 43)
-    canvas.drawString(54, 29, args.date + "  |  Evidence audit and proposed work")
+    canvas.drawString(54, 29, args.date + "  |  " + args.footer)
     canvas.drawRightString(width - 54, 29, str(doc.page))
     canvas.restoreState()
 

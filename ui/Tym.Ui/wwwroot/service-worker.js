@@ -1,5 +1,5 @@
 'use strict';
-const SHELL = 'tym-shell-20261023-selectors-2';
+const SHELL = 'tym-shell-20261023-temporal-2';
 const ASSETS = ['/index.html', '/app.js', '/offline-cache.js', '/offline-register.js', '/i18n.js', '/styles.css',
   '/fonts.css', '/theme.js', '/accounts.js', '/chapter-splitter.js', '/track-groups.js', '/density-cache.js',
   '/segmentation.js', '/viewport.js', '/assets/vendor/react.production.min.js', '/assets/vendor/react-dom.production.min.js',

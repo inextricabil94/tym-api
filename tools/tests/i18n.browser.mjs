@@ -19,6 +19,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="490" vi
 <g class="time-track" data-track-id="TT1" data-height="120"><title>TT1</title><text x="24" y="24">TT1</text><path d="M40 50H900" stroke="black"/><g class="time-segment" data-segment-id="TS1"><title>TS1: Narration</title><text x="50" y="85">Narration</text></g><g data-tag-icon="REM"><title>Memory / flashback</title><circle cx="34" cy="80" r="5" fill="purple"/></g></g>
 <g data-section="legend" data-height="180"><rect x="18" width="924" height="180" fill="#f9fafb"/><text x="36" y="25">Legend</text><text x="36" y="55">Solid line: narrative continuity</text><text x="490" y="55">Triangle: track start/stop</text><text x="36" y="85">REM: Memory / flashback</text></g></svg>`;
 const result = { model_version: 'authored-i18n-fixture', track_generation: { density: 50 },
+  segmentation: { unit: 'temporal_development', algorithm: 'article_rules', decisions: [] },
   diagram: { actors: [{ id: 'A1', name: 'Adam' }], events: [{ id: 'EV1', text: 'Narration', temporal_category: 'Past', relation_to_previous: 'Before', actors: ['Adam'], confidence: 0.9 }],
     segments: [{ id: 'TS1', text: 'Narration', track_id: 'TT1', actors: ['Adam'], temporal_anchor: '', event_ids: ['EV1'], type: 'NAR', confidence: 0.9 }],
     tracks: [{ id: 'TT1', name: 'Adam' }], relations: [], time_ml: { events: [{ id: 'e1', text: 'Narration', class: 'OCCURRENCE' }], timex3: [], tlinks: [] } },

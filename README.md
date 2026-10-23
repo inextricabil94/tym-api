@@ -14,21 +14,27 @@ English is the default extraction language. Romanian narrative text is supported
 
 ### Selectable AI Segmentation
 
-The v0.8 workbench adds **Segmentation algorithm**: article-guided rules
+The v0.9 workbench uses **Temporal segmentation algorithm**: temporal continuity rules
 (default), ML.NET logistic regression, or ML.NET averaged perceptron. The learned
-algorithms decide event-to-TS boundaries in English and Romanian using small
-authored feature-pattern seeds, not a validated narrative corpus. Set
+algorithms decide temporal-development boundaries in English and Romanian using
+small authored temporal-feature seeds, not a validated narrative corpus. A TS
+can span many sentences/paragraphs; changing names, locations or punctuation alone
+does not create a TS. Explicit time/development shifts delimit contexts; ML may
+classify weaker tense candidates. Set
 `options.segmentation_algorithm` to `article_rules`, `mlnet_logistic`, or
-`mlnet_perceptron`. Event extraction and TS type labeling remain unchanged.
+`mlnet_perceptron`. Sentence/clause event extraction is a lower-level stage, not
+temporal segmentation. TS type labeling remains a separate classifier.
 
 The **Segmentation** view marks original source with TS IDs, type colors and a
 legend, exact UTF-16 ranges, boundary features and model scores. Segments are
 paged without truncation, and a TT arrow opens the matching track. Changing the
 algorithm clears incompatible density caches; changing TT density preserves the
 segmentation. See [implementation, API and verification](docs/segmentation-classifiers.md).
-Published to [the live workbench](https://tymui20260707serban.z13.web.core.windows.net/)
-on 21 October 2026, including aligned language, account and theme controls.
-See the [release verification](docs/verification/segmentation-20261021.md).
+The v0.9 correction is published on [the live workbench](https://tymui20260707serban.z13.web.core.windows.net/). See the
+[23 October changes document](docs/research/TYM_Temporal_Segmentation_Changes_20261023.md)
+for behavior, verification and remaining paper-model limitations.
+The [PDF report](https://tymui20260707serban.z13.web.core.windows.net/research/TYM_Temporal_Segmentation_Changes_20261023.pdf)
+is also published on the live site.
 
 ### Offline Caching
 
@@ -296,7 +302,7 @@ The API boundary is intentionally separate from extraction. The current pipeline
 1. split text into event-like clauses using punctuation, conjunction, and verb cues
 2. extract actor, temporal anchor, location, action, and offset features
 3. classify each event as `Past`, `Present`, or `Future` with ML.NET for English, or Romanian temporal rules for Romanian
-4. group adjacent events into `TS` using the selected boundary algorithm; the default retains article-guided temporal-category/actor/anchor/cue rules, while optional ML.NET models learn boundary decisions from authored structural-feature seeds
+4. group adjacent events into temporal-development `TS` spans using retained time/development context; syntax, entity-list and location changes alone do not delimit a TS; optional ML.NET models classify weaker temporal candidates with explicit-shift/continuity guards
 5. classify each `TS` as `NAR`, `REM`, `SUP`, `GEN`, or `FIC` with ML.NET for English, or Romanian narrative-mode rules for Romanian
 6. infer TT membership, boundaries, endpoints, and relations
 7. emit TimeML-style EVENT/TIMEX3/SIGNAL/MAKEINSTANCE/TLINK annotations

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TYM Diagram API
-  version: 0.8.0
+  version: 0.9.0
   description: API for generating paper-guided Time Yards Model diagrams and TimeML-style temporal annotations from English or Romanian narrative text.
 servers:
   - url: http://127.0.0.1:8765
@@ -630,7 +630,7 @@ components:
               type: string
               enum: [article_rules, mlnet_logistic, mlnet_perceptron]
               default: article_rules
-              description: Event-to-segment boundary algorithm, independent of TT density. The ML.NET classifiers learn from 48 authored feature-pattern seed rows, not an annotated narrative corpus. Event extraction and TS type classification are unchanged. Applies to English and Romanian.
+              description: Temporal-development boundary algorithm, independent of TT density. Context persists across extracted events; punctuation, paragraph breaks and changed entity lists alone do not create TS boundaries. Explicit temporal/development shifts delimit contexts; optional ML.NET models classify weaker tense candidates from 48 authored temporal-feature seed rows, not a validated narrative corpus. Applies to English and Romanian.
             cache_track_densities:
               type: boolean
               default: false
@@ -1394,8 +1394,11 @@ components:
           type: string
     SegmentationInfo:
       type: object
-      required: [algorithm, model_version, score_kind, training_examples, training_source, decisions]
+      required: [algorithm, model_version, score_kind, training_examples, training_source, decisions, unit]
       properties:
+        unit:
+          type: string
+          enum: [temporal_development]
         algorithm:
           type: string
           enum: [article_rules, mlnet_logistic, mlnet_perceptron]
@@ -1407,10 +1410,10 @@ components:
         training_source: { type: string }
         decisions:
           type: array
-          description: One decision per extracted event, before density layout. Scores are null for document start and rules. Margins are not probabilities; logistic probabilities are not corpus-calibrated. Evidence contains observed features, not causal model attribution. UTF-16 offsets are relative to the analyzed input or selected chapter.
+          description: One decision per extracted event, before density layout. Scores are raw model predictions, not probabilities of the final guarded boundary. Explicit context shifts force a boundary; lack of temporal/development evidence vetoes one. Scores are null for document start and rules. Margins are not probabilities; logistic probabilities are uncalibrated. Evidence is not causal attribution. Offsets are UTF-16 input/chapter coordinates.
           items:
             type: object
-            required: [event_id, previous_event_id, segment_id, span_start, is_boundary, score, evidence]
+            required: [event_id, previous_event_id, segment_id, span_start, is_boundary, score, evidence, basis, frame, time_reference]
             properties:
               event_id: { type: string }
               previous_event_id: { type: [string, "null"] }
@@ -1418,6 +1421,15 @@ components:
               span_start: { type: integer, minimum: 0 }
               is_boundary: { type: boolean }
               score: { type: [number, "null"] }
+              basis:
+                type: string
+                enum: [document_start, explicit_context_shift, temporal_candidate, temporal_continuity]
+              frame:
+                type: string
+                description: Observed temporal/development context, such as narrative, flashback, prospective, parallel or hypothetical/narrative; not a gold semantic label.
+              time_reference:
+                type: string
+                description: Retained symbolic/calendar reference; an empty string means no supported anchor is known. Relative references are not invented calendar dates.
               evidence:
                 type: array
                 items: { type: string }

@@ -31,6 +31,7 @@ try {
   let response = await post(); assert.equal(response.status, 200); assert.equal(response.headers.get('x-tym-cache'), 'MISS');
   assert.ok(response.headers.get('access-control-expose-headers').includes('X-TYM-Cache'));
   const first = await response.json(), views = new Map();
+  assert.equal(first.segmentation.unit, 'temporal_development');
   for (const density of first.density_cache.pending_densities) {
     const result = await fetch(`${api}/v1/density-sessions/${first.density_cache.session_id}/${density}`);
     assert.equal(result.status, 200); views.set(density, (await result.json()).view);
@@ -39,9 +40,11 @@ try {
   const second = await response.json();
   assert.notEqual(first.density_cache.session_id, second.density_cache.session_id);
   assert.deepEqual(first.diagram, second.diagram);
+  assert.deepEqual(first.segmentation, second.segmentation);
   await stop(); await start();
   response = await post(); assert.equal(response.status, 200); assert.equal(response.headers.get('x-tym-cache'), 'HIT');
   const restarted = await response.json(); assert.deepEqual(restarted.diagram, first.diagram);
+  assert.deepEqual(restarted.segmentation, first.segmentation);
   assert.notEqual(restarted.density_cache.session_id, second.density_cache.session_id);
   for (const density of restarted.density_cache.pending_densities) {
     const result = await fetch(`${api}/v1/density-sessions/${restarted.density_cache.session_id}/${density}`);

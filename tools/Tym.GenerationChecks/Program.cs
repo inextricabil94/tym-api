@@ -54,6 +54,11 @@ if (args.Contains("--cache-only"))
     CacheChecks.Run((DiagramResponse)analyze.Invoke(null, ["Adam waited.", new DiagramOptions()])!);
     return;
 }
+if (args.Contains("--temporal-only"))
+{
+    TemporalSegmentationChecks.Run((text, options) => (DiagramResponse)analyze.Invoke(null, [text, options])!);
+    return;
+}
 if (args.Contains("--segmentation-only"))
 {
     var checks = 0;
@@ -118,12 +123,13 @@ if (args.Contains("--segmentation-only"))
     catch (TargetInvocationException error) when (error.InnerException is ArgumentException) { rejected = true; }
     Check(rejected, "Unknown segmentation algorithm silently accepted");
     Console.WriteLine($"Segmentation: {checks} bilingual algorithm cases, UTF-16, event coverage, score semantics, density invariance and concurrent prediction checks passed.");
+    TemporalSegmentationChecks.Run((text, options) => (DiagramResponse)analyze.Invoke(null, [text, options])!);
     return;
 }
 var samples = new[]
 {
-    (Language: "en", Text: "Adam searched for Margaret after the storm. Karl traveled across the island. Adam waited at the doorway. Margaret found Adam at dawn. Years earlier, Karl had carried Adam through the rain. Meanwhile, Johan searched for Karl. Adam searched for Margaret after the storm. Karl traveled across the island. Adam waited at the doorway."),
-    (Language: "ro", Text: "Adam a cautat-o pe Margaret dupa furtuna. Karl a calatorit pe insula. Adam a asteptat la usa. Margaret l-a gasit pe Adam. Cu ani in urma, Karl l-a dus pe Adam prin ploaie. Intre timp, Johan l-a cautat pe Karl. Adam a cautat-o pe Margaret dupa furtuna. Karl a calatorit pe insula. Adam a asteptat la usa.")
+    (Language: "en", Text: "Adam searched for Margaret after the storm. Karl traveled across the island. Adam waited at the doorway. Margaret found Adam at dawn. Years earlier, Karl had carried Adam through the rain. Meanwhile, Johan searched for Karl. Adam searched for Margaret after the storm. Karl traveled across the island. Adam waited at the doorway. In 2010, Adam opened the shop. In 2011, Adam searched for Margaret."),
+    (Language: "ro", Text: "Adam a cautat-o pe Margaret dupa furtuna. Karl a calatorit pe insula. Adam a asteptat la usa. Margaret l-a gasit pe Adam. Cu ani in urma, Karl l-a dus pe Adam prin ploaie. Intre timp, Johan l-a cautat pe Karl. Adam a cautat-o pe Margaret dupa furtuna. Karl a calatorit pe insula. Adam a asteptat la usa. In 2010, Adam a deschis magazinul. In 2011, Adam a cautat-o pe Margaret.")
 };
 var reports = new List<object>();
 var recognize = typeof(DiagramOptions).Assembly.GetType("TymAnalyzer", true)!.GetMethod("RecognizeEntities", BindingFlags.Public | BindingFlags.Static)!;

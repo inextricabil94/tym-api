@@ -706,6 +706,8 @@ function App() {
         || window.TymViewport.measure(window.innerWidth, window.innerHeight).key !== requestedResolution) return;
       if (segmentationAlgorithm !== 'article_rules' && data.segmentation?.algorithm !== segmentationAlgorithm)
         throw I18n.error('The API did not apply the selected segmentation algorithm.');
+      if (data.segmentation?.unit !== 'temporal_development')
+        throw I18n.error('The API does not provide temporal-development segmentation. Update the API.');
       const returnedSvg = (data.render && data.render.svg) || (data.renderings && data.renderings.svg) || '';
 
       if (!live) setBaseResult(data);
@@ -946,7 +948,7 @@ function App() {
     }
     return e('section', { className: 'segmentation-view', 'aria-label': t('Marked segmentation') },
       e('div', { className: 'segmentation-heading' },
-        e('div', null, e('h3', null, t(algorithm?.label || 'Article-guided rules')),
+        e('div', null, e('h3', null, t(algorithm?.label || 'Temporal continuity rules')),
           e('span', { className: 'muted-line' }, segmentation?.training_examples
             ? t('Seed examples: {count} | Not corpus validated', { count: segmentation.training_examples })
             : t('Rule-based boundaries'))),
@@ -966,6 +968,11 @@ function App() {
         e('dl', { className: 'segment-properties' },
           e('div', null, e('dt', null, 'UTF-16'), e('dd', null, `[${selected.span_start}, ${selected.span_end})`)),
           e('div', null, e('dt', null, t('Events')), e('dd', null, (selected.event_ids || []).join(', ') || '-')),
+          e('div', null, e('dt', null, t('Temporal context')), e('dd', { 'data-testid': 'temporal-frame' },
+            (boundary?.frame || 'narrative').split('/').map(value => t(value)).join(' / '))),
+          e('div', null, e('dt', null, t('Time reference')), e('dd', null, boundary?.time_reference || t('Unanchored'))),
+          e('div', null, e('dt', null, t('Boundary basis')), e('dd', null, locale === 'en'
+            ? (boundary?.basis || 'temporal_continuity').replaceAll('_', ' ') : t(boundary?.basis || 'temporal_continuity'))),
           e('div', null, e('dt', null, t(scoreKind === 'margin' ? 'Decision margin' : scoreKind === 'uncalibrated_probability' ? 'Model probability (uncalibrated)' : 'Boundary score')),
             e('dd', { 'data-testid': 'boundary-score' }, modelScore)),
           e('div', null, e('dt', null, t('Boundary evidence')), e('dd', null, (boundary?.evidence || [])
@@ -1231,7 +1238,7 @@ function App() {
             )
           ),
           e('div', { className: 'field' },
-            e('label', { htmlFor: 'segmentation-algorithm' }, t('Segmentation algorithm')),
+            e('label', { htmlFor: 'segmentation-algorithm' }, t('Temporal segmentation algorithm')),
             e('select', { id: 'segmentation-algorithm', className: 'language-select', value: segmentationAlgorithm, disabled: busy,
               onChange: event => setSegmentationAlgorithm(event.target.value) },
               window.TymSegmentation.algorithms.map(algorithm => e('option', { key: algorithm.id, value: algorithm.id }, t(algorithm.label))))
@@ -1337,7 +1344,7 @@ function App() {
                 onChange: event => restoreSaved(event.target.value) },
                 e('option', { value: '', disabled: true }, t('Select saved diagram')),
                 savedDiagrams.map(entry => e('option', { key: entry.key, value: entry.key },
-                  `${entry.label} | ${t(window.TymSegmentation.algorithms.find(item => item.id === entry.algorithm)?.label || 'Article-guided rules')}`))),
+                  `${entry.label} | ${t(window.TymSegmentation.algorithms.find(item => item.id === entry.algorithm)?.label || 'Temporal continuity rules')}`))),
               e('button', { className: 'tool entity-refresh', type: 'button', title: t('Clear offline cache'), 'aria-label': t('Clear offline cache'),
                 disabled: busy, onClick: clearOffline },
                 e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2,
