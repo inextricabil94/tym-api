@@ -49,6 +49,11 @@ if (args.Contains("--library-only")) return;
 
 var analyze = typeof(DiagramOptions).Assembly.GetType("TymAnalyzer", true)!.GetMethod("Analyze", BindingFlags.Public | BindingFlags.Static)!;
 var json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, WriteIndented = true };
+if (args.Contains("--cache-only"))
+{
+    CacheChecks.Run((DiagramResponse)analyze.Invoke(null, ["Adam waited.", new DiagramOptions()])!);
+    return;
+}
 if (args.Contains("--segmentation-only"))
 {
     var checks = 0;

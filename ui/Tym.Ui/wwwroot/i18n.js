@@ -2,6 +2,14 @@
   'use strict';
   const names = { en: 'English', ro: 'Română' };
   const ro = {
+    'Offline': 'Offline', 'Saved diagrams': 'Diagrame salvate', 'Select saved diagram': 'Selectați o diagramă salvată',
+    'Clear offline cache': 'Ștergeți memoria cache offline', 'Regenerate diagram': 'Regenerați diagrama',
+    'Custom text': 'Text personalizat', 'Saved offline': 'Salvată offline', 'Session cache only': 'Memorată doar în această sesiune',
+    'Loaded from offline cache': 'Încărcată din memoria cache offline', 'Offline cache cleared': 'Memoria cache offline a fost ștearsă',
+    'Offline storage unavailable': 'Stocarea offline nu este disponibilă',
+    'Diagram exceeds the offline storage limit.': 'Diagrama depășește limita de stocare offline.',
+    'No saved book library is available offline.': 'Nu există o bibliotecă salvată disponibilă offline.',
+    'No saved diagram matches these settings. Connect to generate it.': 'Nu există o diagramă salvată pentru aceste setări. Conectați-vă pentru a o genera.',
     'Segmentation algorithm': 'Algoritm de segmentare', 'Segmentation': 'Segmentare',
     'Article-guided rules': 'Reguli bazate pe articol',
     'ML.NET logistic regression (seed)': 'ML.NET regresie logistică (model inițial)',

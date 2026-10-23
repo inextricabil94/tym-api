@@ -20,6 +20,12 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+# React
+
+The offline UI self-hosts the unmodified React and ReactDOM 18.3.1 production UMD
+files from the pinned npm packages. React contributors, MIT license; the original
+notice is in `ui/Tym.Ui/wwwroot/assets/vendor/REACT-LICENSE.txt`.
+
 # Bundled Fonts
 
 The UI reuses the self-hosted Space Grotesk, Inter, and IBM Plex Mono font files supplied in the user's DataSpace project. Fonts are distributed under the SIL Open Font License 1.1. Unmodified copyright and license notices accompany the binaries in `ui/Tym.Ui/wwwroot/assets/fonts/OFL-spacegrotesk.txt`, `OFL-inter.txt`, and `OFL-ibmplexmono.txt`. Both Latin and Latin Extended subsets are included for Romanian text.

@@ -14,6 +14,16 @@ var accountSettings = builder.AddAccounts();
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.AddSingleton<BookLibrary>();
 builder.Services.AddSingleton<DensitySessions>();
+builder.Services.AddSingleton<DiagramDatabaseCache>(services =>
+{
+    var configured = builder.Configuration["TYM_DIAGRAM_CACHE_PATH"];
+    var path = configured ?? (builder.Environment.IsDevelopment()
+        ? Path.Combine(builder.Environment.ContentRootPath, "private-models", "diagram-cache", "diagrams.db") : null);
+    if (!string.IsNullOrWhiteSpace(path) && Path.GetFullPath(path).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+        .Contains("wwwroot", StringComparer.OrdinalIgnoreCase))
+        throw new InvalidOperationException("Diagram cache must be outside wwwroot.");
+    return new DiagramDatabaseCache(path, logger: services.GetRequiredService<ILogger<DiagramDatabaseCache>>());
+});
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
@@ -22,7 +32,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("X-TYM-Cache"));
     options.AddPolicy("account-browser", policy =>
     {
         policy.WithOrigins(accountSettings.BrowserOrigins)
@@ -173,13 +183,13 @@ app.MapGet("/openapi.yaml", () =>
         : Results.NotFound(new { error = "openapi.yaml not found" });
 });
 
-app.MapPost("/v1/diagrams", (DiagramRequest request, HttpContext context, DensitySessions sessions) =>
+app.MapPost("/v1/diagrams", (DiagramRequest request, HttpContext context, DensitySessions sessions, DiagramDatabaseCache cache) =>
 {
     context.Response.Headers.CacheControl = "no-store";
     var validation = Validate(request);
     return validation is not null
         ? Results.BadRequest(new ErrorResponse(validation))
-        : Results.Json(AnalyzeForClient(request, context, sessions));
+        : Results.Json(AnalyzeForClient(request, context, sessions, cache));
 }).RequireRateLimiting(TymRateLimit.PolicyName);
 
 app.MapPost("/v1/entities", (EntityRecognitionRequest request, HttpContext context) =>
@@ -207,14 +217,14 @@ var sourceEndpoint = app.MapGet("/v1/books/{id}/source", (string id, string? sec
 if (accountSettings.RequireLoginForText)
     sourceEndpoint.RequireAuthorization(TymAccounts.ReaderPolicy).RequireCors("account-browser");
 
-app.MapPost("/v1/books/{id}/diagrams", (string id, BookAnalysisRequest selection, BookLibrary library, HttpContext context, DensitySessions sessions) =>
+app.MapPost("/v1/books/{id}/diagrams", (string id, BookAnalysisRequest selection, BookLibrary library, HttpContext context, DensitySessions sessions, DiagramDatabaseCache cache) =>
 {
     context.Response.Headers.CacheControl = "no-store";
     var request = library.Read(id, selection);
     if (request is null) return Results.NotFound(new ErrorResponse("Book or section not found."));
     var validation = Validate(request);
     return validation is not null ? Results.BadRequest(new ErrorResponse(validation))
-        : Results.Json(AnalyzeForClient(request with { Options = request.Options! with { OmitXmlExports = true } }, context, sessions));
+        : Results.Json(AnalyzeForClient(request with { Options = request.Options! with { OmitXmlExports = true } }, context, sessions, cache));
 }).RequireRateLimiting(TymRateLimit.PolicyName);
 
 app.MapGet("/v1/density-sessions/{id}/{density:int}", async (string id, int density, DensitySessions sessions, HttpContext context) =>
@@ -260,13 +270,32 @@ app.MapPost("/v1/diagrams/xml", (DiagramRequest request) =>
 
 app.Run();
 
-static DiagramResponse AnalyzeForClient(DiagramRequest request, HttpContext context, DensitySessions sessions)
+static DiagramResponse AnalyzeForClient(DiagramRequest request, HttpContext context, DensitySessions sessions, DiagramDatabaseCache cache)
 {
     var options = request.Options ?? new DiagramOptions();
-    if (!options.ProgressiveDensityCache) return TymAnalyzer.Analyze(request.Text, options);
-    var prepared = TymAnalyzer.Prepare(request.Text, options with { CacheTrackDensities = false });
-    var response = prepared.Response;
-    var id = sessions.Add(ClientIpResolver.Resolve(context), request.Text.Length, prepared.GenerateDensity);
+    var client = ClientIpResolver.Resolve(context);
+    var version = TymConstants.Version + ":" + (context.RequestServices.GetRequiredService<IConfiguration>()["TYM_DIAGRAM_CACHE_VERSION"] ?? "1");
+    DiagramResponse? Read(DiagramOptions selected) => cache.Get(DiagramDatabaseCache.Key(request with { Options = selected }, client, version));
+    void Save(DiagramOptions selected, DiagramResponse value) => cache.Put(DiagramDatabaseCache.Key(request with { Options = selected }, client, version), value);
+    if (!options.ProgressiveDensityCache)
+    {
+        var cached = Read(options);
+        context.Response.Headers["X-TYM-Cache"] = !cache.Enabled ? "DISABLED" : cached is null ? "MISS" : "HIT";
+        if (cached is not null) return cached;
+        var generated = TymAnalyzer.Analyze(request.Text, options); Save(options, generated); return generated;
+    }
+    var primary = options with { CacheTrackDensities = false, ProgressiveDensityCache = false };
+    PreparedAnalysis? prepared = null;
+    var response = Read(primary);
+    context.Response.Headers["X-TYM-Cache"] = !cache.Enabled ? "DISABLED" : response is null ? "MISS" : "HIT";
+    if (response is null) { prepared = TymAnalyzer.Prepare(request.Text, primary); response = prepared.Response; Save(primary, response); }
+    var id = sessions.Add(client, request.Text.Length, density =>
+    {
+        var selected = primary with { TrackDensity = density };
+        var saved = Read(selected); if (saved is not null) return saved;
+        prepared ??= TymAnalyzer.Prepare(request.Text, primary);
+        var generated = prepared.GenerateDensity(density); Save(selected, generated); return generated;
+    });
     return response with { DensityCache = new DensityCacheInfo(
         [new DensityCacheOption(options.TrackDensity, "base", response.Diagram.Tracks.Count)],
         new Dictionary<string, CachedDensityView>(), id,

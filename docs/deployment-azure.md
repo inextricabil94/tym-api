@@ -33,7 +33,25 @@ Verify both public UI URLs, API health, actual English/Romanian POS lookup, a ge
 
 Rollback uses the previous known-good image with `az containerapp update --image <previous-image>`. Keep the static site's prior public files available in a local deployment backup if rollback is required. Do not expose private sources to make cloud/local catalogs identical.
 
-## Latest Release: 21 October 2026
+## Latest Release: 23 October 2026
+
+Both public UI hosts now include the bounded IndexedDB diagram/catalog cache,
+offline application shell, self-hosted React and horizontally aligned Saved
+diagrams / Cached TT density controls. The API image is tagged
+`release-20261023-offline` (revision `r20261023offline`); the final UI image is
+`release-20261023-offline2` (revision `r20261023offline2`).
+The API cache implementation is deployed but production SQLite remains disabled:
+no persistent cache volume exists and `TYM_DIAGRAM_CACHE_PATH` is unset. Do not
+enable it on ephemeral container storage. No database, volume or paid service was
+provisioned. See [cache behavior and limits](offline-caching.md) and
+[release checks](verification/offline-20261023.md).
+
+The new [improvements document](research/TYM_Improvements_20261023.md) is published
+as a PDF under the static website's `research/` path. Previous research files,
+the sixteen-book server library, public reading, disabled accounts and the
+EUR 20 shutdown policy are preserved. Other hosted apps remain stopped.
+
+## Release: 21 October 2026
 
 The API and both UI hosts now serve selectable rule/logistic/perceptron
 segmentation, marked source ranges and aligned language/account/theme controls.

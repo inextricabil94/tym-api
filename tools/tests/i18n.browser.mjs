@@ -27,7 +27,7 @@ const result = { model_version: 'authored-i18n-fixture', track_generation: { den
   render: { svg }, xml: '<TimeML><TEXT>Narration</TEXT></TimeML>', warnings: [],
   density_cache: { session_id: 'authored', pending_densities: [], views: {}, options: Array.from({ length: 10 }, (_, i) => ({ density: (i + 1) * 10, view_id: 'base', track_count: 1 })) } };
 const browser = await chromium.launch({ headless: true, ...(process.env.TYM_CHROMIUM ? { executablePath: process.env.TYM_CHROMIUM } : {}) });
-const context = await browser.newContext({ locale: 'ro-RO', viewport: { width: 1440, height: 1050 } });
+const context = await browser.newContext({ serviceWorkers: 'block', locale: 'ro-RO', viewport: { width: 1440, height: 1050 } });
 const requests = [], errors = [];
 let catalogUnavailable = false, signedIn = false;
 async function routes(target) {
@@ -82,6 +82,17 @@ async function assertHeaderAlignment() {
   for (let index = 1; index < geometry.controls.length; index++) {
     assert.ok(geometry.controls[index - 1].right <= geometry.controls[index].left, 'Header controls must not overlap');
   }
+}
+async function assertCacheSelectorAlignment() {
+  const boxes = await page.locator('#saved-diagram, #cached-density').evaluateAll(elements => elements.map(element => {
+    const box = element.getBoundingClientRect();
+    return { top: box.top, bottom: box.bottom, left: box.left, right: box.right, width: box.width };
+  }));
+  assert.equal(boxes.length, 2);
+  assert.ok(Math.abs(boxes[0].top - boxes[1].top) <= 1, 'Cache selector tops must align');
+  assert.ok(Math.abs(boxes[0].bottom - boxes[1].bottom) <= 1, 'Cache selector bottoms must align');
+  assert.ok(boxes[0].right < boxes[1].left, 'Cache selectors must be side by side without overlap');
+  assert.ok(boxes.every(box => box.width > 30), 'Cache selectors must remain usable on narrow screens');
 }
 try {
   await page.goto(site);
@@ -155,6 +166,7 @@ try {
       await page.setViewportSize({ width, height: 1050 });
       await page.evaluate(() => document.fonts.ready);
       await assertHeaderAlignment();
+      await assertCacheSelectorAlignment();
     }
   }
   await selectLocale('ro');
@@ -178,6 +190,7 @@ try {
       await page.evaluate(() => document.fonts.ready);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${locale}: page overflow at ${width}`);
       await assertHeaderAlignment();
+      await assertCacheSelectorAlignment();
       assert.ok(await page.locator('.zoom-tools .tool').evaluateAll(buttons => buttons.every(button => button.scrollWidth <= button.clientWidth + 1)), `${locale}: clipped zoom label at ${width}`);
       // Full-page capture can temporarily resize the window and invalidate resolution-keyed diagrams.
       await page.evaluate(() => scrollTo(0, 0));
@@ -189,6 +202,22 @@ try {
       }
     }
   }
+  const textZoom = await page.addStyleTag({ content: '.diagram-cache-selectors label, .diagram-cache-selectors select, .diagram-cache-selectors small { font-size:26px; line-height:1.25; }' });
+  for (const locale of ['en', 'ro']) {
+    await selectLocale(locale);
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 1050 });
+      await assertCacheSelectorAlignment();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Enlarged cache labels must not cause page overflow');
+      assert.ok(await page.locator('.diagram-cache-selectors > .field').evaluateAll(fields => fields.every(field => {
+        const select = field.querySelector('select').getBoundingClientRect();
+        const label = field.querySelector('label').getBoundingClientRect();
+        const status = field.querySelector('small').getBoundingClientRect();
+        return label.bottom <= select.top + 1 && status.top >= select.bottom - 1;
+      })), 'Enlarged labels and status must not overlap the select boxes');
+    }
+  }
+  await textZoom.evaluate(element => element.remove());
   await page.setViewportSize({ width: 390, height: 1050 });
   await page.getByRole('button', { name: 'Autentificare', exact: true }).click();
   await page.getByRole('button', { name: 'Ați uitat parola?', exact: true }).click();
@@ -201,7 +230,8 @@ try {
   await selectLocale('en');
   await page.getByText('Book catalog unavailable (HTTP 503).', { exact: true }).waitFor();
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ passed: true, locales: 2, responsive_cases: 10, header_alignment_cases: 20, status_above_controls: true, browser_locale_detected: true,
+  console.log(JSON.stringify({ passed: true, locales: 2, responsive_cases: 10, header_alignment_cases: 20, cache_selector_alignment_cases: 20,
+    enlarged_selector_cases: 6, status_above_controls: true, browser_locale_detected: true,
     saved_locale_and_cross_tab_sync: true, source_and_analysis_language_preserved: true, cached_diagram_preserved: true,
     no_nlp_on_locale_change: true, localized_legend_without_source_changes: true, account_messages_and_errors: true,
     real_mail_sent: false, screenshots: output }, null, 2));

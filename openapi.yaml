@@ -220,6 +220,10 @@ paths:
       responses:
         "200":
           description: Generated book diagram and optional cached density views
+          headers:
+            X-TYM-Cache:
+              description: Optional private SQLite result cache status; requests still count toward the normal quota.
+              schema: { type: string, enum: [HIT, MISS, DISABLED] }
           content:
             application/json:
               schema:
@@ -434,6 +438,10 @@ paths:
       responses:
         "200":
           description: Diagram generated
+          headers:
+            X-TYM-Cache:
+              description: Optional private SQLite result cache status; requests still count toward the normal quota.
+              schema: { type: string, enum: [HIT, MISS, DISABLED] }
           content:
             application/json:
               schema:

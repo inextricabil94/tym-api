@@ -115,16 +115,13 @@ while i < len(lines):
             ("LINEBELOW", (0, 1), (-1, -1), 0.4, colors.HexColor("#d6dfd9")),
         ]))
         story.extend([table, Spacer(1, 12)])
-    elif line.startswith("- "):
-        story.append(Paragraph("- " + inline(line[2:]), bullet))
-    elif re.match(r"\d+\. ", line):
-        story.append(Paragraph(inline(line), bullet))
     else:
         paragraph = [line]
         while i < len(lines) and lines[i].strip() and not lines[i].startswith(("#", "|", "- ", "<!--")) and not re.match(r"\d+\. ", lines[i]):
             paragraph.append(lines[i].strip())
             i += 1
-        story.append(Paragraph(inline(" ".join(paragraph)), body))
+        style = bullet if line.startswith("- ") or re.match(r"\d+\. ", line) else body
+        story.append(Paragraph(inline(" ".join(paragraph)), style))
 
 document = SimpleDocTemplate(str(OUTPUT), pagesize=letter, rightMargin=54, leftMargin=54,
                              topMargin=57, bottomMargin=57, title=args.title,

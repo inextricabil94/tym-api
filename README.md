@@ -30,6 +30,19 @@ Published to [the live workbench](https://tymui20260707serban.z13.web.core.windo
 on 21 October 2026, including aligned language, account and theme controls.
 See the [release verification](docs/verification/segmentation-20261021.md).
 
+### Offline Caching
+
+Both live workbench hosts support [offline and database caching](docs/offline-caching.md):
+saved diagrams and library metadata in IndexedDB, an offline application shell,
+and an optional bounded SQLite API cache. Browser caching is active; the deployed
+API database cache remains disabled until private persistent storage is configured.
+The Saved diagrams and Cached TT density controls share a responsive horizontal
+row. See the [23 October release checks](docs/verification/offline-20261023.md).
+
+The [23 October improvement roadmap](docs/research/TYM_Improvements_20261023.md)
+and [PDF](output/pdf/TYM_Improvements_20261023.pdf) separate implemented work,
+release prerequisites and proposed research improvements.
+
 ## Example
 
 Input text:
@@ -64,11 +77,11 @@ TT names in JSON/XML remain short extractive summaries of their events, but are 
 
 The UI's **TT density** slider sets `options.track_density` (integer 0-100, default 50). **0** gives an overview by coarsening actor/perspective tracks within the same narrative mode (main, memory, parallel) and temporal category. **50** preserves the original actor/perspective/temporal grouping. **100** creates one TT per temporal segment. Intermediate values deterministically refine these groups; discrete inputs can produce plateaus. Every event, segment, source span, and TimeML annotation remains available at every density. Track-level boundaries, relations, and endpoints are recomputed for the chosen grouping. Low-density overviews are not claims that different characters share one development.
 
-`track_generation` in the response records the effective density and `extractive-event-summary-v1` title method. Change the slider and generate again to apply it; each generation uses the normal daily quota.
+`track_generation` in the response records the effective density and `extractive-event-summary-v1` title method. Change the slider and generate again to apply it. A matching saved density avoids another request; actual API generation requests use the normal daily quota.
 
-The UI offers densities **10, 20, 30, 40, 50, 60, 70, 80, 90 and 100**. It displays the selected density first, then caches other layouts sequentially in the background from the same NLP analysis. **Cached TT density** switches ready diagrams without another daily usage. Background progress never changes the selected diagram. Input or resolution changes abort warming and discard its cache; late responses are ignored. A failed/expired background session leaves the current diagram usable. Cached layouts stay in page memory, not local storage.
+The UI offers densities **10, 20, 30, 40, 50, 60, 70, 80, 90 and 100**. It displays the selected density first, then caches other layouts sequentially in the background from the same NLP analysis. **Cached TT density** switches ready diagrams without another daily usage. Background progress never changes the selected diagram. Input or resolution changes abort warming and clear the active result; late responses are ignored. A failed/expired background session leaves the current diagram usable. Completed layouts are also saved in bounded IndexedDB storage for offline reopening. Partial bundles advertise only completed views; IP-bound warming sessions are never persisted.
 
-**Diagram width** follows the current browser window width in CSS pixels, within the SVG renderer's 720-2400 pixel bounds. The current window width and height are shown beneath it. Cached diagrams belong only to that exact window resolution: any width or height change discards them, including changes within the mobile width clamp. Returning to an earlier size does not restore its old cache. Responses generated for a previous resolution are ignored. Resizing never starts generation or consumes another daily usage automatically; generate explicitly for the new size.
+**Diagram width** follows the current browser window width in CSS pixels, within the SVG renderer's 720-2400 pixel bounds. The current window width and height are shown beneath it. Cached diagrams belong only to that exact window resolution: any width or height change clears the active view, including changes within the mobile width clamp. Saved diagrams lists only records matching the current API and resolution, so returning to an earlier size makes its saved results available to reopen explicitly. Responses generated for a previous resolution are ignored. Resizing never starts generation or consumes another daily usage automatically.
 
 The UI sends `options.progressive_density_cache = true`: the primary response contains only the selected view and an IP-bound density session. Background `GET /v1/density-sessions/{id}/{density}` calls reuse its extracted events, classification and TimeML rather than rerunning NLP or spending daily permits. Sessions are memory-bounded and expire after ten idle minutes; layout requests have a separate 60/minute/IP limit. `density_cache.options` maps ready presets to `base` or an entry in `density_cache.views`. Alternate views contain placements/topology rather than duplicate source events. Legacy API clients can still request synchronous layouts with `cache_track_densities = true`. Responses use compression and `no-store`.
 

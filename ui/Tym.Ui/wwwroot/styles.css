@@ -504,6 +504,26 @@ textarea:focus-visible {
   min-width: 0;
 }
 
+.diagram-cache-selectors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto minmax(44px, auto) minmax(1.25em, auto);
+  gap: 7px 12px;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.diagram-cache-selectors > .field {
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  max-width: none;
+  min-width: 0;
+}
+
+.diagram-cache-selectors label { align-self: end; overflow-wrap: anywhere; }
+.diagram-cache-selectors select { width: 100%; min-width: 0; }
+
 .result-toolbar {
   display: flex;
   flex-wrap: wrap;

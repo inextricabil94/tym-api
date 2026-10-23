@@ -21,7 +21,7 @@ const book = { id: 'authored-book', label: 'Authored chapter fixture', language:
   ] };
 let requests = [], sourceReads = 0, restricted = false, legacy = false, longFixture = null;
 const browser = await chromium.launch({ headless: true, ...(process.env.TYM_CHROMIUM ? { executablePath: process.env.TYM_CHROMIUM } : {}) });
-const page = await browser.newPage({ viewport: { width: 1440, height: 1050 }, locale: 'en-GB' });
+const page = await browser.newPage({ serviceWorkers: 'block', viewport: { width: 1440, height: 1050 }, locale: 'en-GB' });
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 await page.route('**/config.js', route => route.fulfill({ contentType: 'application/javascript', body: `window.TYM_CONFIG={apiBaseUrl:${JSON.stringify(site)},examples:[]};` }));
@@ -134,7 +134,7 @@ try {
   legacy = true;
   await page.locator('#text').fill(fixtures['en/mlnet_logistic'].text);
   await page.waitForFunction(() => !document.querySelector('.actions .primary').disabled);
-  await page.locator('.actions .primary').click();
+  await page.getByRole('button', { name: 'Regenerate diagram', exact: true }).click();
   await page.locator('.message').filter({ hasText: 'The API did not apply the selected segmentation algorithm.' }).waitFor();
   assert.equal(await page.locator('.segment-overview svg').count(), 0);
   legacy = false;

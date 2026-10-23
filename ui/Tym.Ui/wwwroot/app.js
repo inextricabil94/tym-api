@@ -1,6 +1,7 @@
 const e = React.createElement;
 const I18n = window.TymI18n;
 const t = I18n.t;
+const offline = window.TymOffline.create();
 
 const apiDefault = (window.TYM_CONFIG && window.TYM_CONFIG.apiBaseUrl)
   || 'https://tym-api-serban.livelyrock-2726c024.eastus.azurecontainerapps.io';
@@ -216,6 +217,14 @@ function App() {
   const [segmentPage, setSegmentPage] = React.useState(0);
   const [selectedSegmentId, setSelectedSegmentId] = React.useState('');
   const [bookSource, setBookSource] = React.useState(null);
+  const [online, setOnline] = React.useState(navigator.onLine);
+  const [savedDiagrams, setSavedDiagrams] = React.useState([]);
+  const [savedSelection, setSavedSelection] = React.useState('');
+  const [offlineStatus, setOfflineStatus] = React.useState('');
+  const [restoredDiagram, setRestoredDiagram] = React.useState(null);
+  const savedIdentity = React.useRef(null);
+  const lastLibraryRefresh = React.useRef(0);
+  const libraryApi = React.useRef('');
   const [apiBaseUrl, setApiBaseUrl] = React.useState(apiDefault);
   const account = window.TymAccounts.useAccount(apiBaseUrl);
   const [showAccount, setShowAccount] = React.useState(() => new URLSearchParams(window.location.hash.slice(1)).has('resetCode'));
@@ -258,7 +267,7 @@ function App() {
   const selectedCharacters = selectedBook ? selectedSection?.character_count ?? selectedBook.character_count : text.length;
   const bookSelectionKey = selectedBook ? `${selectedBook.id}:${selectedSection?.id || 'full'}` : '';
   const selectedExampleItem = examples.find(example => example.id === selectedExample);
-  const protectedSource = Boolean(selectedBook || selectedExampleItem?.is_private);
+  const protectedSource = Boolean(restoredDiagram?.book || selectedBook || selectedExampleItem?.is_private);
   const picture = examplePicture(selectedBookId || selectedExample);
 
   React.useEffect(() => {
@@ -285,31 +294,63 @@ function App() {
   }, []);
 
   React.useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener('online', update); window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
+  }, []);
+
+  React.useEffect(() => {
     const request = new AbortController();
-    setLibrary([]); setSelectedBookId(''); setLibraryError(''); setLoadingLibrary(true);
-    fetch(`${apiBaseUrl.trim().replace(/\/+$/, '')}/v1/books`, { signal: request.signal, cache: 'no-store' })
-      .then(async response => {
+    const api = window.TymOffline.normalizeApi(apiBaseUrl);
+    const force = lastLibraryRefresh.current !== libraryRefresh;
+    const revision = offline.revision();
+    lastLibraryRefresh.current = libraryRefresh;
+    if (libraryApi.current !== api) { setLibrary([]); setSelectedBookId(''); libraryApi.current = api; }
+    setLibraryError(''); setLoadingLibrary(true);
+    (async () => {
+      try {
+        const cached = await offline.getCatalog(api);
+        if (request.signal.aborted) return;
+        if (cached) { setLibrary(cached.books); setLoadingLibrary(false); }
+        if (!online) {
+          if (!cached) throw I18n.error('No saved book library is available offline.');
+          return;
+        }
+        if (cached && !force && Date.now() - cached.created < 300000) return;
+        const response = await fetch(`${api}/v1/books`, { signal: request.signal, cache: 'no-store' });
         if (!response.ok) throw I18n.error('Book catalog unavailable (HTTP {status}).', { status: response.status });
         const data = await response.json();
-        if (!Array.isArray(data.books) || data.books.some(book => typeof book.id !== 'string'
-          || typeof book.label !== 'string' || !['en', 'ro'].includes(book.language) || !Array.isArray(book.sections)))
-          throw new Error('Invalid book catalog.');
+        const books = window.TymOffline.catalog(data.books);
         if (!request.signal.aborted) {
-          setLibrary(data.books);
+          setLibrary(books);
+          setSelectedBookId(current => books.some(book => book.id === current) ? current : '');
+          await offline.putCatalog(api, books, revision);
         }
-      }).catch(error => { if (!request.signal.aborted) setLibraryError(I18n.describe(error)); })
-      .finally(() => { if (!request.signal.aborted) setLoadingLibrary(false); });
+      } catch (error) { if (!request.signal.aborted) setLibraryError(I18n.describe(error)); }
+      finally { if (!request.signal.aborted) setLoadingLibrary(false); }
+    })();
     return () => request.abort();
-  }, [apiBaseUrl, libraryRefresh]);
+  }, [apiBaseUrl, libraryRefresh, online]);
+
+  React.useEffect(() => {
+    let active = true;
+    (async () => {
+      if (account.config?.text_requires_login) await offline.removeBooks(apiBaseUrl);
+      const entries = await offline.diagrams(apiBaseUrl, resolution.key);
+      if (active) setSavedDiagrams(entries.filter(entry => !entry.book || account.config?.text_requires_login !== true));
+    })();
+    return () => { active = false; };
+  }, [apiBaseUrl, resolution.key, account.config?.text_requires_login]);
 
   React.useEffect(() => () => textRequest.current?.abort(), []);
   React.useEffect(() => { window.TymTheme.set(theme); }, [theme]);
   React.useEffect(() => {
     const request = new AbortController();
     let active = true;
+    if (!online) { setLoadingEntities(false); return () => request.abort(); }
     setEntityOptions([]);
     setEntityError('');
-    if (loadingText || (!selectedBook && !text.trim()) || !apiBaseUrl.trim()
+    if (!online || loadingText || (!selectedBook && !text.trim()) || !apiBaseUrl.trim()
       || (selectedBook && bookEntityRequest !== bookSelectionKey)) {
       setLoadingEntities(false);
       return () => request.abort();
@@ -352,18 +393,33 @@ function App() {
       }
     }, 600);
     return () => { active = false; clearTimeout(timer); request.abort(); };
-  }, [text, language, apiBaseUrl, loadingText, entityRefresh, selectedBook, bookEntityRequest, bookSelectionKey]);
+  }, [text, language, apiBaseUrl, loadingText, entityRefresh, selectedBook, bookEntityRequest, bookSelectionKey, online]);
   const selectedHighlight = entityOptions.some(entity => entity.name === highlightEntity) ? highlightEntity : '';
 
-  React.useEffect(() => { generationVersion.current++; setBaseResult(null); setSegmentPage(0); setSelectedSegmentId(''); },
+  React.useEffect(() => { generationVersion.current++; setBaseResult(null); setRestoredDiagram(null); setSavedSelection(''); savedIdentity.current = null; setSegmentPage(0); setSelectedSegmentId(''); },
     [text, language, diagramWidth, apiBaseUrl, selectedHighlight, bookSelectionKey, segmentationAlgorithm]);
   const currentResult = cacheResolution === resolution.key ? baseResult : null;
   const densityChoices = React.useMemo(() => window.TymDensityCache.choices(currentResult), [currentResult]);
   const result = React.useMemo(() => window.TymDensityCache.select(currentResult, viewerDensity), [currentResult, viewerDensity]);
   const densitySession = currentResult?.density_cache?.session_id;
   React.useEffect(() => {
+    const identity = savedIdentity.current;
+    if (!currentResult || !identity || identity.version !== generationVersion.current || identity.resolution !== resolution.key || restoredDiagram) return;
+    if (identity.book && account.config?.text_requires_login !== false) return;
+    let active = true;
+    const timer = setTimeout(async () => {
+      const outcome = await offline.putDiagram(identity.key, identity.api, identity.resolution, currentResult, identity, identity.revision);
+      if (!active) return;
+      setOfflineStatus(outcome.tooLarge ? 'Diagram exceeds the offline storage limit.'
+        : outcome.saved ? outcome.persistent ? 'Saved offline' : 'Session cache only' : 'Offline storage unavailable');
+      const entries = await offline.diagrams(identity.api, identity.resolution);
+      if (active) setSavedDiagrams(entries);
+    }, 150);
+    return () => { active = false; clearTimeout(timer); };
+  }, [currentResult, resolution.key, restoredDiagram, account.config?.text_requires_login]);
+  React.useEffect(() => {
     setCacheStatus('');
-    if (!densitySession) return;
+    if (!densitySession || !online) return;
     const request = new AbortController();
     const version = generationVersion.current;
     const pending = currentResult.density_cache.pending_densities || [];
@@ -386,7 +442,7 @@ function App() {
       } catch (error) { if (!request.signal.aborted) setCacheStatus(I18n.describe(error)); }
     })();
     return () => request.abort();
-  }, [densitySession, resolution.key, apiBaseUrl]);
+  }, [densitySession, resolution.key, apiBaseUrl, online]);
   const svg = result?.render?.svg || result?.renderings?.svg || '';
   const localizedSvg = React.useMemo(() => I18n.localizeSvg(svg, locale), [svg, locale]);
   const diagram = result && result.diagram ? result.diagram : {};
@@ -394,7 +450,7 @@ function App() {
   const warnings = result && Array.isArray(result.warnings) ? result.warnings : [];
   const segmentation = result?.segmentation;
   const canReadBookSource = account.config?.text_requires_login === false || Boolean(account.user);
-  const markedSource = selectedBook
+  const markedSource = restoredDiagram ? null : selectedBook
     ? canReadBookSource && bookSource?.key === bookSelectionKey ? bookSource.text : null : text;
   const markedPage = React.useMemo(() => window.TymSegmentation.sourcePage(markedSource, diagram.segments || [], segmentPage),
     [markedSource, diagram.segments, segmentPage]);
@@ -453,7 +509,7 @@ function App() {
   const xmlText = result && result.xml ? result.xml : '';
   const timeMlText = React.useMemo(() => timeMlSummary(timeMl), [timeMl]);
   const statusClass = busy || loadingText ? 'busy' : message ? 'error' : result ? 'ready' : '';
-  const statusText = loadingText ? 'Loading text' : busy ? 'Generating' : message ? 'Needs attention' : result ? 'Ready' : 'Idle';
+  const statusText = !online ? 'Offline' : loadingText ? 'Loading text' : busy ? 'Generating' : message ? 'Needs attention' : result ? 'Ready' : 'Idle';
 
   function selectDensity(density) {
     const choice = densityChoices.find(option => option.density === density);
@@ -561,7 +617,7 @@ function App() {
     setActiveTab('diagram'); clearResult();
   }
 
-  async function generate() {
+  async function generate(force = false) {
     const version = generationVersion.current;
     const requestedResolution = resolution.key;
     const trimmedApi = apiBaseUrl.trim().replace(/\/+$/, '');
@@ -592,50 +648,71 @@ function App() {
     }
 
     setBusy(true);
-    setBaseResult(null);
+    setOfflineStatus('');
     setMessage('');
 
     try {
       const endpoint = selectedBook ? `/v1/books/${encodeURIComponent(selectedBook.id)}/diagrams` : '/v1/diagrams';
-      const response = await fetch(`${trimmedApi}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const key = await window.TymOffline.identity(trimmedApi, payload, requestedResolution, selectedBook);
+      if (generationVersion.current !== version || window.TymViewport.measure(window.innerWidth, window.innerHeight).key !== requestedResolution) return;
+      const identity = { key, version, api: trimmedApi, resolution: requestedResolution, book: Boolean(selectedBook || selectedExampleItem?.is_private),
+        label: selectedBook ? `${selectedBook.label}${selectedSection ? ' / ' + selectedSection.label : ''}` : t(selectedExampleItem?.label || 'Custom text'), revision: offline.revision() };
+      const canReuse = force !== true && !(selectedBook && account.config?.text_requires_login === true);
+      const previous = savedIdentity.current;
+      // A pending disk write can contain fewer completed views than the live bundle.
+      const live = canReuse && !restoredDiagram && previous?.key === key && previous.version === version
+        && previous.revision === identity.revision
+        && window.TymDensityCache.choices(currentResult).some(choice => choice.density === trackDensity) ? currentResult : null;
+      savedIdentity.current = identity;
+      const cached = canReuse && !live ? await offline.getDiagram(key) : null;
+      let data = live || (cached && window.TymDensityCache.choices(cached.response).some(choice => choice.density === trackDensity) ? cached.response : null);
+      if (live && (!identity.book || account.config?.text_requires_login === false))
+        await offline.putDiagram(key, trimmedApi, requestedResolution, live, identity, identity.revision);
+      if (!data && !online) throw I18n.error('No saved diagram matches these settings. Connect to generate it.');
+      if (!data) {
+        setBaseResult(null); setRestoredDiagram(null); setSavedSelection('');
+        const response = await fetch(`${trimmedApi}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-      if (!response.ok) {
-        let apiError = null;
+        if (!response.ok) {
+          let apiError = null;
 
-        try {
-          apiError = await response.json();
-        } catch {
-          // The status code remains useful when a proxy returns a non-JSON error.
+          try {
+            apiError = await response.json();
+          } catch {
+            // The status code remains useful when a proxy returns a non-JSON error.
+          }
+
+          if (response.status === 429) {
+            const retrySeconds = Number(apiError && apiError.retry_after_seconds)
+              || Number(response.headers.get('Retry-After'));
+            const retryHours = Number.isFinite(retrySeconds)
+              ? Math.max(1, Math.ceil(retrySeconds / 3600))
+              : null;
+            throw retryHours ? I18n.error('Daily limit reached. Try again in about {count} hours.', { count: retryHours })
+              : I18n.error('Daily limit reached. Try again later.');
+          }
+
+          throw apiError?.error ? I18n.apiError(apiError, response.status)
+            : I18n.error('API returned HTTP {status}', { status: response.status });
         }
 
-        if (response.status === 429) {
-          const retrySeconds = Number(apiError && apiError.retry_after_seconds)
-            || Number(response.headers.get('Retry-After'));
-          const retryHours = Number.isFinite(retrySeconds)
-            ? Math.max(1, Math.ceil(retrySeconds / 3600))
-            : null;
-          throw retryHours ? I18n.error('Daily limit reached. Try again in about {count} hours.', { count: retryHours })
-            : I18n.error('Daily limit reached. Try again later.');
-        }
-
-        throw apiError?.error ? I18n.apiError(apiError, response.status)
-          : I18n.error('API returned HTTP {status}', { status: response.status });
+        data = await response.json();
       }
-
-      const data = await response.json();
       if (generationVersion.current !== version
         || window.TymViewport.measure(window.innerWidth, window.innerHeight).key !== requestedResolution) return;
       if (segmentationAlgorithm !== 'article_rules' && data.segmentation?.algorithm !== segmentationAlgorithm)
         throw I18n.error('The API did not apply the selected segmentation algorithm.');
       const returnedSvg = (data.render && data.render.svg) || (data.renderings && data.renderings.svg) || '';
 
-      setBaseResult(data);
+      if (!live) setBaseResult(data);
+      setRestoredDiagram(null); setSavedSelection('');
+      setOfflineStatus(live || (cached && data === cached.response) ? 'Loaded from offline cache' : '');
       setCacheResolution(requestedResolution);
-      setViewerDensity(data.track_generation?.density ?? trackDensity);
+      setViewerDensity(trackDensity);
       setActiveTab('diagram');
       setTrackQuery('');
       setTrackPage(0);
@@ -654,6 +731,25 @@ function App() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function restoreSaved(key) {
+    const version = ++generationVersion.current;
+    const saved = await offline.getDiagram(key);
+    if (generationVersion.current !== version || !saved || saved.resolution !== resolution.key
+      || saved.api !== window.TymOffline.normalizeApi(apiBaseUrl) || (saved.book && account.config?.text_requires_login === true)) return;
+    savedIdentity.current = null;
+    setRestoredDiagram({ book: saved.book }); setSavedSelection(key);
+    setBaseResult(saved.response); setCacheResolution(resolution.key);
+    setViewerDensity(saved.response.track_generation?.density ?? 50);
+    setActiveTab('diagram'); setTrackQuery(''); setTrackPage(0); setSegmentPage(0);
+    setSelectedSegmentId(''); setFitToWidth(false); setZoom(1); setMessage('');
+    setOfflineStatus('Loaded from offline cache');
+  }
+
+  async function clearOffline() {
+    await offline.clear(); savedIdentity.current = null; setSavedDiagrams([]); setSavedSelection('');
+    setOfflineStatus('Offline cache cleared');
   }
 
   function downloadSvg() {
@@ -1211,8 +1307,13 @@ function App() {
             ) : null
           ) : null,
           e('div', { className: 'actions' },
-            e('button', { className: 'primary', type: 'button', onClick: generate, disabled: busy || loadingText || loadingEntities }, t(busy ? 'Generating...' : 'Generate diagram')),
+            e('button', { className: 'primary', type: 'button', onClick: () => generate(), disabled: busy || loadingText || loadingEntities }, t(busy ? 'Generating...' : 'Generate diagram')),
             e('div', { className: 'download-actions' },
+              e('button', { className: 'tool entity-refresh', type: 'button', title: t('Regenerate diagram'), 'aria-label': t('Regenerate diagram'),
+                disabled: busy || loadingText || loadingEntities || !online, onClick: () => generate(true) },
+                e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2,
+                  strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+                  e('path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.02 6.74 2.74L21 8M21 3v5h-5' }))),
               e('button', { className: 'secondary', type: 'button', onClick: downloadSvg, disabled: !svg }, 'SVG'),
               !protectedSource ? e('button', { className: 'secondary', type: 'button', onClick: () => downloadText('tym-diagram.json', jsonText, 'application/json'), disabled: !result }, 'JSON') : null,
               !protectedSource ? e('button', { className: 'secondary', type: 'button', onClick: () => downloadText('tym-diagram.xml', xmlText, 'application/xml'), disabled: !xmlText }, 'XML') : null
@@ -1227,6 +1328,22 @@ function App() {
           result ? e('span', { className: 'status' }, result.model_version || '') : null
         ),
         e('div', { className: 'result-toolbar' },
+          e('div', { className: 'diagram-cache-selectors' },
+          e('div', { className: 'field density-cache-control offline-controls' },
+            e('label', { htmlFor: 'saved-diagram' }, t('Saved diagrams')),
+            e('div', { className: 'entity-controls' },
+              e('select', { id: 'saved-diagram', className: 'language-select', value: savedSelection, disabled: busy || !savedDiagrams.length,
+                title: savedDiagrams.find(entry => entry.key === savedSelection)?.label,
+                onChange: event => restoreSaved(event.target.value) },
+                e('option', { value: '', disabled: true }, t('Select saved diagram')),
+                savedDiagrams.map(entry => e('option', { key: entry.key, value: entry.key },
+                  `${entry.label} | ${t(window.TymSegmentation.algorithms.find(item => item.id === entry.algorithm)?.label || 'Article-guided rules')}`))),
+              e('button', { className: 'tool entity-refresh', type: 'button', title: t('Clear offline cache'), 'aria-label': t('Clear offline cache'),
+                disabled: busy, onClick: clearOffline },
+                e('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2,
+                  strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+                  e('path', { d: 'M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6' })))),
+            e('small', { className: 'entity-status', role: 'status' }, t(offlineStatus))),
           e('div', { className: 'field density-cache-control' },
             e('label', { htmlFor: 'cached-density' }, t('Cached TT density')),
             e('select', { id: 'cached-density', className: 'language-select', value: result ? viewerDensity : '',
@@ -1238,7 +1355,7 @@ function App() {
               })
                 : e('option', { value: '' }, t('No cached diagrams')))
             , e('small', { className: 'entity-status', role: 'status' }, t(cacheStatus))
-          ),
+          )),
           e('div', { className: 'tabs', role: 'tablist', 'aria-label': t('Result views') },
             resultTab('diagram', 'SVG'),
             resultTab('segmentation', 'Segmentation'),
